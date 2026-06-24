@@ -1,0 +1,21 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: ['build', '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/familiarocha/api:$COMMIT_SHA', '.']
+  - name: gcr.io/cloud-builders/docker
+    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/familiarocha/api:$COMMIT_SHA']
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - familiarocha-api
+      - --image=us-central1-docker.pkg.dev/$PROJECT_ID/familiarocha/api:$COMMIT_SHA
+      - --region=us-central1
+      - --platform=managed
+      - --allow-unauthenticated
+      - --memory=512Mi
+      - --timeout=300
+      - --set-secrets=GOOGLE_APPLICATION_CREDENTIALS=credenciais-google:latest
+      - --set-env-vars=GOOGLE_CLOUD_PROJECT_ID=familia-rocha-7ea1a,GOOGLE_CLOUD_LOCATION=us,DOCUMENT_AI_PROCESSOR_ID=4cad7feb06d834dd,TESSERACT_ENABLED=false,CRON_ENABLED=false
+images:
+  - us-central1-docker.pkg.dev/$PROJECT_ID/familiarocha/api:$COMMIT_SHA

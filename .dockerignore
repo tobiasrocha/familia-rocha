@@ -1,0 +1,7 @@
+node_modules
+.env
+credenciais-google.json
+uploads
+tessdata
+test-*
+*.md

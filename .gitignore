@@ -1,0 +1,13 @@
+node_modules/
+.env
+*.env
+!.env.production
+credenciais-google.json
+uploads/
+tessdata/
+test-*
+*.md
+dist/
+.DS_Store
+.firebase/
+*.cache
