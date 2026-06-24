@@ -217,7 +217,7 @@ export default function AdminUsuarios({ cores }) {
         <h2 style={{ color: cores?.texto, margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
           <Shield size={28} color={cores?.dourado} /> Membros da Família
         </h2>
-        <button onClick={abrirFormCriar} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', cursor: 'pointer', backgroundColor: exibirForm ? '#6c757d' : cores?.dourado, color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>
+        <button onClick={() => exibirForm ? resetarForm() : abrirFormCriar()} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', cursor: 'pointer', backgroundColor: exibirForm ? '#6c757d' : cores?.dourado, color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>
           <Plus size={18} /> {exibirForm ? 'Cancelar' : 'Novo Membro'}
         </button>
       </div>

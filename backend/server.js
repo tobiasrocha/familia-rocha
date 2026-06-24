@@ -1023,7 +1023,7 @@ const formatarMembro = (doc) => {
     criadoEm: data.criadoEm || '',
     isSuperadmin: isSuperadmin(email),
     permissoes: isSuperadmin(email) ? permissoesPadrao() : (data.permissoes || {}),
-    temAuth: !!data.uid,
+    temAuth: !!(data.uid || data.email),
   };
 };
 
