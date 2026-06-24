@@ -994,6 +994,18 @@ app.post('/api/upload-saude', upload.single('documento'), async (req, res) => {
 // ADMIN: Gerenciamento de Usuários do Sistema
 // ---------------------------------------------------------
 
+const SUPERADMIN_EMAIL = 'tobiasrocha@gmail.com';
+
+const MODULOS = ['financeiro', 'tarefas', 'saude', 'estudos', 'patrimonio', 'viagens', 'espiritual'];
+
+const permissoesPadrao = () => {
+  const p = {};
+  MODULOS.forEach(m => p[m] = true);
+  return p;
+};
+
+const isSuperadmin = (email) => email === SUPERADMIN_EMAIL;
+
 // Lista todos os usuarios
 app.get('/api/admin/usuarios', async (req, res) => {
   try {
@@ -1001,13 +1013,16 @@ app.get('/api/admin/usuarios', async (req, res) => {
     const usuarios = await Promise.all(listResult.users.map(async (userRecord) => {
       const meta = await firestoreDb.collection('usuarios').doc(userRecord.uid).get();
       const metaData = meta.exists ? meta.data() : {};
+      const email = userRecord.email;
       return {
         uid: userRecord.uid,
-        email: userRecord.email,
+        email,
         disabled: userRecord.disabled,
-        nome: metaData.nome || userRecord.displayName || userRecord.email,
+        nome: metaData.nome || userRecord.displayName || email,
         role: metaData.role || 'usuario',
         criadoEm: metaData.criadoEm || userRecord.metadata.creationTime,
+        isSuperadmin: isSuperadmin(email),
+        permissoes: isSuperadmin(email) ? permissoesPadrao() : (metaData.permissoes || {}),
       };
     }));
     res.json({ usuarios });
@@ -1040,6 +1055,7 @@ app.post('/api/admin/usuarios', async (req, res) => {
       role: role || 'usuario',
       criadoEm: new Date().toISOString(),
       ativo: true,
+      permissoes: {},
     });
 
     console.log(`[ADMIN] Usuario criado: ${email} (${userRecord.uid})`);
@@ -1081,6 +1097,52 @@ app.post('/api/admin/usuarios/:uid/reset-senha', async (req, res) => {
   } catch (error) {
     console.error('[ADMIN] Erro ao redefinir senha:', error);
     res.status(500).json({ erro: 'Falha ao redefinir senha.', detalhes: error.message });
+  }
+});
+
+// Atualiza permissoes de um usuario
+app.put('/api/admin/usuarios/:uid/permissoes', async (req, res) => {
+  try {
+    const { uid } = req.params;
+    const { permissoes } = req.body;
+    if (!permissoes || typeof permissoes !== 'object') {
+      return res.status(400).json({ erro: 'Permissoes invalidas.' });
+    }
+    await firestoreDb.collection('usuarios').doc(uid).update({ permissoes }, { merge: true });
+    console.log(`[ADMIN] Permissoes atualizadas para: ${uid}`);
+    res.json({ ok: true, permissoes });
+  } catch (error) {
+    console.error('[ADMIN] Erro ao atualizar permissoes:', error);
+    res.status(500).json({ erro: 'Falha ao atualizar permissoes.', detalhes: error.message });
+  }
+});
+
+// Obtem permissoes do usuario logado
+app.get('/api/admin/permissoes', async (req, res) => {
+  try {
+    const email = req.query.email;
+    if (!email) return res.status(400).json({ erro: 'Email obrigatorio.' });
+
+    if (isSuperadmin(email)) {
+      return res.json({ permissoes: permissoesPadrao(), isSuperadmin: true });
+    }
+
+    let userRecord;
+    try {
+      userRecord = await authAdmin.getUserByEmail(email);
+    } catch {
+      return res.json({ permissoes: {}, isSuperadmin: false });
+    }
+
+    const meta = await firestoreDb.collection('usuarios').doc(userRecord.uid).get();
+    const metaData = meta.exists ? meta.data() : {};
+    res.json({
+      permissoes: metaData.permissoes || {},
+      isSuperadmin: false,
+    });
+  } catch (error) {
+    console.error('[ADMIN] Erro ao buscar permissoes:', error);
+    res.status(500).json({ erro: 'Falha ao buscar permissoes.', detalhes: error.message });
   }
 });
 

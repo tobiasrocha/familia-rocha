@@ -13,8 +13,17 @@ export default function TelaLogin({ cores, logo }) {
     setErro('');
     try {
       await signInWithEmailAndPassword(auth, email, senha);
-    } catch {
-      setErro("Credenciais inválidas.");
+    } catch (error) {
+      const code = error.code || '';
+      if (code.includes('invalid-credential') || code.includes('wrong-password') || code.includes('user-not-found')) {
+        setErro('Email ou senha incorretos.');
+      } else if (code.includes('too-many-requests')) {
+        setErro('Muitas tentativas. Aguarde um momento.');
+      } else if (code.includes('user-disabled')) {
+        setErro('Sua conta foi desativada. Contate o administrador.');
+      } else {
+        setErro('Erro ao acessar. Verifique suas credenciais.');
+      }
     }
   };
 

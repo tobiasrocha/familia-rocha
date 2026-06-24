@@ -2,6 +2,7 @@ import { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from './firebaseConfig';
+import { API_BASE } from './config';
 import logoFamiliarocha from './assets/familiarocha.png';
 
 const Dashboard = lazy(() => import('./components/Dashboard'));
@@ -25,20 +26,22 @@ const coresApp = { primaria: '#2c3e50', secundaria: '#f8f9fa', dourado: '#C5A059
 
 const Carregando = () => <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', color: coresApp.dourado, fontFamily: 'system-ui, sans-serif' }}>Carregando...</div>;
 
-const menuItems = [
-  { to: '/', label: 'Dashboard', icon: <LayoutDashboard size={16} /> },
-  { to: '/financeiro', label: 'Financeiro', icon: <Wallet size={16} /> },
-  { to: '/perfis', label: 'Perfis', icon: <Users size={16} /> },
-  { to: '/tarefas', label: 'Tarefas', icon: <ClipboardList size={16} /> },
-  { to: '/saude', label: 'Saúde', icon: <HeartPulse size={16} /> },
-  { to: '/estudos', label: 'Estudos', icon: <BookOpen size={16} /> },
-  { to: '/patrimonio', label: 'Patrimônio', icon: <Package size={16} /> },
-  { to: '/viagens', label: 'Viagens', icon: <Compass size={16} /> },
-  { to: '/espiritual', label: 'Espiritual', icon: <BookOpen size={16} /> },
+const todosMenuItems = [
+  { to: '/', label: 'Dashboard', icon: <LayoutDashboard size={16} />, sempreVisivel: true },
+  { to: '/financeiro', label: 'Financeiro', icon: <Wallet size={16} />, modulo: 'financeiro' },
+  { to: '/perfis', label: 'Perfis', icon: <Users size={16} />, sempreVisivel: true },
+  { to: '/tarefas', label: 'Tarefas', icon: <ClipboardList size={16} />, modulo: 'tarefas' },
+  { to: '/saude', label: 'Saúde', icon: <HeartPulse size={16} />, modulo: 'saude' },
+  { to: '/estudos', label: 'Estudos', icon: <BookOpen size={16} />, modulo: 'estudos' },
+  { to: '/patrimonio', label: 'Patrimônio', icon: <Package size={16} />, modulo: 'patrimonio' },
+  { to: '/viagens', label: 'Viagens', icon: <Compass size={16} />, modulo: 'viagens' },
+  { to: '/espiritual', label: 'Espiritual', icon: <BookOpen size={16} />, modulo: 'espiritual' },
 ];
 
-function BarraNavegacao({ userEmail, onLogout }) {
+function BarraNavegacao({ userEmail, onLogout, permissoes, isSuperadmin }) {
   const location = useLocation();
+
+  const menuVisiveis = todosMenuItems.filter(item => item.sempreVisivel || (item.modulo && permissoes[item.modulo]));
 
   const obterEstiloBotao = (path) => {
     const ativo = location.pathname === path;
@@ -59,16 +62,18 @@ function BarraNavegacao({ userEmail, onLogout }) {
         </Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '14px', color: '#6c757d' }}>Olá, <strong style={{ color: coresApp.primaria }}>{userEmail}</strong></span>
-          <Link to="/admin" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', backgroundColor: 'transparent', border: `1px solid ${coresApp.primaria}`, color: coresApp.primaria, borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', textDecoration: 'none' }}>
-            <Shield size={14} /> Admin
-          </Link>
+          {isSuperadmin && (
+            <Link to="/admin" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', backgroundColor: 'transparent', border: `1px solid ${coresApp.primaria}`, color: coresApp.primaria, borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', textDecoration: 'none' }}>
+              <Shield size={14} /> Admin
+            </Link>
+          )}
           <button onClick={onLogout} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', backgroundColor: 'transparent', border: `1px solid ${coresApp.dourado}`, color: coresApp.dourado, borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>
             <LogOut size={14} /> Sair
           </button>
         </div>
       </div>
       <nav style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap', overflowX: 'auto', paddingBottom: '4px' }}>
-        {menuItems.map((item) => (
+        {menuVisiveis.map((item) => (
           <Link key={item.to} to={item.to} style={{ ...obterEstiloBotao(item.to), flexShrink: 0 }}>
             {item.icon} {item.label}
           </Link>
@@ -80,17 +85,36 @@ function BarraNavegacao({ userEmail, onLogout }) {
 
 export default function App() {
   const [user, setUser] = useState(undefined);
+  const [permissoes, setPermissoes] = useState({});
+  const [isSuperadmin, setIsSuperadmin] = useState(false);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => setUser(u));
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      setUser(u);
+      if (u?.email) {
+        try {
+          const res = await fetch(`${API_BASE}/admin/permissoes?email=${encodeURIComponent(u.email)}`);
+          const data = await res.json();
+          setPermissoes(data.permissoes || {});
+          setIsSuperadmin(data.isSuperadmin || false);
+        } catch {
+          setPermissoes({});
+          setIsSuperadmin(false);
+        }
+      }
+    });
     return () => unsub();
   }, []);
 
   const handleLogout = async () => {
+    setPermissoes({});
+    setIsSuperadmin(false);
     await signOut(auth);
   };
 
   if (user === undefined) return <Carregando />;
+
+  const temPermissao = (modulo) => isSuperadmin || (permissoes[modulo] === true);
 
   return (
     <Router>
@@ -98,21 +122,21 @@ export default function App() {
         <TelaLogin cores={coresApp} logo={logoFamiliarocha} />
       ) : (
         <div style={{ backgroundColor: coresApp.secundaria, minHeight: '100vh', fontFamily: 'system-ui, sans-serif' }}>
-          <BarraNavegacao userEmail={user.email} onLogout={handleLogout} />
+          <BarraNavegacao userEmail={user.email} onLogout={handleLogout} permissoes={permissoes} isSuperadmin={isSuperadmin} />
           <main style={{ paddingBottom: '40px' }}>
             <Suspense fallback={<Carregando />}>
             <Routes>
               <Route path="/" element={<Dashboard cores={coresApp} />} />
               <Route path="/login" element={<TelaLogin cores={coresApp} logo={logoFamiliarocha} />} />
-              <Route path="/financeiro" element={<PainelFinanceiro cores={coresApp} />} />
               <Route path="/perfis" element={<TelaPerfis cores={coresApp} />} />
-              <Route path="/tarefas" element={<TelaTarefas cores={coresApp} />} />
-              <Route path="/saude" element={<TelaSaude cores={coresApp} />} />
-              <Route path="/estudos" element={<TelaEstudos cores={coresApp} />} />
-              <Route path="/patrimonio" element={<TelaPatrimonio cores={coresApp} />} />
-              <Route path="/viagens" element={<TelaViagens cores={coresApp} />} />
-              <Route path="/espiritual" element={<TelaEspiritual cores={coresApp} />} />
-              <Route path="/admin" element={<AdminUsuarios cores={coresApp} />} />
+              {temPermissao('financeiro') && <Route path="/financeiro" element={<PainelFinanceiro cores={coresApp} />} />}
+              {temPermissao('tarefas') && <Route path="/tarefas" element={<TelaTarefas cores={coresApp} />} />}
+              {temPermissao('saude') && <Route path="/saude" element={<TelaSaude cores={coresApp} />} />}
+              {temPermissao('estudos') && <Route path="/estudos" element={<TelaEstudos cores={coresApp} />} />}
+              {temPermissao('patrimonio') && <Route path="/patrimonio" element={<TelaPatrimonio cores={coresApp} />} />}
+              {temPermissao('viagens') && <Route path="/viagens" element={<TelaViagens cores={coresApp} />} />}
+              {temPermissao('espiritual') && <Route path="/espiritual" element={<TelaEspiritual cores={coresApp} />} />}
+              {isSuperadmin && <Route path="/admin" element={<AdminUsuarios cores={coresApp} />} />}
             </Routes>
             </Suspense>
           </main>

@@ -1,6 +1,16 @@
 import { useState, useEffect } from 'react'
-import { Shield, Plus, Trash2, Key, Mail, User } from 'lucide-react'
+import { Shield, Plus, Trash2, Key, Mail, User, Settings, CheckSquare, Square } from 'lucide-react'
 import { API_BASE } from '../../config'
+
+const MODULOS = [
+  { key: 'financeiro', label: 'Financeiro' },
+  { key: 'tarefas', label: 'Tarefas' },
+  { key: 'saude', label: 'Saúde' },
+  { key: 'estudos', label: 'Estudos' },
+  { key: 'patrimonio', label: 'Patrimônio' },
+  { key: 'viagens', label: 'Viagens' },
+  { key: 'espiritual', label: 'Espiritual' },
+]
 
 export default function AdminUsuarios({ cores }) {
   const [usuarios, setUsuarios] = useState([])
@@ -15,6 +25,9 @@ export default function AdminUsuarios({ cores }) {
 
   const [resetUid, setResetUid] = useState(null)
   const [novaSenha, setNovaSenha] = useState('')
+
+  const [editPermUid, setEditPermUid] = useState(null)
+  const [editPerm, setEditPerm] = useState({})
 
   const buscarUsuarios = async () => {
     setCarregando(true)
@@ -101,6 +114,32 @@ export default function AdminUsuarios({ cores }) {
     }
   }
 
+  const abrirEditarPermissoes = (u) => {
+    setEditPermUid(u.uid)
+    setEditPerm({ ...(u.permissoes || {}) })
+  }
+
+  const togglePermissao = (key) => {
+    setEditPerm(prev => ({ ...prev, [key]: !prev[key] }))
+  }
+
+  const handleSalvarPermissoes = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/admin/usuarios/${editPermUid}/permissoes`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ permissoes: editPerm }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.erro || 'Erro ao salvar')
+      alert('Permissoes atualizadas!')
+      setEditPermUid(null); setEditPerm({})
+      buscarUsuarios()
+    } catch (err) {
+      alert(err.message)
+    }
+  }
+
   return (
     <div style={{ padding: '30px', maxWidth: '1000px', margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px', flexWrap: 'wrap', gap: '15px' }}>
@@ -134,6 +173,9 @@ export default function AdminUsuarios({ cores }) {
               {salvando ? 'Criando...' : 'Criar Usuário'}
             </button>
           </div>
+          <div style={{ width: '100%', fontSize: '12px', color: '#888', marginTop: '4px' }}>
+            Após criar, edite as permissões do usuário nos botões <Settings size={12} style={{verticalAlign:'middle'}}/> abaixo.
+          </div>
         </form>
       )}
 
@@ -153,6 +195,31 @@ export default function AdminUsuarios({ cores }) {
         </div>
       )}
 
+      {editPermUid && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }} onClick={() => { setEditPermUid(null); setEditPerm({}); }}>
+          <div onClick={e => e.stopPropagation()} style={{ backgroundColor: '#fff', padding: '25px', borderRadius: '12px', width: '90%', maxWidth: '450px', display: 'flex', flexDirection: 'column', gap: '15px', boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}>
+            <h3 style={{ margin: 0, color: cores?.texto, display: 'flex', alignItems: 'center', gap: '8px' }}><Settings size={20} color={cores?.dourado} /> Permissões de Acesso</h3>
+            <p style={{ margin: 0, fontSize: '13px', color: '#666' }}>
+              Marque os módulos que este usuário pode acessar:
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {MODULOS.map(m => (
+                <label key={m.key} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold', color: '#333' }}>
+                  <span onClick={() => togglePermissao(m.key)} style={{ display: 'flex', alignItems: 'center', color: editPerm[m.key] ? '#28a745' : '#ccc', cursor: 'pointer' }}>
+                    {editPerm[m.key] ? <CheckSquare size={20} /> : <Square size={20} />}
+                  </span>
+                  {m.label}
+                </label>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button type="button" onClick={() => { setEditPermUid(null); setEditPerm({}); }} style={{ padding: '10px 20px', border: '1px solid #ccc', borderRadius: '6px', background: '#fff', cursor: 'pointer' }}>Cancelar</button>
+              <button onClick={handleSalvarPermissoes} style={{ padding: '10px 20px', backgroundColor: cores?.dourado, color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Salvar Permissões</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {carregando ? (
         <div style={{ textAlign: 'center', padding: '40px', color: '#6c757d' }}>Carregando usuários...</div>
       ) : erro ? (
@@ -164,7 +231,7 @@ export default function AdminUsuarios({ cores }) {
               <tr>
                 <th style={{ padding: '15px', textAlign: 'left', color: '#495057' }}>Nome</th>
                 <th style={{ padding: '15px', textAlign: 'left', color: '#495057' }}>Email</th>
-                <th style={{ padding: '15px', textAlign: 'center', color: '#495057' }}>Criado em</th>
+                <th style={{ padding: '15px', textAlign: 'center', color: '#495057' }}>Módulos</th>
                 <th style={{ padding: '15px', textAlign: 'center', color: '#495057' }}>Ações</th>
               </tr>
             </thead>
@@ -178,23 +245,36 @@ export default function AdminUsuarios({ cores }) {
                       <div style={{ padding: '8px', backgroundColor: '#f0f0f0', borderRadius: '50%' }}><User size={18} color="#495057" /></div>
                       <div>
                         <strong style={{ color: '#333', display: 'block' }}>{u.nome}</strong>
-                        <span style={{ fontSize: '11px', color: '#888', padding: '2px 6px', backgroundColor: u.role === 'admin' ? '#d4edda' : '#e9ecef', borderRadius: '8px' }}>{u.role || 'usuario'}</span>
+                        <span style={{ fontSize: '11px', color: '#888', padding: '2px 6px', backgroundColor: u.isSuperadmin ? '#d4edda' : '#e9ecef', borderRadius: '8px' }}>{u.isSuperadmin ? 'superadmin' : 'usuario'}</span>
                       </div>
                     </td>
                     <td style={{ padding: '12px 15px', color: '#555' }}>
                       <Mail size={14} style={{ verticalAlign: 'middle', marginRight: '6px' }} />{u.email}
                     </td>
-                    <td style={{ padding: '12px 15px', textAlign: 'center', color: '#888', fontSize: '12px' }}>
-                      {u.criadoEm ? new Date(u.criadoEm).toLocaleDateString('pt-BR') : '-'}
+                    <td style={{ padding: '12px 15px', textAlign: 'center' }}>
+                      {u.isSuperadmin ? (
+                        <span style={{ fontSize: '11px', color: '#28a745', fontWeight: 'bold' }}>Todos</span>
+                      ) : (
+                        <span style={{ fontSize: '11px', color: '#888' }}>
+                          {MODULOS.filter(m => u.permissoes && u.permissoes[m.key]).length} de {MODULOS.length}
+                        </span>
+                      )}
                     </td>
                     <td style={{ padding: '12px 15px', textAlign: 'center' }}>
                       <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                        {!u.isSuperadmin && (
+                          <button onClick={() => abrirEditarPermissoes(u)} title="Permissões" style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', backgroundColor: '#e8f0fe', border: '1px solid #c4d7f2', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', color: '#1a73e8' }}>
+                            <Settings size={14} />
+                          </button>
+                        )}
                         <button onClick={() => { setResetUid(u.uid); setNovaSenha(''); }} title="Redefinir senha" style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', backgroundColor: '#fff3cd', border: '1px solid #ffeaa7', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', color: '#856404' }}>
-                          <Key size={14} /> Senha
+                          <Key size={14} />
                         </button>
-                        <button onClick={() => handleExcluir(u.uid, u.email)} title="Excluir usuário" style={{ padding: '6px 10px', backgroundColor: '#fff', border: '1px solid #f5c6cb', borderRadius: '6px', cursor: 'pointer', color: '#dc3545' }}>
-                          <Trash2 size={14} />
-                        </button>
+                        {!u.isSuperadmin && (
+                          <button onClick={() => handleExcluir(u.uid, u.email)} title="Excluir usuário" style={{ padding: '6px 10px', backgroundColor: '#fff', border: '1px solid #f5c6cb', borderRadius: '6px', cursor: 'pointer', color: '#dc3545' }}>
+                            <Trash2 size={14} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
