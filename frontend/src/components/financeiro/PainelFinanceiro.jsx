@@ -42,11 +42,13 @@ export default function PainelFinanceiro({ cores }) {
   const [isParcelado, setIsParcelado] = useState(false); const [qtdParcelas, setQtdParcelas] = useState('2');
   const [listaParcelas, setListaParcelas] = useState([]);
 
-  const mesAtual = new Date().toISOString().slice(0, 7);
-  const anoAtual = new Date().getFullYear().toString();
-  const [mesFiltro, setMesFiltro] = useState(mesAtual);
+  const anoAtual = new Date().getFullYear();
+  const mesNumAtual = new Date().getMonth() + 1;
+  const [anoFiltro, setAnoFiltro] = useState(anoAtual);
+  const [mesNumFiltro, setMesNumFiltro] = useState(mesNumAtual);
+  const mesFiltro = `${anoFiltro}-${String(mesNumFiltro).padStart(2, '0')}`;
 
-  const [anoContabil, setAnoContabil] = useState(anoAtual);
+  const [anoContabil, setAnoContabil] = useState(anoAtual.toString());
   const [mesContabil, setMesContabil] = useState('Todos');
   const [perfilContabil, setPerfilContabil] = useState('Todos');
 
@@ -178,9 +180,25 @@ export default function PainelFinanceiro({ cores }) {
           </div>
 
           {abaAtiva !== 'relatorios' && (
-            <div style={{ display: 'flex', alignItems: 'center', backgroundColor: cores?.branco, padding: '8px 15px', borderRadius: '8px', border: '1px solid #e0e0e0' }}>
-              <Calendar size={20} color={cores?.dourado} style={{ marginRight: '10px' }} />
-              <input type="month" value={mesFiltro} onChange={(e) => setMesFiltro(e.target.value)} style={{ border: 'none', outline: 'none', fontSize: '16px', color: cores?.texto, fontWeight: 'bold', backgroundColor: 'transparent' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: cores?.branco, padding: '6px 12px', borderRadius: '8px', border: '1px solid #e0e0e0' }}>
+              <Calendar size={18} color={cores?.dourado} />
+              <select value={anoFiltro} onChange={(e) => setAnoFiltro(parseInt(e.target.value))} style={{ border: 'none', outline: 'none', fontSize: '14px', fontWeight: 'bold', color: cores?.texto, backgroundColor: 'transparent', cursor: 'pointer' }}>
+                {[anoAtual - 1, anoAtual, anoAtual + 1, anoAtual + 2].map(a => <option key={a} value={a}>{a}</option>)}
+              </select>
+              <select value={mesNumFiltro} onChange={(e) => setMesNumFiltro(parseInt(e.target.value))} style={{ border: 'none', outline: 'none', fontSize: '14px', fontWeight: 'bold', color: cores?.texto, backgroundColor: 'transparent', cursor: 'pointer' }}>
+                <option value={1}>Janeiro</option>
+                <option value={2}>Fevereiro</option>
+                <option value={3}>Março</option>
+                <option value={4}>Abril</option>
+                <option value={5}>Maio</option>
+                <option value={6}>Junho</option>
+                <option value={7}>Julho</option>
+                <option value={8}>Agosto</option>
+                <option value={9}>Setembro</option>
+                <option value={10}>Outubro</option>
+                <option value={11}>Novembro</option>
+                <option value={12}>Dezembro</option>
+              </select>
             </div>
           )}
         </div>
