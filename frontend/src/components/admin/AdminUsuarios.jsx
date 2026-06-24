@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { Shield, Plus, Trash2, Key, Mail, User, Settings, CheckSquare, Square } from 'lucide-react'
+import { Shield, Plus, Trash2, Key, Mail, User, Settings, CheckSquare, Square, Pencil } from 'lucide-react'
 import { API_BASE } from '../../config'
 
 const MODULOS = [
   { key: 'financeiro', label: 'Financeiro' },
+  { key: 'perfis', label: 'Perfis' },
   { key: 'tarefas', label: 'Tarefas' },
   { key: 'saude', label: 'Saúde' },
   { key: 'estudos', label: 'Estudos' },
@@ -28,6 +29,10 @@ export default function AdminUsuarios({ cores }) {
 
   const [editPermUid, setEditPermUid] = useState(null)
   const [editPerm, setEditPerm] = useState({})
+
+  const [editUid, setEditUid] = useState(null)
+  const [editNome, setEditNome] = useState('')
+  const [editEmail, setEditEmail] = useState('')
 
   const buscarUsuarios = async () => {
     setCarregando(true)
@@ -117,6 +122,29 @@ export default function AdminUsuarios({ cores }) {
   const abrirEditarPermissoes = (u) => {
     setEditPermUid(u.uid)
     setEditPerm({ ...(u.permissoes || {}) })
+  }
+
+  const abrirEditarUsuario = (u) => {
+    setEditUid(u.uid)
+    setEditNome(u.nome || '')
+    setEditEmail(u.email || '')
+  }
+
+  const handleSalvarEdicao = async (e) => {
+    e.preventDefault()
+    try {
+      const res = await fetch(`${API_BASE}/admin/usuarios/${editUid}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome: editNome, email: editEmail }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.erro || 'Erro ao atualizar')
+      setEditUid(null); setEditNome(''); setEditEmail('')
+      buscarUsuarios()
+    } catch (err) {
+      alert(err.message)
+    }
   }
 
   const togglePermissao = (key) => {
@@ -220,6 +248,26 @@ export default function AdminUsuarios({ cores }) {
         </div>
       )}
 
+      {editUid && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }} onClick={() => { setEditUid(null); setEditNome(''); setEditEmail(''); }}>
+          <form onSubmit={handleSalvarEdicao} onClick={e => e.stopPropagation()} style={{ backgroundColor: '#fff', padding: '25px', borderRadius: '12px', width: '90%', maxWidth: '450px', display: 'flex', flexDirection: 'column', gap: '15px', boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}>
+            <h3 style={{ margin: 0, color: cores?.texto, display: 'flex', alignItems: 'center', gap: '8px' }}><Pencil size={20} color={cores?.dourado} /> Editar Usuário</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              <label style={{ fontSize: '14px', fontWeight: 'bold' }}>Nome</label>
+              <input type="text" value={editNome} onChange={e => setEditNome(e.target.value)} required style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              <label style={{ fontSize: '14px', fontWeight: 'bold' }}>Email</label>
+              <input type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)} required style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
+            </div>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button type="button" onClick={() => { setEditUid(null); setEditNome(''); setEditEmail(''); }} style={{ padding: '10px 20px', border: '1px solid #ccc', borderRadius: '6px', background: '#fff', cursor: 'pointer' }}>Cancelar</button>
+              <button type="submit" style={{ padding: '10px 20px', backgroundColor: cores?.dourado, color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Salvar</button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {carregando ? (
         <div style={{ textAlign: 'center', padding: '40px', color: '#6c757d' }}>Carregando usuários...</div>
       ) : erro ? (
@@ -262,6 +310,11 @@ export default function AdminUsuarios({ cores }) {
                     </td>
                     <td style={{ padding: '12px 15px', textAlign: 'center' }}>
                       <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                        {!u.isSuperadmin && (
+                          <button onClick={() => abrirEditarUsuario(u)} title="Editar" style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', backgroundColor: '#e8f5e9', border: '1px solid #b7dfb9', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', color: '#28a745' }}>
+                            <Pencil size={14} />
+                          </button>
+                        )}
                         {!u.isSuperadmin && (
                           <button onClick={() => abrirEditarPermissoes(u)} title="Permissões" style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', backgroundColor: '#e8f0fe', border: '1px solid #c4d7f2', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', color: '#1a73e8' }}>
                             <Settings size={14} />

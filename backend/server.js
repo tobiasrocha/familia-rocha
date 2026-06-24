@@ -996,7 +996,7 @@ app.post('/api/upload-saude', upload.single('documento'), async (req, res) => {
 
 const SUPERADMIN_EMAIL = 'tobiasrocha@gmail.com';
 
-const MODULOS = ['financeiro', 'tarefas', 'saude', 'estudos', 'patrimonio', 'viagens', 'espiritual'];
+const MODULOS = ['financeiro', 'perfis', 'tarefas', 'saude', 'estudos', 'patrimonio', 'viagens', 'espiritual'];
 
 const permissoesPadrao = () => {
   const p = {};
@@ -1066,6 +1066,38 @@ app.post('/api/admin/usuarios', async (req, res) => {
       return res.status(409).json({ erro: 'Este email ja esta cadastrado.' });
     }
     res.status(500).json({ erro: 'Falha ao criar usuario.', detalhes: error.message });
+  }
+});
+
+// Atualiza dados do usuario (nome, email)
+app.put('/api/admin/usuarios/:uid', async (req, res) => {
+  try {
+    const { uid } = req.params;
+    const { nome, email } = req.body;
+
+    const updates = {};
+    if (nome) updates.displayName = nome;
+    if (email) updates.email = email;
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ erro: 'Nenhum campo para atualizar.' });
+    }
+
+    const userRecord = await authAdmin.updateUser(uid, updates);
+
+    const firestoreUpdates = {};
+    if (nome) firestoreUpdates.nome = nome;
+    if (email) firestoreUpdates.email = email;
+    await firestoreDb.collection('usuarios').doc(uid).set(firestoreUpdates, { merge: true });
+
+    console.log(`[ADMIN] Usuario atualizado: ${uid}`);
+    res.json({ uid: userRecord.uid, email: userRecord.email, nome: userRecord.displayName || nome });
+  } catch (error) {
+    console.error('[ADMIN] Erro ao atualizar usuario:', error);
+    if (error.code === 'auth/email-already-exists') {
+      return res.status(409).json({ erro: 'Este email ja esta em uso.' });
+    }
+    res.status(500).json({ erro: 'Falha ao atualizar usuario.', detalhes: error.message });
   }
 });
 

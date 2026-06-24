@@ -5,8 +5,12 @@ import { db } from '../../firebaseConfig';
 import { useFirestore } from '../../hooks/useFirestore';
 import { Users, User, PawPrint, Baby, Calendar, Droplet, AlertTriangle, Pencil, Trash2, Plus, Mail, Phone } from 'lucide-react';
 
-export default function TelaPerfis({ cores }) {
-  const { dados: perfis, carregando, erro, recarregar } = useFirestore('perfis');
+export default function TelaPerfis({ cores, userUid, isSuperadmin }) {
+  const { dados: todosPerfis, carregando, erro, recarregar } = useFirestore('perfis');
+
+  const perfis = isSuperadmin
+    ? todosPerfis
+    : todosPerfis.filter(p => p.tipo === 'Pet' || p.userId === userUid);
   
   const [exibirForm, setExibirForm] = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -33,11 +37,15 @@ export default function TelaPerfis({ cores }) {
     e.preventDefault();
     setSalvando(true);
     try {
-      const dadosDoPerfil = { nome, tipo, dataNascimento, tipoSanguineo, alergias, email, telefone };
+      const dadosDoPerfil = {
+        nome, tipo, dataNascimento, tipoSanguineo, alergias, email, telefone,
+        criadoEm: new Date().toISOString()
+      };
       if (idEditando) {
         await updateDoc(doc(db, 'perfis', idEditando), { ...dadosDoPerfil, atualizadoEm: new Date().toISOString() });
       } else {
-        await addDoc(collection(db, 'perfis'), { ...dadosDoPerfil, criadoEm: new Date().toISOString() });
+        if (tipo !== 'Pet' && userUid) dadosDoPerfil.userId = userUid;
+        await addDoc(collection(db, 'perfis'), dadosDoPerfil);
       }
       resetarFormulario(); recarregar();
     } catch (e) {

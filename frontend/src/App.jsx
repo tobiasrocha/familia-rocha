@@ -29,7 +29,7 @@ const Carregando = () => <div style={{ display: 'flex', justifyContent: 'center'
 const todosMenuItems = [
   { to: '/', label: 'Dashboard', icon: <LayoutDashboard size={16} />, sempreVisivel: true },
   { to: '/financeiro', label: 'Financeiro', icon: <Wallet size={16} />, modulo: 'financeiro' },
-  { to: '/perfis', label: 'Perfis', icon: <Users size={16} />, sempreVisivel: true },
+  { to: '/perfis', label: 'Perfis', icon: <Users size={16} />, modulo: 'perfis' },
   { to: '/tarefas', label: 'Tarefas', icon: <ClipboardList size={16} />, modulo: 'tarefas' },
   { to: '/saude', label: 'Saúde', icon: <HeartPulse size={16} />, modulo: 'saude' },
   { to: '/estudos', label: 'Estudos', icon: <BookOpen size={16} />, modulo: 'estudos' },
@@ -128,7 +128,7 @@ export default function App() {
             <Routes>
               <Route path="/" element={<Dashboard cores={coresApp} />} />
               <Route path="/login" element={<TelaLogin cores={coresApp} logo={logoFamiliarocha} />} />
-              <Route path="/perfis" element={<TelaPerfis cores={coresApp} />} />
+              <Route path="/perfis" element={<TelaPerfis cores={coresApp} userUid={user?.uid} isSuperadmin={isSuperadmin} />} />
               {temPermissao('financeiro') && <Route path="/financeiro" element={<PainelFinanceiro cores={coresApp} />} />}
               {temPermissao('tarefas') && <Route path="/tarefas" element={<TelaTarefas cores={coresApp} />} />}
               {temPermissao('saude') && <Route path="/saude" element={<TelaSaude cores={coresApp} />} />}
