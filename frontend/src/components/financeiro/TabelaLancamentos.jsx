@@ -5,7 +5,7 @@ export default function TabelaLancamentos({ dadosMesFiltro, contasBancarias, cor
   return (
     <div style={{ backgroundColor: cores?.branco, borderRadius: '12px', overflowX: 'auto' }}>
       <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse', minWidth: '800px' }}>
-        <thead style={{ backgroundColor: '#f8f9fa', borderBottom: '2px solid #e9ecef' }}><tr><th style={{padding:'15px'}}>Data</th><th style={{padding:'15px'}}>Descricao</th><th style={{padding:'15px'}}>Responsavel/Banco</th><th style={{padding:'15px'}}>Valor</th><th style={{padding:'15px', textAlign:'center'}}>Status</th><th style={{padding:'15px', textAlign:'center'}}>Acoes</th></tr></thead>
+        <thead style={{ backgroundColor: '#f8f9fa', borderBottom: '2px solid #e9ecef' }}><tr><th style={{padding:'15px'}}>Data</th><th style={{padding:'15px'}}>Descrição</th><th style={{padding:'15px'}}>Responsável/Banco</th><th style={{padding:'15px'}}>Valor</th><th style={{padding:'15px', textAlign:'center'}}>Status</th><th style={{padding:'15px', textAlign:'center'}}>Ações</th></tr></thead>
         <tbody>
           {dadosMesFiltro.sort((a, b) => new Date(a.dataVencimento) - new Date(b.dataVencimento)).map(item => {
             const nomeBanco = contasBancarias.find(c => c.id === item.contaId)?.nome || 'Sem Banco';

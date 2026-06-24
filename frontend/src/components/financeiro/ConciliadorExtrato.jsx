@@ -72,13 +72,13 @@ export default function ConciliadorExtrato({ cores, onBaixas }) {
   return (
     <div style={{ backgroundColor: cores?.branco, padding: '20px', borderRadius: '12px', boxShadow: '0 2px 10px rgba(0,0,0,0.04)', marginBottom: '20px' }}>
       <h4 style={{ margin: '0 0 15px 0', display: 'flex', alignItems: 'center', gap: '8px', color: cores?.texto }}>
-        <FileSearch size={20} color={cores?.dourado} /> Conciliacao de Extrato
+        <FileSearch size={20} color={cores?.dourado} /> Conciliação de Extrato
       </h4>
 
       <div style={{ backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '8px', border: '1px dashed #ccc', display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
         <UploadCloud size={28} color={cores?.dourado} />
         <div style={{ flex: 1 }}>
-          <span style={{ display: 'block', fontWeight: 'bold', fontSize: '14px' }}>Upload de Extrato Bancario (PDF)</span>
+          <span style={{ display: 'block', fontWeight: 'bold', fontSize: '14px' }}>Upload de Extrato Bancário (PDF)</span>
           <span style={{ display: 'block', fontSize: '12px', color: '#666' }}>O sistema vai ler o extrato e encontrar contas pendentes com o mesmo valor.</span>
         </div>
         <input type="file" accept=".pdf,image/*" onChange={handleUpload} disabled={enviando} style={{ display: 'none' }} id="fileExtrato" />
@@ -112,11 +112,11 @@ export default function ConciliadorExtrato({ cores, onBaixas }) {
               <thead>
                 <tr style={{ borderBottom: '2px solid #eee', textAlign: 'left' }}>
                   <th style={{ padding: '8px', width: '30px' }}><input type="checkbox" onChange={selecionarTodos} checked={selecionados.size === resultado.matches.length && resultado.matches.length > 0} /></th>
-                  <th style={{ padding: '8px' }}>Descricao no Sistema</th>
+                  <th style={{ padding: '8px' }}>Descrição no Sistema</th>
                   <th style={{ padding: '8px' }}>Valor</th>
                   <th style={{ padding: '8px' }}>Vencimento</th>
-                  <th style={{ padding: '8px' }}>Descricao no Extrato</th>
-                  <th style={{ padding: '8px', textAlign: 'center' }}>Confianca</th>
+                  <th style={{ padding: '8px' }}>Descrição no Extrato</th>
+                  <th style={{ padding: '8px', textAlign: 'center' }}>Confiança</th>
                 </tr>
               </thead>
               <tbody>
@@ -131,7 +131,7 @@ export default function ConciliadorExtrato({ cores, onBaixas }) {
                   </tr>
                 ))}
                 {resultado.matches.length === 0 && (
-                  <tr><td colSpan={6} style={{ padding: '20px', textAlign: 'center', color: '#999' }}>Nenhuma correspondencia encontrada.</td></tr>
+                  <tr><td colSpan={6} style={{ padding: '20px', textAlign: 'center', color: '#999' }}>Nenhuma correspondência encontrada.</td></tr>
                 )}
               </tbody>
             </table>

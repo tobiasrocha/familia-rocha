@@ -17,7 +17,7 @@ export default function Dashboard({ cores }) {
   const { dados: estudos, carregando: carregandoEst } = useFirestore('estudos');
 
   if (carregandoFin || carregandoTar || carregandoSau || carregandoPat || carregandoEst) {
-    return <div style={{ padding: '40px', textAlign: 'center', color: cores?.dourado, fontWeight: 'bold' }}>A calibrar a Torre de Controle...</div>;
+    return <div style={{ padding: '40px', textAlign: 'center', color: cores?.dourado, fontWeight: 'bold' }}>Calibrando a Torre de Controle...</div>;
   }
 
   const hojeStr = new Date().toISOString().slice(0, 10);

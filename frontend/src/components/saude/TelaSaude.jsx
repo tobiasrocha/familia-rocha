@@ -29,7 +29,7 @@ export default function TelaSaude({ cores }) {
       const res = await fetch('/api/disparar-alertas-saude', { method: 'POST' });
       const dados = await res.json();
       if (dados.ok) {
-        alert(`📬 Alertas de Saude enviados!\n\n` +
+        alert(`📬 Alertas de Saúde enviados!\n\n` +
           `📊 Eventos escaneados: ${dados.eventosEscaneados}\n` +
           `⏰ Eventos no prazo: ${dados.eventosNoPrazo}\n` +
           `📧 Emails: ${dados.emailsEnviados} enviados, ${dados.emailsFalhas} falhas\n` +
@@ -107,7 +107,7 @@ export default function TelaSaude({ cores }) {
     }
   };
 
-  if (carregandoRegistros || carregandoPerfis) return <div style={{ padding: '40px', textAlign: 'center', color: cores?.dourado }}>A sincronizar Prontuários...</div>;
+  if (carregandoRegistros || carregandoPerfis) return <div style={{ padding: '40px', textAlign: 'center', color: cores?.dourado }}>Sincronizando Prontuários...</div>;
 
   const hoje = new Date().toISOString().slice(0, 10);
   const proximosEventos = registros.filter(r => r.dataEvento >= hoje).sort((a, b) => new Date(a.dataEvento) - new Date(b.dataEvento));
@@ -147,7 +147,7 @@ export default function TelaSaude({ cores }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
               <input type="file" accept="image/*,application/pdf" onChange={handleUploadArquivo} disabled={enviandoAnexo} style={{ padding: '8px', backgroundColor: '#fff', borderRadius: '6px', border: '1px solid #ddd', flex: '1 1 250px' }} />
               
-              {enviandoAnexo && <span style={{ color: '#0056b3', fontSize: '14px', fontWeight: 'bold' }}>Fazendo upload...</span>}
+              {enviandoAnexo && <span style={{ color: '#0056b3', fontSize: '14px', fontWeight: 'bold' }}>Enviando...</span>}
               
               {linkAnexo && !enviandoAnexo && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#28a745', fontWeight: 'bold', fontSize: '14px' }}>
@@ -161,7 +161,7 @@ export default function TelaSaude({ cores }) {
 
           <div style={{ width: '100%', display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
             <button type="submit" disabled={salvando || enviandoAnexo} style={{ padding: '12px 25px', backgroundColor: cores?.dourado, color: cores?.branco, border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: (salvando || enviandoAnexo) ? 'not-allowed' : 'pointer' }}>
-              {salvando ? 'A Gravar...' : 'Salvar Prontuário'}
+              {salvando ? 'Salvando...' : 'Salvar Prontuário'}
             </button>
           </div>
         </form>

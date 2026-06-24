@@ -46,8 +46,8 @@ export default function PainelFinanceiro({ cores }) {
   const [perfilContabil, setPerfilContabil] = useState('Todos');
 
   const hoje = new Date().toISOString().slice(0, 10);
-  const categoriesDespesa = ['Alimentacao', 'Moradia', 'Transporte', 'Educacao', 'Saude', 'Lazer', 'Igreja/Celula', 'Impostos', 'Outros'];
-  const categoriasReceita = ['Salario', 'Servicos', 'Investimentos', 'Presente', 'Outros'];
+  const categoriesDespesa = ['Alimentação', 'Moradia', 'Transporte', 'Educação', 'Saúde', 'Lazer', 'Igreja/Célula', 'Impostos', 'Outros'];
+  const categoriasReceita = ['Salário', 'Serviços', 'Investimentos', 'Presente', 'Outros'];
 
   const { extraindo: extraindoDados, erro: erroOcr, dadosExtraidos, extrairDados } = useUploadOcr();
 
@@ -103,7 +103,7 @@ export default function PainelFinanceiro({ cores }) {
       } else {
         alert("Erro: " + (dados.erro || 'Falha desconhecida'));
       }
-    } catch (e) { alert("Falha na execucao. Verifique se o backend esta rodando."); } finally { setExecutandoAlertas(false); }
+    } catch (e) { alert("Falha na execução. Verifique se o backend está rodando."); } finally { setExecutandoAlertas(false); }
   };
 
   const handleGerarCronogramaParcelas = () => {
@@ -163,14 +163,14 @@ export default function PainelFinanceiro({ cores }) {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           <button type="button" onClick={handleDispararAlertas} disabled={executandoAlertas} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px', backgroundColor: '#dc3545', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
-            <Bell size={18} /> {executandoAlertas ? 'A Enviar...' : 'Testar Alertas'}
+            <Bell size={18} /> {executandoAlertas ? 'Enviando...' : 'Testar Alertas'}
           </button>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '5px', backgroundColor: cores?.branco, padding: '5px', borderRadius: '10px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
-            <button type="button" onClick={() => setAbaAtiva('dashboard')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'dashboard' ? cores?.dourado : 'transparent', color: abaAtiva === 'dashboard' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Metricas</button>
+            <button type="button" onClick={() => setAbaAtiva('dashboard')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'dashboard' ? cores?.dourado : 'transparent', color: abaAtiva === 'dashboard' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Métricas</button>
             <button type="button" onClick={() => setAbaAtiva('contas')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'contas' ? cores?.dourado : 'transparent', color: abaAtiva === 'contas' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Bancos</button>
-            <button type="button" onClick={() => setAbaAtiva('lancamentos')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'lancamentos' ? cores?.dourado : 'transparent', color: abaAtiva === 'lancamentos' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Lancamentos</button>
-            <button type="button" onClick={() => setAbaAtiva('relatorios')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'relatorios' ? cores?.primaria : 'transparent', color: abaAtiva === 'relatorios' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}><FileText size={16} style={{verticalAlign:'middle'}}/> Contabil</button>
+            <button type="button" onClick={() => setAbaAtiva('lancamentos')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'lancamentos' ? cores?.dourado : 'transparent', color: abaAtiva === 'lancamentos' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Lançamentos</button>
+            <button type="button" onClick={() => setAbaAtiva('relatorios')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'relatorios' ? cores?.primaria : 'transparent', color: abaAtiva === 'relatorios' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}><FileText size={16} style={{verticalAlign:'middle'}}/> Contábil</button>
           </div>
 
           {abaAtiva !== 'relatorios' && (
@@ -209,7 +209,7 @@ export default function PainelFinanceiro({ cores }) {
 
       {abaAtiva === 'lancamentos' && (
         <>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}><button type="button" onClick={() => { if (exibirForm) resetarFormulario(); else setExibirForm(true); }} style={{ padding: '10px 20px', backgroundColor: exibirForm ? '#6c757d' : cores?.dourado, color: cores?.branco, border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>{exibirForm ? 'Cancelar Edicao' : '+ Nova Transacao'}</button></div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}><button type="button" onClick={() => { if (exibirForm) resetarFormulario(); else setExibirForm(true); }} style={{ padding: '10px 20px', backgroundColor: exibirForm ? '#6c757d' : cores?.dourado, color: cores?.branco, border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>{exibirForm ? 'Cancelar Edição' : '+ Nova Transação'}</button></div>
           {exibirForm && (
             <FormularioLancamento
               cores={cores}

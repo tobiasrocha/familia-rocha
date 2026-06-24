@@ -20,13 +20,13 @@ export default function TelaViagens({ cores }) {
   const [dataPartida, setDataPartida] = useState('');
   const [dataRetorno, setDataRetorno] = useState('');
   const [orcamento, setOrcamento] = useState('');
-  const [status, setStatus] = useState('Planeada'); // Planeada, Confirmada, Concluída
+  const [status, setStatus] = useState('Planejada'); // Planejada, Confirmada, Concluída
   const [roteiro, setRoteiro] = useState('');
   const [checklist, setChecklist] = useState('');
 
   const resetarFormulario = () => {
     setDestino(''); setDataPartida(''); setDataRetorno(''); setOrcamento('');
-    setStatus('Planeada'); setRoteiro(''); setChecklist('');
+    setStatus('Planejada'); setRoteiro(''); setChecklist('');
     setIdEditando(null); setExibirForm(false);
   };
 
@@ -55,7 +55,7 @@ export default function TelaViagens({ cores }) {
       recarregar();
     } catch (err) {
       console.error("Erro ao guardar viagem:", err);
-      alert("Falha ao registar a viagem.");
+      alert("Falha ao registrar a viagem.");
     } finally {
       setSalvando(false);
     }
@@ -75,7 +75,7 @@ export default function TelaViagens({ cores }) {
       await deleteDoc(doc(db, 'viagens', id));
       recarregar();
     } catch (err) {
-      alert("Erro ao remover o registo.");
+      alert("Erro ao remover o registro.");
     }
   };
 
@@ -88,13 +88,13 @@ export default function TelaViagens({ cores }) {
       {/* CABEÇALHO */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', flexWrap: 'wrap', gap: '15px' }}>
         <h2 style={{ color: cores?.texto, margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Compass size={28} color={cores?.dourado} /> Planeamento de Viagens
+          <Compass size={28} color={cores?.dourado} /> Planejamento de Viagens
         </h2>
         <button 
           onClick={() => { if (exibirForm) resetarFormulario(); else setExibirForm(true); }}
           style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', cursor: 'pointer', backgroundColor: exibirForm ? '#6c757d' : cores?.dourado, color: cores?.branco, border: 'none', borderRadius: '8px', fontWeight: 'bold' }}
         >
-          {exibirForm ? 'Cancelar' : <><Plus size={18} /> Planear Viagem</>}
+          {exibirForm ? 'Cancelar' : <><Plus size={18} /> Planejar Viagem</>}
         </button>
       </div>
 
@@ -125,7 +125,7 @@ export default function TelaViagens({ cores }) {
           <div style={{ flex: '1 1 150px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
             <label style={{ fontSize: '14px', fontWeight: 'bold' }}>Status</label>
             <select value={status} onChange={e => setStatus(e.target.value)} style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc', backgroundColor: '#fff' }}>
-              <option value="Planeada">Planeada</option>
+              <option value="Planejada">Planejada</option>
               <option value="Confirmada">Confirmada / Reservas Feitas</option>
               <option value="Concluída">Concluída</option>
             </select>
@@ -144,7 +144,7 @@ export default function TelaViagens({ cores }) {
 
           <div style={{ width: '100%', display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
             <button type="submit" disabled={salvando} style={{ padding: '12px 25px', backgroundColor: cores?.dourado, color: cores?.branco, border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
-              {salvando ? 'A Gravar...' : 'Guardar Plano'}
+              {salvando ? 'Salvando...' : 'Guardar Plano'}
             </button>
           </div>
         </form>
@@ -154,9 +154,9 @@ export default function TelaViagens({ cores }) {
       {!viagemSelecionada ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '25px' }}>
           {carregando ? (
-            <div style={{ color: '#6c757d' }}>A carregar cronogramas de viagem...</div>
+            <div style={{ color: '#6c757d' }}>Carregando cronogramas de viagem...</div>
           ) : viagens.length === 0 ? (
-            <div style={{ color: '#6c757d', gridColumn: '1/-1', backgroundColor: cores?.branco, padding: '20px', borderRadius: '12px', textAlign: 'center' }}>Nenhuma viagem planeada no horizonte.</div>
+            <div style={{ color: '#6c757d', gridColumn: '1/-1', backgroundColor: cores?.branco, padding: '20px', borderRadius: '12px', textAlign: 'center' }}>Nenhuma viagem planejada no horizonte.</div>
           ) : (
             viagens.sort((a,b) => new Date(a.dataPartida) - new Date(b.dataPartida)).map(viagem => (
               <div key={viagem.id} style={{ backgroundColor: cores?.branco, borderRadius: '12px', padding: '20px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', borderTop: `4px solid ${viagem.status === 'Concluída' ? '#28a745' : (viagem.status === 'Confirmada' ? '#17a2b8' : cores?.dourado)}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>

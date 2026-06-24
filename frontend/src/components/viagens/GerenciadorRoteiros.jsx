@@ -278,7 +278,7 @@ export default function GerenciadorRoteiros({ viagemId, cores }) {
       )}
 
       {carregando ? (
-        <p style={{ color: '#6c757d' }}>A carregar roteiros...</p>
+        <p style={{ color: '#6c757d' }}>Carregando roteiros...</p>
       ) : roteiros.length === 0 ? (
         <p style={{ color: '#6c757d', fontStyle: 'italic' }}>Nenhum local adicionado ainda</p>
       ) : (

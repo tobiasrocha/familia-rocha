@@ -47,7 +47,7 @@ export default function TelaTarefas({ cores }) {
       recarregarTarefas();
     } catch (err) {
       console.error("Erro ao salvar tarefa:", err);
-      alert("Falha ao registar a tarefa.");
+      alert("Falha ao registrar a tarefa.");
     } finally {
       setSalvando(false);
     }
@@ -72,7 +72,7 @@ export default function TelaTarefas({ cores }) {
       await deleteDoc(doc(db, 'tarefas', id));
       recarregarTarefas();
     } catch (err) {
-      alert("Erro ao eliminar o registo.");
+      alert("Erro ao eliminar o registro.");
     }
   };
 
@@ -90,7 +90,7 @@ export default function TelaTarefas({ cores }) {
   };
 
   if (carregandoTarefas || carregandoPerfis) {
-    return <div style={{ padding: '40px', textAlign: 'center', color: cores?.dourado }}>A carregar a Engenharia de Rotinas...</div>;
+    return <div style={{ padding: '40px', textAlign: 'center', color: cores?.dourado }}>Carregando a Engenharia de Rotinas...</div>;
   }
 
   const colunas = [
@@ -153,7 +153,7 @@ export default function TelaTarefas({ cores }) {
 
           <div style={{ width: '100%', display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
             <button type="submit" disabled={salvando} style={{ padding: '12px 25px', backgroundColor: cores?.dourado, color: cores?.branco, border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: salvando ? 'not-allowed' : 'pointer' }}>
-              {salvando ? 'A processar...' : 'Alocar no Quadro'}
+              {salvando ? 'Processando...' : 'Alocar no Quadro'}
             </button>
           </div>
         </form>

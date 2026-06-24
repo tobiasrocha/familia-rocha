@@ -118,7 +118,7 @@ export default function TelaEstudos({ cores }) {
   };
 
   if (carregandoSessoes || carregandoPerfis || carregandoDisc) {
-    return <div style={{ padding: '40px', textAlign: 'center', color: cores?.dourado }}>A compilar métricas de aprendizado...</div>;
+    return <div style={{ padding: '40px', textAlign: 'center', color: cores?.dourado }}>Compilando métricas de aprendizado...</div>;
   }
 
   return (

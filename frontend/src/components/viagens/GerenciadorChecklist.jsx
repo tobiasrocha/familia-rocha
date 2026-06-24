@@ -119,7 +119,7 @@ export default function GerenciadorChecklist({ viagemId, cores }) {
       </form>
 
       {carregando ? (
-        <p style={{ color: '#6c757d' }}>A carregar checklist...</p>
+        <p style={{ color: '#6c757d' }}>Carregando checklist...</p>
       ) : itens.length === 0 ? (
         <p style={{ color: '#6c757d', fontStyle: 'italic' }}>Nenhum item no checklist ainda</p>
       ) : (

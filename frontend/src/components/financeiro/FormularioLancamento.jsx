@@ -22,12 +22,12 @@ export default function FormularioLancamento({
         <UploadCloud size={28} color="#0056b3" />
         <div style={{ flex: 1 }}>
           <span style={{ display: 'block', fontWeight: 'bold', color: '#0056b3', fontSize: '14px' }}>Leitura Inteligente (GCP) & Drive</span>
-          <span style={{ display: 'block', fontSize: '12px', color: '#666' }}>Faca upload do boleto/recibo. A IA preenchera os dados e guardara o ficheiro na nuvem.</span>
+          <span style={{ display: 'block', fontSize: '12px', color: '#666' }}>Faça upload do boleto/recibo. A IA preencherá os dados e guardará o arquivo na nuvem.</span>
         </div>
         <div>
           <input type="file" onChange={onUploadDocumento} style={{ display: 'none' }} id="fileUploadOcr" />
           <label htmlFor="fileUploadOcr" style={{ cursor: 'pointer', padding: '8px 15px', backgroundColor: '#0056b3', color: '#fff', borderRadius: '6px', fontSize: '13px', fontWeight: 'bold' }}>
-            {extraindoDados ? 'A extrair dados...' : 'Selecionar Arquivo'}
+            {extraindoDados ? 'Extraindo dados...' : 'Selecionar Arquivo'}
           </label>
         </div>
       </div>
@@ -38,13 +38,13 @@ export default function FormularioLancamento({
       )}
 
       <div style={{ flex: '1 1 100%', display: 'flex', gap: '15px', flexWrap: 'wrap', paddingBottom: '15px', borderBottom: '1px solid #eee', marginBottom: '10px' }}>
-        <div style={{ flex: '1 1 250px' }}><h4 style={{ margin: '0 0 10px 0', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}><User size={18}/> Responsavel</h4><select value={perfilTransacaoId} onChange={e => setPerfilTransacaoId(e.target.value)} required style={{ padding: '12px', borderRadius: '6px', border: '2px solid #C5A059', width: '100%', fontWeight: 'bold' }}><option value="" disabled>--- Quem pagou/recebeu? ---</option>{perfis.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}</select></div>
+        <div style={{ flex: '1 1 250px' }}><h4 style={{ margin: '0 0 10px 0', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}><User size={18}/> Responsável</h4><select value={perfilTransacaoId} onChange={e => setPerfilTransacaoId(e.target.value)} required style={{ padding: '12px', borderRadius: '6px', border: '2px solid #C5A059', width: '100%', fontWeight: 'bold' }}><option value="" disabled>--- Quem pagou/recebeu? ---</option>{perfis.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}</select></div>
         <div style={{ flex: '1 1 250px' }}><h4 style={{ margin: '0 0 10px 0', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}><ArrowRightLeft size={18}/> Conta Banco</h4><select value={contaIdSelecionada} onChange={e => setContaIdSelecionada(e.target.value)} required style={{ padding: '12px', borderRadius: '6px', border: '2px solid #2c3e50', width: '100%', fontWeight: 'bold' }}><option value="" disabled>--- Selecione o Banco ---</option>{contasBancarias.map(c => <option key={c.id} value={c.id}>{c.nome} ({obterNomePerfil(c.perfilId)})</option>)}</select></div>
       </div>
       <div style={{ flex: '1 1 150px' }}><label>Vencimento</label><input type="date" value={dataVencimento} onChange={e=>setDataVencimento(e.target.value)} required style={{ width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }} /></div>
       <div style={{ flex: '1 1 150px' }}><label>Tipo</label><select value={tipo} onChange={e=>{setTipo(e.target.value); setCategoria(e.target.value==='Despesa'?'Moradia':'Salario');}} style={{ width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }}><option value="Despesa">Despesa</option><option value="Receita">Receita</option></select></div>
       <div style={{ flex: '1 1 150px' }}><label>Categoria</label><select value={categoria} onChange={e=>setCategoria(e.target.value)} style={{ width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }}>{(tipo==='Despesa'?categoriesDespesa:categoriasReceita).map(c=><option key={c} value={c}>{c}</option>)}</select></div>
-      <div style={{ flex: '2 1 200px' }}><label>Descricao</label><input type="text" value={descricao} onChange={e=>setDescricao(e.target.value)} required style={{ width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }} /></div>
+      <div style={{ flex: '2 1 200px' }}><label>Descrição</label><input type="text" value={descricao} onChange={e=>setDescricao(e.target.value)} required style={{ width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }} /></div>
       <div style={{ flex: '1 1 150px' }}><label>Valor Total (R$)</label><input type="number" step="0.01" value={valor} onChange={e=>setValor(e.target.value)} required style={{ width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }} /></div>
 
       {tipo === 'Despesa' && !idEditando && (
@@ -59,7 +59,7 @@ export default function FormularioLancamento({
                   <label style={{ fontSize: '13px' }}>N de Parcelas:</label>
                   <input type="number" min="2" value={qtdParcelas} onChange={e => setQtdParcelas(e.target.value)} style={{ padding: '8px', width: '90px', borderRadius: '6px', border: '1px solid #ccc' }} />
                 </div>
-                <button type="button" onClick={handleGerarCronogramaParcelas} style={{ marginTop: '22px', padding: '8px 15px', backgroundColor: '#5b2d86', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Gerar Previsao</button>
+                <button type="button" onClick={handleGerarCronogramaParcelas} style={{ marginTop: '22px', padding: '8px 15px', backgroundColor: '#5b2d86', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Gerar Previsão</button>
               </div>
 
               {listaParcelas.length > 0 && (
@@ -88,7 +88,7 @@ export default function FormularioLancamento({
           <a href={linkArquivo} target="_blank" rel="noopener noreferrer" style={{ color: '#0056b3', fontWeight: 'bold' }}>📄 Visualizar Documento Anexado no Drive</a>
         </div>
       )}
-      <div style={{ width: '100%', textAlign: 'right' }}><button type="submit" disabled={salvando || extraindoDados} style={{ padding: '12px 25px', backgroundColor: cores?.dourado, color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>{salvando ? 'Salvando...' : 'Registar Transacao'}</button></div>
+      <div style={{ width: '100%', textAlign: 'right' }}><button type="submit" disabled={salvando || extraindoDados} style={{ padding: '12px 25px', backgroundColor: cores?.dourado, color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>{salvando ? 'Salvando...' : 'Registrar Transação'}</button></div>
     </form>
   );
 }

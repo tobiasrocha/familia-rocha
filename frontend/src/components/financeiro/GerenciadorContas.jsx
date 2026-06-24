@@ -31,7 +31,7 @@ export default function GerenciadorContas({ cores, contasBancarias, perfis, calc
   };
 
   const handleExcluirConta = async (id) => {
-    if (!window.confirm("Excluir esta conta bancaria?")) return;
+    if (!window.confirm("Excluir esta conta bancária?")) return;
     try { await deleteDoc(doc(db, 'contas_bancarias', id)); recarregarContas(); } catch { alert("Erro ao excluir."); }
   };
 
@@ -102,7 +102,7 @@ export default function GerenciadorContas({ cores, contasBancarias, perfis, calc
 
               {diff.tem && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px', borderRadius: '6px', backgroundColor: diff.valor === 0 ? '#d4edda' : '#fff3cd', fontSize: '12px', fontWeight: 'bold', marginBottom: '10px' }}>
-                  {diff.valor === 0 ? <span style={{color:'#155724'}}>✓ Conciliado</span> : <><TrendingDown size={14} color='#856404'/> Diferenca: {formatarMoeda(diff.valor)}</>}
+                  {diff.valor === 0 ? <span style={{color:'#155724'}}>✓ Conciliado</span> : <><TrendingDown size={14} color='#856404'/> Diferença: {formatarMoeda(diff.valor)}</>}
                 </div>
               )}
 
@@ -112,7 +112,7 @@ export default function GerenciadorContas({ cores, contasBancarias, perfis, calc
 
               {historico.length > 0 && (
                 <div style={{ borderTop: '1px solid #eee', paddingTop: '8px' }}>
-                  <span style={{ fontSize: '11px', color: '#999', fontWeight: 'bold' }}>Historico de saldos:</span>
+                  <span style={{ fontSize: '11px', color: '#999', fontWeight: 'bold' }}>Histórico de saldos:</span>
                   {historico.slice(0, 3).map((s, i) => (
                     <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#666', padding: '2px 0' }}>
                       <span>{s.data.split('-').reverse().join('/')}</span>

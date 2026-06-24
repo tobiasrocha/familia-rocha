@@ -46,7 +46,7 @@ export default function TelaEspiritual({ cores }) {
       resetarFormulario();
       recarregar();
     } catch (err) {
-      console.error("Erro ao guardar registo espiritual:", err);
+      console.error("Erro ao guardar registro espiritual:", err);
       alert("Falha ao salvar as informações.");
     } finally {
       setSalvando(false);
@@ -61,7 +61,7 @@ export default function TelaEspiritual({ cores }) {
   };
 
   const handleExcluir = async (id) => {
-    if (!window.confirm("Remover este registo permanentemente?")) return;
+    if (!window.confirm("Remover este registro permanentemente?")) return;
     try {
       await deleteDoc(doc(db, 'espiritual', id));
       recarregar();
@@ -91,7 +91,7 @@ export default function TelaEspiritual({ cores }) {
           onClick={() => { if (exibirForm) resetarFormulario(); else setExibirForm(true); }}
           style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', cursor: 'pointer', backgroundColor: exibirForm ? '#6c757d' : cores?.dourado, color: cores?.branco, border: 'none', borderRadius: '8px', fontWeight: 'bold' }}
         >
-          {exibirForm ? 'Cancelar' : <><Plus size={18} /> Novo Registo</>}
+          {exibirForm ? 'Cancelar' : <><Plus size={18} /> Novo Registro</>}
         </button>
       </div>
 
@@ -105,7 +105,7 @@ export default function TelaEspiritual({ cores }) {
           </div>
 
           <div style={{ flex: '1 1 200px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
-            <label style={{ fontSize: '14px', fontWeight: 'bold' }}>Tipo de Registo</label>
+            <label style={{ fontSize: '14px', fontWeight: 'bold' }}>Tipo de Registro</label>
             <select value={tipo} onChange={e => setTipo(e.target.value)} style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc', backgroundColor: '#fff' }}>
               <option value="Célula">Célula (Encontros/Escalas)</option>
               <option value="Igreja">Igreja (Cultos/Ações)</option>
@@ -131,7 +131,7 @@ export default function TelaEspiritual({ cores }) {
 
           <div style={{ width: '100%', display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
             <button type="submit" disabled={salvando} style={{ padding: '12px 25px', backgroundColor: cores?.dourado, color: cores?.branco, border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
-              {salvando ? 'A Gravar...' : 'Guardar Registo'}
+              {salvando ? 'Salvando...' : 'Guardar Registro'}
             </button>
           </div>
         </form>
@@ -140,9 +140,9 @@ export default function TelaEspiritual({ cores }) {
       {/* RENDERIZAÇÃO DA TIMELINE / REGISTOS */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
         {carregando ? (
-          <div style={{ color: '#6c757d' }}>A sincronizar base de fé...</div>
+          <div style={{ color: '#6c757d' }}>Sincronizando base de fé...</div>
         ) : registros.length === 0 ? (
-          <div style={{ color: '#6c757d', backgroundColor: cores?.branco, padding: '20px', borderRadius: '12px', textAlign: 'center' }}>Nenhum registo espiritual lançado até ao momento.</div>
+          <div style={{ color: '#6c757d', backgroundColor: cores?.branco, padding: '20px', borderRadius: '12px', textAlign: 'center' }}>Nenhum registro espiritual lançado até o momento.</div>
         ) : (
           registros.sort((a,b) => new Date(b.dataEvento) - new Date(a.dataEvento)).map(reg => (
             <div key={reg.id} style={{ backgroundColor: cores?.branco, padding: '20px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.02)', display: 'flex', gap: '15px', alignItems: 'flex-start', flexWrap: 'wrap' }}>

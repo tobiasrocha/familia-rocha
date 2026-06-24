@@ -27,9 +27,9 @@ const menuItems = [
   { to: '/financeiro', label: 'Financeiro', icon: <Wallet size={16} /> },
   { to: '/perfis', label: 'Perfis', icon: <Users size={16} /> },
   { to: '/tarefas', label: 'Tarefas', icon: <ClipboardList size={16} /> },
-  { to: '/saude', label: 'Saude', icon: <HeartPulse size={16} /> },
+  { to: '/saude', label: 'Saúde', icon: <HeartPulse size={16} /> },
   { to: '/estudos', label: 'Estudos', icon: <BookOpen size={16} /> },
-  { to: '/patrimonio', label: 'Patrimonio', icon: <Package size={16} /> },
+  { to: '/patrimonio', label: 'Patrimônio', icon: <Package size={16} /> },
   { to: '/viagens', label: 'Viagens', icon: <Compass size={16} /> },
   { to: '/espiritual', label: 'Espiritual', icon: <BookOpen size={16} /> },
 ];
@@ -55,7 +55,7 @@ function BarraNavegacao({ userEmail, onLogout }) {
           <img src={logoFamiliarocha} alt="Familia Rocha" style={{ height: '60px', objectFit: 'contain' }} />
         </Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '14px', color: '#6c757d' }}>Ola, <strong style={{ color: coresApp.primaria }}>{userEmail}</strong></span>
+          <span style={{ fontSize: '14px', color: '#6c757d' }}>Olá, <strong style={{ color: coresApp.primaria }}>{userEmail}</strong></span>
           <button onClick={onLogout} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', backgroundColor: 'transparent', border: `1px solid ${coresApp.dourado}`, color: coresApp.dourado, borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>
             <LogOut size={14} /> Sair
           </button>
