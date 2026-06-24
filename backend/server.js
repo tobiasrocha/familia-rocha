@@ -991,12 +991,12 @@ app.post('/api/upload-saude', upload.single('documento'), async (req, res) => {
 });
 
 // ---------------------------------------------------------
-// ADMIN: Gerenciamento de Usuários do Sistema
+// ADMIN: Gerenciamento de Membros da Família (Usuários + Pets)
 // ---------------------------------------------------------
 
 const SUPERADMIN_EMAIL = 'tobiasrocha@gmail.com';
 
-const MODULOS = ['financeiro', 'perfis', 'tarefas', 'saude', 'estudos', 'patrimonio', 'viagens', 'espiritual'];
+const MODULOS = ['financeiro', 'tarefas', 'saude', 'estudos', 'patrimonio', 'viagens', 'espiritual'];
 
 const permissoesPadrao = () => {
   const p = {};
@@ -1006,38 +1006,66 @@ const permissoesPadrao = () => {
 
 const isSuperadmin = (email) => email === SUPERADMIN_EMAIL;
 
-// Lista todos os usuarios
+const formatarMembro = (doc) => {
+  const data = doc.data();
+  const email = data.email || '';
+  return {
+    id: doc.id,
+    uid: data.uid || null,
+    nome: data.nome || '',
+    email,
+    tipo: data.tipo || 'Adulto',
+    dataNascimento: data.dataNascimento || '',
+    tipoSanguineo: data.tipoSanguineo || '',
+    alergias: data.alergias || '',
+    telefone: data.telefone || '',
+    role: data.role || 'usuario',
+    criadoEm: data.criadoEm || '',
+    isSuperadmin: isSuperadmin(email),
+    permissoes: isSuperadmin(email) ? permissoesPadrao() : (data.permissoes || {}),
+    temAuth: !!data.uid,
+  };
+};
+
+// Lista todos os membros (auth users + pets)
 app.get('/api/admin/usuarios', async (req, res) => {
   try {
-    const listResult = await authAdmin.listUsers(1000);
-    const usuarios = await Promise.all(listResult.users.map(async (userRecord) => {
-      const meta = await firestoreDb.collection('usuarios').doc(userRecord.uid).get();
-      const metaData = meta.exists ? meta.data() : {};
-      const email = userRecord.email;
-      return {
-        uid: userRecord.uid,
-        email,
-        disabled: userRecord.disabled,
-        nome: metaData.nome || userRecord.displayName || email,
-        role: metaData.role || 'usuario',
-        criadoEm: metaData.criadoEm || userRecord.metadata.creationTime,
-        isSuperadmin: isSuperadmin(email),
-        permissoes: isSuperadmin(email) ? permissoesPadrao() : (metaData.permissoes || {}),
-      };
-    }));
-    res.json({ usuarios });
+    const snapshot = await firestoreDb.collection('usuarios').get();
+    const membros = snapshot.docs.map(formatarMembro);
+    res.json({ usuarios: membros });
   } catch (error) {
-    console.error('[ADMIN] Erro ao listar usuarios:', error);
-    res.status(500).json({ erro: 'Falha ao listar usuarios.', detalhes: error.message });
+    console.error('[ADMIN] Erro ao listar membros:', error);
+    res.status(500).json({ erro: 'Falha ao listar membros.', detalhes: error.message });
   }
 });
 
-// Cria novo usuario
+// Cria novo membro (auth user ou pet)
 app.post('/api/admin/usuarios', async (req, res) => {
   try {
-    const { email, senha, nome, role } = req.body;
-    if (!email || !senha || !nome) {
-      return res.status(400).json({ erro: 'Campos obrigatorios: email, senha, nome.' });
+    const { nome, email, senha, tipo, dataNascimento, tipoSanguineo, alergias, telefone } = req.body;
+
+    if (!nome) return res.status(400).json({ erro: 'Nome obrigatorio.' });
+
+    const dadosFirestore = {
+      nome,
+      tipo: tipo || 'Adulto',
+      dataNascimento: dataNascimento || '',
+      tipoSanguineo: tipoSanguineo || '',
+      alergias: alergias || '',
+      telefone: telefone || '',
+      criadoEm: new Date().toISOString(),
+    };
+
+    // Pet: apenas Firestore, sem auth
+    if (tipo === 'Pet') {
+      const docRef = await firestoreDb.collection('usuarios').add(dadosFirestore);
+      console.log(`[ADMIN] Pet criado: ${nome} (${docRef.id})`);
+      return res.json(formatarMembro(await docRef.get()));
+    }
+
+    // Auth user: requer email e senha
+    if (!email || !senha) {
+      return res.status(400).json({ erro: 'Email e senha obrigatorios para usuario do sistema.' });
     }
     if (senha.length < 6) {
       return res.status(400).json({ erro: 'Senha deve ter no minimo 6 caracteres.' });
@@ -1049,82 +1077,110 @@ app.post('/api/admin/usuarios', async (req, res) => {
       displayName: nome,
     });
 
-    await firestoreDb.collection('usuarios').doc(userRecord.uid).set({
-      nome,
-      email,
-      role: role || 'usuario',
-      criadoEm: new Date().toISOString(),
-      ativo: true,
-      permissoes: {},
-    });
+    dadosFirestore.uid = userRecord.uid;
+    dadosFirestore.email = email;
+    dadosFirestore.role = 'usuario';
+    dadosFirestore.ativo = true;
+    dadosFirestore.permissoes = {};
+
+    await firestoreDb.collection('usuarios').doc(userRecord.uid).set(dadosFirestore);
 
     console.log(`[ADMIN] Usuario criado: ${email} (${userRecord.uid})`);
-    res.json({ uid: userRecord.uid, email: userRecord.email, nome, role: role || 'usuario' });
+    const doc = await firestoreDb.collection('usuarios').doc(userRecord.uid).get();
+    res.json(formatarMembro(doc));
   } catch (error) {
-    console.error('[ADMIN] Erro ao criar usuario:', error);
+    console.error('[ADMIN] Erro ao criar membro:', error);
     if (error.code === 'auth/email-already-exists') {
       return res.status(409).json({ erro: 'Este email ja esta cadastrado.' });
     }
-    res.status(500).json({ erro: 'Falha ao criar usuario.', detalhes: error.message });
+    res.status(500).json({ erro: 'Falha ao criar membro.', detalhes: error.message });
   }
 });
 
-// Atualiza dados do usuario (nome, email)
-app.put('/api/admin/usuarios/:uid', async (req, res) => {
+// Atualiza membro (todos os campos)
+app.put('/api/admin/usuarios/:id', async (req, res) => {
   try {
-    const { uid } = req.params;
-    const { nome, email } = req.body;
+    const { id } = req.params;
+    const { nome, email, tipo, dataNascimento, tipoSanguineo, alergias, telefone } = req.body;
 
-    const updates = {};
-    if (nome) updates.displayName = nome;
-    if (email) updates.email = email;
+    const docRef = firestoreDb.collection('usuarios').doc(id);
+    const doc = await docRef.get();
+    if (!doc.exists) return res.status(404).json({ erro: 'Membro nao encontrado.' });
 
-    if (Object.keys(updates).length === 0) {
-      return res.status(400).json({ erro: 'Nenhum campo para atualizar.' });
-    }
-
-    const userRecord = await authAdmin.updateUser(uid, updates);
+    const data = doc.data();
+    const temAuth = !!data.uid;
 
     const firestoreUpdates = {};
-    if (nome) firestoreUpdates.nome = nome;
-    if (email) firestoreUpdates.email = email;
-    await firestoreDb.collection('usuarios').doc(uid).set(firestoreUpdates, { merge: true });
+    if (nome !== undefined) firestoreUpdates.nome = nome;
+    if (tipo !== undefined) firestoreUpdates.tipo = tipo;
+    if (dataNascimento !== undefined) firestoreUpdates.dataNascimento = dataNascimento;
+    if (tipoSanguineo !== undefined) firestoreUpdates.tipoSanguineo = tipoSanguineo;
+    if (alergias !== undefined) firestoreUpdates.alergias = alergias;
+    if (telefone !== undefined) firestoreUpdates.telefone = telefone;
 
-    console.log(`[ADMIN] Usuario atualizado: ${uid}`);
-    res.json({ uid: userRecord.uid, email: userRecord.email, nome: userRecord.displayName || nome });
+    if (temAuth) {
+      const authUpdates = {};
+      if (nome) authUpdates.displayName = nome;
+      if (email && email !== data.email) {
+        authUpdates.email = email;
+        firestoreUpdates.email = email;
+      }
+      if (Object.keys(authUpdates).length > 0) {
+        await authAdmin.updateUser(data.uid, authUpdates);
+      }
+    }
+
+    await docRef.set(firestoreUpdates, { merge: true });
+
+    console.log(`[ADMIN] Membro atualizado: ${id}`);
+    const updated = await docRef.get();
+    res.json(formatarMembro(updated));
   } catch (error) {
-    console.error('[ADMIN] Erro ao atualizar usuario:', error);
+    console.error('[ADMIN] Erro ao atualizar membro:', error);
     if (error.code === 'auth/email-already-exists') {
       return res.status(409).json({ erro: 'Este email ja esta em uso.' });
     }
-    res.status(500).json({ erro: 'Falha ao atualizar usuario.', detalhes: error.message });
+    res.status(500).json({ erro: 'Falha ao atualizar membro.', detalhes: error.message });
   }
 });
 
-// Exclui usuario
-app.delete('/api/admin/usuarios/:uid', async (req, res) => {
+// Exclui membro
+app.delete('/api/admin/usuarios/:id', async (req, res) => {
   try {
-    const { uid } = req.params;
-    await authAdmin.deleteUser(uid);
-    await firestoreDb.collection('usuarios').doc(uid).delete();
-    console.log(`[ADMIN] Usuario excluido: ${uid}`);
+    const { id } = req.params;
+    const docRef = firestoreDb.collection('usuarios').doc(id);
+    const doc = await docRef.get();
+    if (!doc.exists) return res.status(404).json({ erro: 'Membro nao encontrado.' });
+
+    const data = doc.data();
+    if (data.uid) {
+      try { await authAdmin.deleteUser(data.uid); } catch (e) { console.warn('[ADMIN] Auth user ja removido:', e.message); }
+    }
+    await docRef.delete();
+    console.log(`[ADMIN] Membro excluido: ${id}`);
     res.json({ ok: true });
   } catch (error) {
-    console.error('[ADMIN] Erro ao excluir usuario:', error);
-    res.status(500).json({ erro: 'Falha ao excluir usuario.', detalhes: error.message });
+    console.error('[ADMIN] Erro ao excluir membro:', error);
+    res.status(500).json({ erro: 'Falha ao excluir membro.', detalhes: error.message });
   }
 });
 
-// Redefine senha (envia email de reset)
-app.post('/api/admin/usuarios/:uid/reset-senha', async (req, res) => {
+// Redefine senha (apenas auth users)
+app.post('/api/admin/usuarios/:id/reset-senha', async (req, res) => {
   try {
-    const { uid } = req.params;
+    const { id } = req.params;
     const { novaSenha } = req.body;
     if (!novaSenha || novaSenha.length < 6) {
       return res.status(400).json({ erro: 'Senha deve ter no minimo 6 caracteres.' });
     }
-    await authAdmin.updateUser(uid, { password: novaSenha });
-    console.log(`[ADMIN] Senha redefinida para: ${uid}`);
+
+    const doc = await firestoreDb.collection('usuarios').doc(id).get();
+    if (!doc.exists || !doc.data().uid) {
+      return res.status(400).json({ erro: 'Este membro nao possui conta de acesso.' });
+    }
+
+    await authAdmin.updateUser(doc.data().uid, { password: novaSenha });
+    console.log(`[ADMIN] Senha redefinida para: ${id}`);
     res.json({ ok: true });
   } catch (error) {
     console.error('[ADMIN] Erro ao redefinir senha:', error);
@@ -1132,16 +1188,21 @@ app.post('/api/admin/usuarios/:uid/reset-senha', async (req, res) => {
   }
 });
 
-// Atualiza permissoes de um usuario
-app.put('/api/admin/usuarios/:uid/permissoes', async (req, res) => {
+// Atualiza permissoes (apenas auth users)
+app.put('/api/admin/usuarios/:id/permissoes', async (req, res) => {
   try {
-    const { uid } = req.params;
+    const { id } = req.params;
     const { permissoes } = req.body;
     if (!permissoes || typeof permissoes !== 'object') {
       return res.status(400).json({ erro: 'Permissoes invalidas.' });
     }
-    await firestoreDb.collection('usuarios').doc(uid).update({ permissoes }, { merge: true });
-    console.log(`[ADMIN] Permissoes atualizadas para: ${uid}`);
+    const docRef = firestoreDb.collection('usuarios').doc(id);
+    const doc = await docRef.get();
+    if (!doc.exists || !doc.data().uid) {
+      return res.status(400).json({ erro: 'Apenas usuarios do sistema possuem permissoes.' });
+    }
+    await docRef.update({ permissoes });
+    console.log(`[ADMIN] Permissoes atualizadas para: ${id}`);
     res.json({ ok: true, permissoes });
   } catch (error) {
     console.error('[ADMIN] Erro ao atualizar permissoes:', error);
