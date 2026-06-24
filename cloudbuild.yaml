@@ -15,7 +15,10 @@ steps:
       - --allow-unauthenticated
       - --memory=512Mi
       - --timeout=300
-      - --set-secrets=GOOGLE_APPLICATION_CREDENTIALS=credenciais-google:latest,GOOGLE_OAUTH_CLIENT_ID=oauth-client-id:latest,GOOGLE_OAUTH_CLIENT_SECRET=oauth-client-secret:latest,GOOGLE_OAUTH_REFRESH_TOKEN=oauth-refresh-token:latest
+      - --set-secrets=GOOGLE_APPLICATION_CREDENTIALS=credenciais-google:latest
+      - --set-secrets=GOOGLE_OAUTH_CLIENT_ID=oauth-client-id:latest
+      - --set-secrets=GOOGLE_OAUTH_CLIENT_SECRET=oauth-client-secret:latest
+      - --set-secrets=GOOGLE_OAUTH_REFRESH_TOKEN=oauth-refresh-token:latest
       - --set-env-vars=GOOGLE_CLOUD_PROJECT_ID=familia-rocha-7ea1a,GOOGLE_CLOUD_LOCATION=us,DOCUMENT_AI_PROCESSOR_ID=4cad7feb06d834dd,TESSERACT_ENABLED=false,CRON_ENABLED=false
 options:
   logging: CLOUD_LOGGING_ONLY
