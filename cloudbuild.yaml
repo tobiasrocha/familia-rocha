@@ -17,5 +17,7 @@ steps:
       - --timeout=300
       - --set-secrets=GOOGLE_APPLICATION_CREDENTIALS=credenciais-google:latest
       - --set-env-vars=GOOGLE_CLOUD_PROJECT_ID=familia-rocha-7ea1a,GOOGLE_CLOUD_LOCATION=us,DOCUMENT_AI_PROCESSOR_ID=4cad7feb06d834dd,TESSERACT_ENABLED=false,CRON_ENABLED=false
+options:
+  logging: CLOUD_LOGGING_ONLY
 images:
   - us-central1-docker.pkg.dev/$PROJECT_ID/familiarocha/api:$COMMIT_SHA
