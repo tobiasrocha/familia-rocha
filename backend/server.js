@@ -18,6 +18,7 @@ const { getFirestore } = require('firebase-admin/firestore');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { createWorker } = require('tesseract.js');
 
 // Carrega credenciais: arquivo local ou Application Default Credentials (Cloud Run)
 let serviceAccount = null;
@@ -569,25 +570,44 @@ app.post('/api/importar-extrato', upload.single('documento'), async (req, res) =
 app.post('/api/conciliar-extrato', upload.single('documento'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ erro: 'Arquivo de extrato ausente.' });
-    console.log(`[CONCILIACAO] Processando extrato: ${req.file.originalname}`);
+    console.log(`[CONCILIACAO] Processando extrato: ${req.file.originalname} (${req.file.mimetype})`);
 
     let textoExtrato = '';
 
     // 1) Extrai texto do extrato
     if (req.file.mimetype === 'application/pdf') {
       try {
-        const doc = await pdfToImg(new Uint8Array(req.file.buffer.buffer, req.file.buffer.byteOffset, req.file.buffer.byteLength), { scale: 2 });
+        console.log('[CONCILIACAO] Convertendo PDF para imagem...');
+        const doc = await pdfToImg(
+          new Uint8Array(req.file.buffer.buffer, req.file.buffer.byteOffset, req.file.buffer.byteLength),
+          { scale: 2 }
+        );
         const pageImg = await doc.getPage(1);
-        const tmpImg = require('path').join(require('os').tmpdir(), `extrato_${Date.now()}.png`);
-        const tmpOut = tmpImg.replace('.png', '');
-        require('fs').writeFileSync(tmpImg, pageImg);
-        const tesseractPath = process.env.TESSERACT_PATH || 'C:\\Program Files\\Tesseract-OCR\\tesseract.exe';
-        await execFileAsync(tesseractPath, [tmpImg, tmpOut, '-l', 'por', '--psm', '6', '--tessdata-dir', require('path').join(__dirname, 'tessdata')], { timeout: 60000 });
-        textoExtrato = require('fs').readFileSync(tmpOut + '.txt', 'utf-8');
-        try { require('fs').unlinkSync(tmpImg); require('fs').unlinkSync(tmpOut + '.txt'); } catch {}
+        console.log(`[CONCILIACAO] Pagina convertida: ${pageImg.length} bytes`);
+
+        console.log('[CONCILIACAO] Executando OCR com tesseract.js...');
+        const worker = await createWorker('por');
+        const { data: { text } } = await worker.recognize(pageImg);
+        await worker.terminate();
+
+        textoExtrato = text || '';
+        console.log(`[CONCILIACAO] OCR concluido: ${textoExtrato.length} caracteres`);
       } catch (ocrErr) {
         console.error('[CONCILIACAO] Falha ao extrair texto do extrato:', ocrErr.message);
-        return res.status(500).json({ erro: 'Nao foi possivel ler o extrato. Certifique-se de que e um PDF com texto ou imagem legivel.' });
+        return res.status(500).json({ erro: 'Nao foi possivel ler o extrato. Certifique-se de que e um PDF com texto ou imagem legivel. Detalhes: ' + ocrErr.message });
+      }
+    } else if (req.file.mimetype.startsWith('image/')) {
+      try {
+        console.log('[CONCILIACAO] Executando OCR com tesseract.js na imagem...');
+        const worker = await createWorker('por');
+        const { data: { text } } = await worker.recognize(req.file.buffer);
+        await worker.terminate();
+
+        textoExtrato = text || '';
+        console.log(`[CONCILIACAO] OCR concluido: ${textoExtrato.length} caracteres`);
+      } catch (ocrErr) {
+        console.error('[CONCILIACAO] Falha ao processar imagem:', ocrErr.message);
+        return res.status(500).json({ erro: 'Nao foi possivel processar a imagem. Detalhes: ' + ocrErr.message });
       }
     } else {
       textoExtrato = req.file.buffer.toString('utf-8');
