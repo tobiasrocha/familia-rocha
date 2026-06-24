@@ -14,10 +14,11 @@ const TelaPatrimonio = lazy(() => import('./components/patrimonio/TelaPatrimonio
 const TelaViagens = lazy(() => import('./components/viagens/TelaViagens'));
 const TelaEspiritual = lazy(() => import('./components/espiritual/TelaEspiritual'));
 const TelaLogin = lazy(() => import('./components/auth/TelaLogin'));
+const AdminUsuarios = lazy(() => import('./components/admin/AdminUsuarios'));
 
 import { 
   LayoutDashboard, Wallet, Users, ClipboardList, 
-  HeartPulse, BookOpen, Package, Compass, LogOut 
+  HeartPulse, BookOpen, Package, Compass, LogOut, Shield 
 } from 'lucide-react';
 
 const coresApp = { primaria: '#2c3e50', secundaria: '#f8f9fa', dourado: '#C5A059', texto: '#333333', branco: '#ffffff', borda: '#e9ecef' };
@@ -34,6 +35,7 @@ const menuItems = [
   { to: '/patrimonio', label: 'Patrimônio', icon: <Package size={16} /> },
   { to: '/viagens', label: 'Viagens', icon: <Compass size={16} /> },
   { to: '/espiritual', label: 'Espiritual', icon: <BookOpen size={16} /> },
+  { to: '/admin', label: 'Admin', icon: <Shield size={16} /> },
 ];
 
 function BarraNavegacao({ userEmail, onLogout }) {
@@ -108,6 +110,7 @@ export default function App() {
               <Route path="/patrimonio" element={<TelaPatrimonio cores={coresApp} />} />
               <Route path="/viagens" element={<TelaViagens cores={coresApp} />} />
               <Route path="/espiritual" element={<TelaEspiritual cores={coresApp} />} />
+              <Route path="/admin" element={<AdminUsuarios cores={coresApp} />} />
             </Routes>
             </Suspense>
           </main>

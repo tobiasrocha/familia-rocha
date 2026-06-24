@@ -15,6 +15,7 @@ const execFileAsync = promisify(execFile);
 
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
+const { getAuth } = require('firebase-admin/auth');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -63,6 +64,7 @@ if (getApps().length === 0) {
   initializeApp(serviceAccount ? { credential: cert(serviceAccount) } : {});
 }
 const firestoreDb = getFirestore();
+const authAdmin = getAuth();
 
 // Inicialização segura do Google Drive API via service account
 const GOOGLE_OAUTH_CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT_ID || null;
@@ -985,6 +987,100 @@ app.post('/api/upload-saude', upload.single('documento'), async (req, res) => {
     res.json({ linkArquivo: driveFile.data.webViewLink });
   } catch (error) {
     res.status(500).json({ erro: 'Falha ao salvar o documento no Google Drive.', detalhes: error.message });
+  }
+});
+
+// ---------------------------------------------------------
+// ADMIN: Gerenciamento de Usuários do Sistema
+// ---------------------------------------------------------
+
+// Lista todos os usuarios
+app.get('/api/admin/usuarios', async (req, res) => {
+  try {
+    const listResult = await authAdmin.listUsers(1000);
+    const usuarios = await Promise.all(listResult.users.map(async (userRecord) => {
+      const meta = await firestoreDb.collection('usuarios').doc(userRecord.uid).get();
+      const metaData = meta.exists ? meta.data() : {};
+      return {
+        uid: userRecord.uid,
+        email: userRecord.email,
+        disabled: userRecord.disabled,
+        nome: metaData.nome || userRecord.displayName || userRecord.email,
+        role: metaData.role || 'usuario',
+        criadoEm: metaData.criadoEm || userRecord.metadata.creationTime,
+      };
+    }));
+    res.json({ usuarios });
+  } catch (error) {
+    console.error('[ADMIN] Erro ao listar usuarios:', error);
+    res.status(500).json({ erro: 'Falha ao listar usuarios.', detalhes: error.message });
+  }
+});
+
+// Cria novo usuario
+app.post('/api/admin/usuarios', async (req, res) => {
+  try {
+    const { email, senha, nome, role } = req.body;
+    if (!email || !senha || !nome) {
+      return res.status(400).json({ erro: 'Campos obrigatorios: email, senha, nome.' });
+    }
+    if (senha.length < 6) {
+      return res.status(400).json({ erro: 'Senha deve ter no minimo 6 caracteres.' });
+    }
+
+    const userRecord = await authAdmin.createUser({
+      email,
+      password: senha,
+      displayName: nome,
+    });
+
+    await firestoreDb.collection('usuarios').doc(userRecord.uid).set({
+      nome,
+      email,
+      role: role || 'usuario',
+      criadoEm: new Date().toISOString(),
+      ativo: true,
+    });
+
+    console.log(`[ADMIN] Usuario criado: ${email} (${userRecord.uid})`);
+    res.json({ uid: userRecord.uid, email: userRecord.email, nome, role: role || 'usuario' });
+  } catch (error) {
+    console.error('[ADMIN] Erro ao criar usuario:', error);
+    if (error.code === 'auth/email-already-exists') {
+      return res.status(409).json({ erro: 'Este email ja esta cadastrado.' });
+    }
+    res.status(500).json({ erro: 'Falha ao criar usuario.', detalhes: error.message });
+  }
+});
+
+// Exclui usuario
+app.delete('/api/admin/usuarios/:uid', async (req, res) => {
+  try {
+    const { uid } = req.params;
+    await authAdmin.deleteUser(uid);
+    await firestoreDb.collection('usuarios').doc(uid).delete();
+    console.log(`[ADMIN] Usuario excluido: ${uid}`);
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('[ADMIN] Erro ao excluir usuario:', error);
+    res.status(500).json({ erro: 'Falha ao excluir usuario.', detalhes: error.message });
+  }
+});
+
+// Redefine senha (envia email de reset)
+app.post('/api/admin/usuarios/:uid/reset-senha', async (req, res) => {
+  try {
+    const { uid } = req.params;
+    const { novaSenha } = req.body;
+    if (!novaSenha || novaSenha.length < 6) {
+      return res.status(400).json({ erro: 'Senha deve ter no minimo 6 caracteres.' });
+    }
+    await authAdmin.updateUser(uid, { password: novaSenha });
+    console.log(`[ADMIN] Senha redefinida para: ${uid}`);
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('[ADMIN] Erro ao redefinir senha:', error);
+    res.status(500).json({ erro: 'Falha ao redefinir senha.', detalhes: error.message });
   }
 });
 
