@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { collection, addDoc, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useFirestore } from '../../hooks/useFirestore';
@@ -39,7 +39,7 @@ export default function TelaSaude({ cores }) {
       } else {
         alert("Erro: " + (dados.erro || 'Falha desconhecida'));
       }
-    } catch (e) { alert("Falha ao conectar com o servidor."); } finally { setDisparandoAlertas(false); }
+    } catch { alert("Falha ao conectar com o servidor."); } finally { setDisparandoAlertas(false); }
   };
 
   const { enviando: enviandoAnexo, enviarArquivo } = useUploadSaude();
@@ -71,7 +71,7 @@ export default function TelaSaude({ cores }) {
       else await addDoc(collection(db, 'saude'), novoRegistro);
       
       resetarFormulario(); recarregarRegistros();
-    } catch (err) {
+    } catch {
       alert("Falha ao gravar no banco de dados.");
     } finally {
       setSalvando(false);
@@ -89,7 +89,7 @@ export default function TelaSaude({ cores }) {
   const handleExcluir = async (id) => {
     if (!window.confirm("Remover este registro do histórico?")) return;
     try { await deleteDoc(doc(db, 'saude', id)); recarregarRegistros(); } 
-    catch (err) { alert("Erro ao excluir."); }
+    catch { alert("Erro ao excluir."); }
   };
 
   const obterNomePerfil = (id) => {

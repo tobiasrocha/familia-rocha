@@ -1,9 +1,9 @@
 // frontend/src/components/estudos/TelaEstudos.jsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { collection, addDoc, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useFirestore } from '../../hooks/useFirestore';
-import { BookOpen, Plus, Clock, Target, Calendar, Trash2, CheckCircle2, AlertCircle, BarChart3, Settings, User } from 'lucide-react';
+import { BookOpen, Plus, Clock, Target, Trash2, CheckCircle2, AlertCircle, BarChart3, Settings, User } from 'lucide-react';
 
 export default function TelaEstudos({ cores }) {
   // Conexão com múltiplas coleções (Chaves Relacionais)
@@ -37,7 +37,7 @@ export default function TelaEstudos({ cores }) {
       await addDoc(collection(db, 'disciplinas'), { nome: novaDisciplina, criadoEm: new Date().toISOString() });
       setNovaDisciplina('');
       recarregarDisc();
-    } catch (err) {
+    } catch {
       alert("Erro ao adicionar disciplina.");
     }
   };
@@ -47,7 +47,7 @@ export default function TelaEstudos({ cores }) {
     try {
       await deleteDoc(doc(db, 'disciplinas', id));
       recarregarDisc();
-    } catch (err) {
+    } catch {
       alert("Erro ao excluir disciplina.");
     }
   };
@@ -74,7 +74,7 @@ export default function TelaEstudos({ cores }) {
       });
       resetarFormularioSessao();
       recarregarSessoes();
-    } catch (err) {
+    } catch {
       alert("Falha ao registrar a sessão.");
     } finally {
       setSalvando(false);
@@ -86,7 +86,7 @@ export default function TelaEstudos({ cores }) {
       const novoStatus = statusAtual === 'Concluída' ? 'Pendente' : 'Concluída';
       await updateDoc(doc(db, 'estudos', id), { statusRevisao: novoStatus });
       recarregarSessoes();
-    } catch (err) {
+    } catch {
       alert("Erro ao atualizar status.");
     }
   };
@@ -94,7 +94,7 @@ export default function TelaEstudos({ cores }) {
   const handleExcluirSessao = async (id) => {
     if (!window.confirm("Remover este registro?")) return;
     try { await deleteDoc(doc(db, 'estudos', id)); recarregarSessoes(); } 
-    catch (err) { alert("Erro ao excluir."); }
+    catch { alert("Erro ao excluir."); }
   };
 
   // --- UTILITÁRIOS E CÁLCULOS ANALÍTICOS ---

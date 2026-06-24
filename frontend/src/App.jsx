@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from './firebaseConfig';
 import logoFamiliarocha from './assets/familiarocha.png';
@@ -70,22 +70,6 @@ function BarraNavegacao({ userEmail, onLogout }) {
       </nav>
     </header>
   );
-}
-
-function ProtectedRoute({ children }) {
-  const [user, setUser] = useState(undefined);
-  
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => setUser(u));
-    return () => unsub();
-  }, []);
-
-  if (user === undefined) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', color: coresApp.dourado, fontFamily: 'system-ui, sans-serif' }}>Carregando...</div>;
-  if (!user) {
-    window.location.href = '/login';
-    return null;
-  }
-  return children;
 }
 
 export default function App() {

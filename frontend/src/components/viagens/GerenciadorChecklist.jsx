@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { collection, addDoc, deleteDoc, doc, getDocs, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { Plus, Trash2, CheckCircle2, Circle } from 'lucide-react';
@@ -26,7 +26,27 @@ export default function GerenciadorChecklist({ viagemId, cores }) {
   };
 
   useEffect(() => {
-    buscarItens();
+    if (!viagemId) return;
+
+    let ignore = false;
+    async function fetchData() {
+      setCarregando(true);
+      try {
+        const snapshot = await getDocs(collection(db, `viagens/${viagemId}/checklists`));
+        if (!ignore) {
+          const lista = snapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() }))
+            .sort((a, b) => (a.concluido === b.concluido ? 0 : a.concluido ? 1 : -1));
+          setItens(lista);
+        }
+      } catch (err) {
+        if (!ignore) console.error("Erro ao buscar checklist:", err);
+      } finally {
+        if (!ignore) setCarregando(false);
+      }
+    }
+    fetchData();
+    return () => { ignore = true; };
   }, [viagemId]);
 
   const handleAdicionarItem = async (e) => {
@@ -69,7 +89,7 @@ export default function GerenciadorChecklist({ viagemId, cores }) {
     try {
       await deleteDoc(doc(db, `viagens/${viagemId}/checklists`, id));
       buscarItens();
-    } catch (err) {
+    } catch {
       alert('Erro ao remover');
     }
   };

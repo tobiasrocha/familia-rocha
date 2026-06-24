@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 
-export function useFinancas({ lancamentosGlobais, contasBancarias, patrimonio, mesFiltro, anoContabil, mesContabil, perfilContabil }) {
+export function useFinancas({ lancamentosGlobais, contasBancarias, patrimonio, cartoes, investimentos, mesFiltro, anoContabil, mesContabil, perfilContabil }) {
 
   const calcularSaldoConta = (contaId, saldoIni) => {
     const historico = lancamentosGlobais.filter(i => i.contaId === contaId && i.status === 'Pago');
@@ -9,7 +9,24 @@ export function useFinancas({ lancamentosGlobais, contasBancarias, patrimonio, m
     return Number(saldoIni) + ent - sai;
   };
 
-  const saldoGlobalConsolidado = contasBancarias.reduce((acc, c) => acc + calcularSaldoConta(c.id, c.saldoInicial), 0);
+  const saldoBancario = contasBancarias.reduce((acc, c) => acc + calcularSaldoConta(c.id, c.saldoInicial), 0);
+
+  const saldoInvestimentos = useMemo(() =>
+    (investimentos || []).reduce((acc, i) => acc + Number(i.valor || 0), 0),
+    [investimentos]
+  );
+
+  const debitoCartoes = useMemo(() =>
+    (cartoes || []).reduce((acc, c) => {
+      const pendentes = lancamentosGlobais
+        .filter(i => i.tipo === 'Despesa' && i.formaPagamento === 'Crédito' && i.status === 'Pendente' && i.contaId === c.id)
+        .reduce((a, b) => a + Number(b.valor), 0);
+      return acc + pendentes;
+    }, 0),
+    [cartoes, lancamentosGlobais]
+  );
+
+  const saldoGlobalConsolidado = saldoBancario + saldoInvestimentos - debitoCartoes;
 
   const dadosMesFiltro = useMemo(() =>
     lancamentosGlobais.filter(i => i.dataVencimento && i.dataVencimento.startsWith(mesFiltro)),
@@ -49,7 +66,7 @@ export function useFinancas({ lancamentosGlobais, contasBancarias, patrimonio, m
   const resultadoExercicio = recContabil - despContabil;
 
   const valorBensDireitos = useMemo(() =>
-    patrimonio.reduce((a, b) => a + Number(b.valor), 0),
+    (patrimonio || []).reduce((a, b) => a + Number(b.valor || 0), 0),
     [patrimonio]
   );
 
@@ -64,6 +81,9 @@ export function useFinancas({ lancamentosGlobais, contasBancarias, patrimonio, m
 
   return {
     calcularSaldoConta,
+    saldoBancario,
+    saldoInvestimentos,
+    debitoCartoes,
     saldoGlobalConsolidado,
     dadosMesFiltro,
     totalReceitas,

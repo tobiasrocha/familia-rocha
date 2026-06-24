@@ -1,12 +1,12 @@
 // frontend/src/components/patrimonio/TelaPatrimonio.jsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { collection, addDoc, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useFirestore } from '../../hooks/useFirestore';
-import { Package, Plus, Trash2, Pencil, MapPin, Car, Home } from 'lucide-react';
+import { Package, Trash2, Pencil, MapPin, Car, Home } from 'lucide-react';
 
 export default function TelaPatrimonio({ cores }) {
-  const { dados: patrimonio, carregando, recarregar } = useFirestore('patrimonio');
+  const { dados: patrimonio, recarregar } = useFirestore('patrimonio');
   const [exibirForm, setExibirForm] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [idEditando, setIdEditando] = useState(null);
@@ -64,7 +64,7 @@ export default function TelaPatrimonio({ cores }) {
       else await addDoc(collection(db, 'patrimonio'), dadosBens);
       
       resetarFormulario(); recarregar();
-    } catch (err) { alert("Erro ao salvar."); } finally { setSalvando(false); }
+    } catch { alert("Erro ao salvar."); } finally { setSalvando(false); }
   };
 
   const handleEditar = (bem) => {

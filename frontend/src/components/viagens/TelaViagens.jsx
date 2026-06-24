@@ -1,9 +1,9 @@
 // frontend/src/components/viagens/TelaViagens.jsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { collection, addDoc, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useFirestore } from '../../hooks/useFirestore';
-import { Compass, Plus, Calendar, DollarSign, MapPin, ClipboardList, Trash2, Pencil, CheckCircle, Clock, X, ChevronDown } from 'lucide-react';
+import { Compass, Plus, Calendar, DollarSign, MapPin, Trash2, Pencil, X, ChevronDown } from 'lucide-react';
 import GerenciadorRoteiros from './GerenciadorRoteiros';
 import GerenciadorChecklist from './GerenciadorChecklist';
 
@@ -74,7 +74,7 @@ export default function TelaViagens({ cores }) {
     try {
       await deleteDoc(doc(db, 'viagens', id));
       recarregar();
-    } catch (err) {
+    } catch {
       alert("Erro ao remover o registro.");
     }
   };

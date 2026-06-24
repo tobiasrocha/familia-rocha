@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { UploadCloud, CheckCircle, AlertCircle, FileSearch } from 'lucide-react';
 
 export default function ConciliadorExtrato({ cores, onBaixas }) {
@@ -60,7 +60,7 @@ export default function ConciliadorExtrato({ cores, onBaixas }) {
       onBaixas();
       setResultado(null);
       setSelecionados(new Set());
-    } catch (err) {
+    } catch {
       alert('Falha ao dar baixa.');
     } finally {
       setBaixando(false);

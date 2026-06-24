@@ -1,9 +1,9 @@
 // frontend/src/components/tarefas/TelaTarefas.jsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { collection, addDoc, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useFirestore } from '../../hooks/useFirestore';
-import { ClipboardList, Plus, Calendar, User, ArrowRight, ArrowLeft, Trash2, CheckCircle, AlertTriangle } from 'lucide-react';
+import { ClipboardList, Calendar, User, ArrowRight, ArrowLeft, Trash2, CheckCircle, AlertTriangle } from 'lucide-react';
 
 export default function TelaTarefas({ cores }) {
   // Chamadas duplas ao useFirestore renomeando as propriedades para evitar conflitos de contexto
@@ -71,7 +71,7 @@ export default function TelaTarefas({ cores }) {
     try {
       await deleteDoc(doc(db, 'tarefas', id));
       recarregarTarefas();
-    } catch (err) {
+    } catch {
       alert("Erro ao eliminar o registro.");
     }
   };

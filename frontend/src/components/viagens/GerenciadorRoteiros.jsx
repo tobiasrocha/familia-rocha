@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { collection, addDoc, deleteDoc, doc, getDocs, updateDoc, query, where } from 'firebase/firestore';
+import { useState, useEffect } from 'react';
+import { collection, addDoc, deleteDoc, doc, getDocs, updateDoc, query } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { Plus, Trash2, Pencil, MapPin, Navigation, Search, Check, AlertCircle } from 'lucide-react';
 
@@ -34,7 +34,26 @@ export default function GerenciadorRoteiros({ viagemId, cores }) {
   };
 
   useEffect(() => {
-    buscarRoteiros();
+    if (!viagemId) return;
+
+    let ignore = false;
+    async function fetchData() {
+      setCarregando(true);
+      try {
+        const q = query(collection(db, `viagens/${viagemId}/roteiros`));
+        const snapshot = await getDocs(q);
+        if (!ignore) {
+          const lista = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setRoteiros(lista);
+        }
+      } catch (err) {
+        if (!ignore) console.error("Erro ao buscar roteiros:", err);
+      } finally {
+        if (!ignore) setCarregando(false);
+      }
+    }
+    fetchData();
+    return () => { ignore = true; };
   }, [viagemId]);
 
   const resetarForm = () => {
@@ -136,7 +155,7 @@ export default function GerenciadorRoteiros({ viagemId, cores }) {
     try {
       await deleteDoc(doc(db, `viagens/${viagemId}/roteiros`, id));
       buscarRoteiros();
-    } catch (err) {
+    } catch {
       alert('Erro ao remover');
     }
   };

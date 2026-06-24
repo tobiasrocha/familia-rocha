@@ -1,9 +1,9 @@
 // frontend/src/components/espiritual/TelaEspiritual.jsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { collection, addDoc, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useFirestore } from '../../hooks/useFirestore';
-import { Heart, Plus, Calendar, BookOpen, Users, Trash2, Pencil, CheckCircle, MessageSquare } from 'lucide-react';
+import { Heart, Plus, BookOpen, Users, Trash2, Pencil, MessageSquare } from 'lucide-react';
 
 export default function TelaEspiritual({ cores }) {
   const { dados: registros, carregando, recarregar } = useFirestore('espiritual');
@@ -45,8 +45,7 @@ export default function TelaEspiritual({ cores }) {
       
       resetarFormulario();
       recarregar();
-    } catch (err) {
-      console.error("Erro ao guardar registro espiritual:", err);
+    } catch {
       alert("Falha ao salvar as informações.");
     } finally {
       setSalvando(false);
@@ -65,7 +64,7 @@ export default function TelaEspiritual({ cores }) {
     try {
       await deleteDoc(doc(db, 'espiritual', id));
       recarregar();
-    } catch (err) {
+    } catch {
       alert("Erro ao remover.");
     }
   };

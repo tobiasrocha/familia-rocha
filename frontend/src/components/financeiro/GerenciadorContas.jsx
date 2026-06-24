@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { collection, addDoc, doc, deleteDoc } from 'firebase/firestore';
+import { useState } from 'react';
+import { collection, addDoc, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useFirestore } from '../../hooks/useFirestore';
-import { Plus, Landmark, User, Calendar, Trash2, TrendingUp, TrendingDown } from 'lucide-react';
+import { Plus, Landmark, User, Calendar, Trash2, TrendingDown, Pencil } from 'lucide-react';
 
 export default function GerenciadorContas({ cores, contasBancarias, perfis, calcularSaldoConta, formatarMoeda, obterNomePerfil, recarregarContas }) {
   const [exibirFormConta, setExibirFormConta] = useState(false);
@@ -15,6 +15,7 @@ export default function GerenciadorContas({ cores, contasBancarias, perfis, calc
   const [exibirFormSaldo, setExibirFormSaldo] = useState(false);
   const [valorSaldoManual, setValorSaldoManual] = useState('');
   const [dataSaldoManual, setDataSaldoManual] = useState(new Date().toISOString().slice(0, 10));
+  const [editandoSaldoId, setEditandoSaldoId] = useState(null);
 
   const { dados: saldosBancarios, recarregar: recarregarSaldos } = useFirestore('saldos_bancarios');
 
@@ -37,13 +38,21 @@ export default function GerenciadorContas({ cores, contasBancarias, perfis, calc
 
   const handleSalvarSaldoManual = async (e) => {
     e.preventDefault();
-    await addDoc(collection(db, 'saldos_bancarios'), {
-      contaId: contaSaldoId,
-      valor: parseFloat(valorSaldoManual) || 0,
-      data: dataSaldoManual,
-      criadoEm: new Date().toISOString()
-    });
-    setValorSaldoManual(''); setDataSaldoManual(new Date().toISOString().slice(0, 10)); setExibirFormSaldo(false); setContaSaldoId(null); recarregarSaldos();
+    if (editandoSaldoId) {
+      await updateDoc(doc(db, 'saldos_bancarios', editandoSaldoId), {
+        valor: parseFloat(valorSaldoManual) || 0,
+        data: dataSaldoManual,
+        atualizadoEm: new Date().toISOString()
+      });
+    } else {
+      await addDoc(collection(db, 'saldos_bancarios'), {
+        contaId: contaSaldoId,
+        valor: parseFloat(valorSaldoManual) || 0,
+        data: dataSaldoManual,
+        criadoEm: new Date().toISOString()
+      });
+    }
+    setValorSaldoManual(''); setDataSaldoManual(new Date().toISOString().slice(0, 10)); setExibirFormSaldo(false); setContaSaldoId(null); setEditandoSaldoId(null); recarregarSaldos();
   };
 
   const historicoSaldos = (contaId) => {
@@ -54,6 +63,27 @@ export default function GerenciadorContas({ cores, contasBancarias, perfis, calc
 
   const ultimoSaldoManual = (contaId) => {
     return historicoSaldos(contaId)[0];
+  };
+
+  const handleExcluirSaldo = async (id) => {
+    if (!window.confirm("Excluir este registro de saldo?")) return;
+    try { await deleteDoc(doc(db, 'saldos_bancarios', id)); recarregarSaldos(); } catch { alert("Erro ao excluir saldo."); }
+  };
+
+  const handleEditarSaldo = (saldo) => {
+    setContaSaldoId(saldo.contaId);
+    setValorSaldoManual(saldo.valor.toString());
+    setDataSaldoManual(saldo.data);
+    setEditandoSaldoId(saldo.id);
+    setExibirFormSaldo(true);
+  };
+
+  const handleAbrirNovoSaldo = (contaId) => {
+    setContaSaldoId(contaId);
+    setValorSaldoManual('');
+    setDataSaldoManual(new Date().toISOString().slice(0, 10));
+    setEditandoSaldoId(null);
+    setExibirFormSaldo(true);
   };
 
   const calcularDiferenca = (contaId, saldoIni) => {
@@ -106,17 +136,21 @@ export default function GerenciadorContas({ cores, contasBancarias, perfis, calc
                 </div>
               )}
 
-              <button type="button" onClick={() => { setContaSaldoId(conta.id); setExibirFormSaldo(true); }} style={{ width: '100%', padding: '8px', backgroundColor: '#e9ecef', color: cores?.texto, border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', marginBottom: '10px' }}>
+              <button type="button" onClick={() => handleAbrirNovoSaldo(conta.id)} style={{ width: '100%', padding: '8px', backgroundColor: '#e9ecef', color: cores?.texto, border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', marginBottom: '10px' }}>
                 + Registrar Saldo Manual
               </button>
 
               {historico.length > 0 && (
                 <div style={{ borderTop: '1px solid #eee', paddingTop: '8px' }}>
                   <span style={{ fontSize: '11px', color: '#999', fontWeight: 'bold' }}>Histórico de saldos:</span>
-                  {historico.slice(0, 3).map((s, i) => (
-                    <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#666', padding: '2px 0' }}>
+                  {historico.slice(0, 5).map((s) => (
+                    <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#666', padding: '2px 0' }}>
                       <span>{s.data.split('-').reverse().join('/')}</span>
                       <span style={{ fontWeight: 'bold' }}>{formatarMoeda(s.valor)}</span>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <button type="button" onClick={() => handleEditarSaldo(s)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0056b3', padding: '0 2px' }}><Pencil size={12}/></button>
+                        <button type="button" onClick={() => handleExcluirSaldo(s.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc3545', padding: '0 2px' }}><Trash2 size={12}/></button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -127,9 +161,9 @@ export default function GerenciadorContas({ cores, contasBancarias, perfis, calc
       </div>
 
       {exibirFormSaldo && (
-        <div style={{ position: 'fixed', top:0,left:0,right:0,bottom:0, backgroundColor:'rgba(0,0,0,0.4)', display:'flex', justifyContent:'center', alignItems:'center', zIndex:1000 }} onClick={() => { setExibirFormSaldo(false); setContaSaldoId(null); }}>
+        <div style={{ position: 'fixed', top:0,left:0,right:0,bottom:0, backgroundColor:'rgba(0,0,0,0.4)', display:'flex', justifyContent:'center', alignItems:'center', zIndex:1000 }} onClick={() => { setExibirFormSaldo(false); setContaSaldoId(null); setEditandoSaldoId(null); }}>
           <form onSubmit={handleSalvarSaldoManual} onClick={e => e.stopPropagation()} style={{ backgroundColor:'#fff', padding:'25px', borderRadius:'12px', width:'90%', maxWidth:'400px', display:'flex', flexDirection:'column', gap:'15px', boxShadow:'0 10px 40px rgba(0,0,0,0.2)' }}>
-            <h3 style={{ margin:0, color:cores?.texto }}>Registrar Saldo Manual</h3>
+            <h3 style={{ margin:0, color:cores?.texto }}>{editandoSaldoId ? 'Editar Saldo Manual' : 'Registrar Saldo Manual'}</h3>
             <p style={{ margin:0, fontSize:'13px', color:'#666' }}>Conta: <strong>{contasBancarias.find(c=>c.id===contaSaldoId)?.nome}</strong></p>
             <div style={{ display:'flex', flexDirection:'column', gap:'5px' }}>
               <label style={{ fontSize:'14px', fontWeight:'bold' }}>Data do Saldo</label>
@@ -140,7 +174,7 @@ export default function GerenciadorContas({ cores, contasBancarias, perfis, calc
               <input type="number" step="0.01" value={valorSaldoManual} onChange={e => setValorSaldoManual(e.target.value)} required placeholder="Ex: 1523,45" style={{ padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }} />
             </div>
             <div style={{ display:'flex', gap:'10px', justifyContent:'flex-end' }}>
-              <button type="button" onClick={() => { setExibirFormSaldo(false); setContaSaldoId(null); }} style={{ padding:'10px 20px', border:'1px solid #ccc', borderRadius:'6px', background:'#fff', cursor:'pointer' }}>Cancelar</button>
+              <button type="button" onClick={() => { setExibirFormSaldo(false); setContaSaldoId(null); setEditandoSaldoId(null); }} style={{ padding:'10px 20px', border:'1px solid #ccc', borderRadius:'6px', background:'#fff', cursor:'pointer' }}>Cancelar</button>
               <button type="submit" style={{ padding:'10px 20px', backgroundColor:cores?.dourado, color:'#fff', border:'none', borderRadius:'6px', cursor:'pointer', fontWeight:'bold' }}>Salvar</button>
             </div>
           </form>

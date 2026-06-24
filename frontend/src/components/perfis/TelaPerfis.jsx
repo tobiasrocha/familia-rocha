@@ -1,5 +1,5 @@
 // frontend/src/components/perfis/TelaPerfis.jsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { collection, addDoc, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useFirestore } from '../../hooks/useFirestore';
@@ -40,8 +40,8 @@ export default function TelaPerfis({ cores }) {
         await addDoc(collection(db, 'perfis'), { ...dadosDoPerfil, criadoEm: new Date().toISOString() });
       }
       resetarFormulario(); recarregar();
-    } catch (err) {
-      console.error("Erro ao salvar perfil:", err);
+    } catch (e) {
+      console.error("Erro ao salvar perfil:", e);
       alert("Falha ao salvar o perfil no banco de dados.");
     } finally {
       setSalvando(false);
@@ -59,7 +59,7 @@ export default function TelaPerfis({ cores }) {
   const handleExcluir = async (id) => {
     if (!window.confirm("Atenção: Excluir este perfil permanentemente?")) return;
     try { await deleteDoc(doc(db, 'perfis', id)); recarregar(); } 
-    catch (err) { alert("Falha ao excluir."); }
+    catch { alert("Falha ao excluir."); }
   };
 
   const calcularIdade = (dataNasc) => {

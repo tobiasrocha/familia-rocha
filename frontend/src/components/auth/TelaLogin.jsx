@@ -1,5 +1,5 @@
 // frontend/src/components/auth/TelaLogin.jsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../firebaseConfig';
 
@@ -13,7 +13,7 @@ export default function TelaLogin({ cores, logo }) {
     setErro('');
     try {
       await signInWithEmailAndPassword(auth, email, senha);
-    } catch (error) {
+    } catch {
       setErro("Credenciais inválidas.");
     }
   };

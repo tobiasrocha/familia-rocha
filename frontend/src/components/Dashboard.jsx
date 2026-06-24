@@ -1,9 +1,8 @@
 // frontend/src/components/Dashboard.jsx
-import React from 'react';
 import { useFirestore } from '../hooks/useFirestore';
 import { 
-  LayoutDashboard, Wallet, ClipboardList, HeartPulse, 
-  AlertTriangle, CheckCircle, Clock, Calendar, ArrowRight, Package
+  Wallet, ClipboardList, HeartPulse, 
+  AlertTriangle, CheckCircle, Clock, ArrowRight, Package
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
