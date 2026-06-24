@@ -209,7 +209,8 @@ export default function AdminUsuarios({ cores }) {
   }
 
   const authUsers = membros.filter(m => m.temAuth)
-  const pets = membros.filter(m => !m.temAuth)
+  const semAcesso = membros.filter(m => !m.temAuth && m.tipo !== 'Pet')
+  const pets = membros.filter(m => !m.temAuth && m.tipo === 'Pet')
 
   return (
     <div style={{ padding: '30px', maxWidth: '1100px', margin: '0 auto' }}>
@@ -363,6 +364,36 @@ export default function AdminUsuarios({ cores }) {
             </div>
           )}
 
+          {semAcesso.length > 0 && (
+            <div style={{ marginBottom: '40px' }}>
+              <h3 style={{ color: cores?.texto, marginBottom: '15px', fontSize: '16px' }}>Membros sem Acesso ao Sistema</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '15px' }}>
+                {semAcesso.map(m => (
+                  <div key={m.id} style={{ backgroundColor: '#fff', borderRadius: '12px', padding: '18px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', borderTop: `4px solid #ffc107`, position: 'relative' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '10px' }}>
+                      <div style={{ padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '50%' }}>{renderIcone(m.tipo, 24)}</div>
+                      <div style={{ flex: 1 }}>
+                        <strong style={{ fontSize: '16px', color: '#333', display: 'block' }}>{m.nome}</strong>
+                        <span style={{ fontSize: '11px', color: '#ffc107', fontWeight: 'bold' }}>sem acesso</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <button onClick={() => abrirEditar(m)} title="Editar" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#28a745', padding: '4px' }}><Pencil size={16} /></button>
+                        <button onClick={() => handleExcluir(m)} title="Excluir" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc3545', padding: '4px' }}><Trash2 size={16} /></button>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px', color: '#495057' }}>
+                      {m.email && <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Mail size={14} color="#6c757d" />{m.email}</div>}
+                      {m.telefone && <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Phone size={14} color="#6c757d" />{m.telefone}</div>}
+                      {m.dataNascimento && <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Calendar size={14} color="#6c757d" />{m.dataNascimento.split('-').reverse().join('/')} ({calcularIdade(m.dataNascimento)} anos)</div>}
+                      {m.tipoSanguineo && <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Droplet size={14} color="#dc3545" />Sangue: {m.tipoSanguineo}</div>}
+                      {m.alergias && <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', backgroundColor: '#fff3cd', padding: '6px 8px', borderRadius: '6px', color: '#856404' }}><AlertTriangle size={14} style={{ flexShrink: 0, marginTop: '1px' }} />{m.alergias}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {pets.length > 0 && (
             <div>
               <h3 style={{ color: cores?.texto, marginBottom: '15px', fontSize: '16px' }}>Pets</h3>
@@ -390,7 +421,7 @@ export default function AdminUsuarios({ cores }) {
             </div>
           )}
 
-          {authUsers.length === 0 && pets.length === 0 && (
+          {authUsers.length === 0 && semAcesso.length === 0 && pets.length === 0 && (
             <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>Nenhum membro cadastrado.</div>
           )}
         </>

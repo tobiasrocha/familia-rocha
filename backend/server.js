@@ -1027,11 +1027,69 @@ const formatarMembro = (doc) => {
   };
 };
 
-// Lista todos os membros (auth users + pets)
+// Lista todos os membros (auth users + pets + dados antigos de perfis)
 app.get('/api/admin/usuarios', async (req, res) => {
   try {
+    // Garante que o superadmin tem doc no Firestore
+    try {
+      const superDoc = await firestoreDb.collection('usuarios')
+        .where('email', '==', SUPERADMIN_EMAIL).limit(1).get();
+      if (superDoc.empty) {
+        let uid = null;
+        try {
+          const superUser = await authAdmin.getUserByEmail(SUPERADMIN_EMAIL);
+          uid = superUser.uid;
+          await firestoreDb.collection('usuarios').doc(uid).set({
+            uid, nome: 'Tobias Rocha', email: SUPERADMIN_EMAIL, tipo: 'Adulto',
+            role: 'admin', criadoEm: new Date().toISOString(), ativo: true,
+            permissoes: permissoesPadrao(),
+            dataNascimento: '', tipoSanguineo: '', alergias: '', telefone: '',
+          });
+        } catch {
+          await firestoreDb.collection('usuarios').add({
+            nome: 'Tobias Rocha', email: SUPERADMIN_EMAIL, tipo: 'Adulto',
+            role: 'admin', criadoEm: new Date().toISOString(), ativo: true,
+            permissoes: permissoesPadrao(),
+            dataNascimento: '', tipoSanguineo: '', alergias: '', telefone: '',
+          });
+        }
+        console.log('[ADMIN] Documento superadmin criado automaticamente.');
+      }
+    } catch (e) { console.warn('[ADMIN] Nao foi possivel verificar superadmin:', e.message); }
+
     const snapshot = await firestoreDb.collection('usuarios').get();
     const membros = snapshot.docs.map(formatarMembro);
+    const emailsExistentes = new Set(membros.filter(m => m.email).map(m => m.email.toLowerCase()));
+
+    // Inclui dados antigos da colecao 'perfis' que nao estao em 'usuarios'
+    try {
+      const perfisSnap = await firestoreDb.collection('perfis').get();
+      for (const doc of perfisSnap.docs) {
+        const data = doc.data();
+        const emailPerfil = (data.email || '').toLowerCase();
+        // Pula se ja existe em usuarios (mesmo email) ou se tem userId vinculado a auth
+        if (emailPerfil && emailsExistentes.has(emailPerfil)) continue;
+        if (data.userId && membros.some(m => m.uid === data.userId)) continue;
+
+        membros.push({
+          id: doc.id,
+          uid: data.userId || null,
+          nome: data.nome || '',
+          email: data.email || '',
+          tipo: data.tipo || 'Adulto',
+          dataNascimento: data.dataNascimento || '',
+          tipoSanguineo: data.tipoSanguineo || '',
+          alergias: data.alergias || '',
+          telefone: data.telefone || '',
+          role: 'usuario',
+          criadoEm: data.criadoEm || '',
+          isSuperadmin: false,
+          permissoes: {},
+          temAuth: false,
+        });
+      }
+    } catch (e) { console.warn('[ADMIN] Nao foi possivel ler colecao perfis:', e.message); }
+
     res.json({ usuarios: membros });
   } catch (error) {
     console.error('[ADMIN] Erro ao listar membros:', error);
