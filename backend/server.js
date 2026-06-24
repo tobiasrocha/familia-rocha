@@ -1059,36 +1059,6 @@ app.get('/api/admin/usuarios', async (req, res) => {
 
     const snapshot = await firestoreDb.collection('usuarios').get();
     const membros = snapshot.docs.map(formatarMembro);
-    const emailsExistentes = new Set(membros.filter(m => m.email).map(m => m.email.toLowerCase()));
-
-    // Inclui dados antigos da colecao 'perfis' que nao estao em 'usuarios'
-    try {
-      const perfisSnap = await firestoreDb.collection('perfis').get();
-      for (const doc of perfisSnap.docs) {
-        const data = doc.data();
-        const emailPerfil = (data.email || '').toLowerCase();
-        // Pula se ja existe em usuarios (mesmo email) ou se tem userId vinculado a auth
-        if (emailPerfil && emailsExistentes.has(emailPerfil)) continue;
-        if (data.userId && membros.some(m => m.uid === data.userId)) continue;
-
-        membros.push({
-          id: doc.id,
-          uid: data.userId || null,
-          nome: data.nome || '',
-          email: data.email || '',
-          tipo: data.tipo || 'Adulto',
-          dataNascimento: data.dataNascimento || '',
-          tipoSanguineo: data.tipoSanguineo || '',
-          alergias: data.alergias || '',
-          telefone: data.telefone || '',
-          role: 'usuario',
-          criadoEm: data.criadoEm || '',
-          isSuperadmin: false,
-          permissoes: {},
-          temAuth: false,
-        });
-      }
-    } catch (e) { console.warn('[ADMIN] Nao foi possivel ler colecao perfis:', e.message); }
 
     res.json({ usuarios: membros });
   } catch (error) {
