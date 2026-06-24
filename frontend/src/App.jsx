@@ -1,19 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from './firebaseConfig';
 import logoFamiliarocha from './assets/familiarocha.png';
 
-import Dashboard from './components/Dashboard';
-import PainelFinanceiro from './components/financeiro/PainelFinanceiro';
-import TelaPerfis from './components/perfis/TelaPerfis';
-import TelaTarefas from './components/tarefas/TelaTarefas';
-import TelaSaude from './components/saude/TelaSaude';
-import TelaEstudos from './components/estudos/TelaEstudos';
-import TelaPatrimonio from './components/patrimonio/TelaPatrimonio';
-import TelaViagens from './components/viagens/TelaViagens';
-import TelaEspiritual from './components/espiritual/TelaEspiritual';
-import TelaLogin from './components/auth/TelaLogin';
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const PainelFinanceiro = lazy(() => import('./components/financeiro/PainelFinanceiro'));
+const TelaPerfis = lazy(() => import('./components/perfis/TelaPerfis'));
+const TelaTarefas = lazy(() => import('./components/tarefas/TelaTarefas'));
+const TelaSaude = lazy(() => import('./components/saude/TelaSaude'));
+const TelaEstudos = lazy(() => import('./components/estudos/TelaEstudos'));
+const TelaPatrimonio = lazy(() => import('./components/patrimonio/TelaPatrimonio'));
+const TelaViagens = lazy(() => import('./components/viagens/TelaViagens'));
+const TelaEspiritual = lazy(() => import('./components/espiritual/TelaEspiritual'));
+const TelaLogin = lazy(() => import('./components/auth/TelaLogin'));
 
 import { 
   LayoutDashboard, Wallet, Users, ClipboardList, 
@@ -21,6 +21,8 @@ import {
 } from 'lucide-react';
 
 const coresApp = { primaria: '#2c3e50', secundaria: '#f8f9fa', dourado: '#C5A059', texto: '#333333', branco: '#ffffff', borda: '#e9ecef' };
+
+const Carregando = () => <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', color: coresApp.dourado, fontFamily: 'system-ui, sans-serif' }}>Carregando...</div>;
 
 const menuItems = [
   { to: '/', label: 'Dashboard', icon: <LayoutDashboard size={16} /> },
@@ -84,7 +86,7 @@ export default function App() {
     await signOut(auth);
   };
 
-  if (user === undefined) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', color: coresApp.dourado, fontFamily: 'system-ui, sans-serif' }}>Carregando...</div>;
+  if (user === undefined) return <Carregando />;
 
   return (
     <Router>
@@ -94,6 +96,7 @@ export default function App() {
         <div style={{ backgroundColor: coresApp.secundaria, minHeight: '100vh', fontFamily: 'system-ui, sans-serif' }}>
           <BarraNavegacao userEmail={user.email} onLogout={handleLogout} />
           <main style={{ paddingBottom: '40px' }}>
+            <Suspense fallback={<Carregando />}>
             <Routes>
               <Route path="/" element={<Dashboard cores={coresApp} />} />
               <Route path="/login" element={<TelaLogin cores={coresApp} logo={logoFamiliarocha} />} />
@@ -106,6 +109,7 @@ export default function App() {
               <Route path="/viagens" element={<TelaViagens cores={coresApp} />} />
               <Route path="/espiritual" element={<TelaEspiritual cores={coresApp} />} />
             </Routes>
+            </Suspense>
           </main>
         </div>
       )}
