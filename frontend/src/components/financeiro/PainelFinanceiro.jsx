@@ -84,8 +84,8 @@ export default function PainelFinanceiro({ cores }) {
     }
   };
 
-  const tipoAviso = erroOcr ? 'erro' : (dadosExtraidos?.aviso && !dadosExtraidos?.linkArquivo ? 'alerta' : null);
-  const avisoUpload = erroOcr || (!dadosExtraidos?.linkArquivo && dadosExtraidos?.aviso) || '';
+  const tipoAviso = erroOcr ? 'erro' : (dadosExtraidos?.aviso ? 'alerta' : null);
+  const avisoUpload = erroOcr || dadosExtraidos?.aviso || '';
 
   const handleDispararAlertas = async () => {
     setExecutandoAlertas(true);

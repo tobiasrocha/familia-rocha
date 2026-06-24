@@ -21,6 +21,13 @@ export default function ConciliadorExtrato({ cores, onBaixas }) {
 
     try {
       const res = await fetch('/api/conciliar-extrato', { method: 'POST', body: formData });
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        const texto = await res.text();
+        throw new Error(texto.includes('<!doctype') || texto.includes('<html')
+          ? 'Servidor indisponivel. Verifique se o backend esta rodando na porta 3000.'
+          : `Resposta inesperada: ${texto.substring(0, 100)}`);
+      }
       const dados = await res.json();
       if (!res.ok) throw new Error(dados.erro || 'Erro ao processar');
       setResultado(dados);
@@ -55,6 +62,13 @@ export default function ConciliadorExtrato({ cores, onBaixas }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids: [...selecionados] })
       });
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        const texto = await res.text();
+        throw new Error(texto.includes('<!doctype')
+          ? 'Servidor indisponivel.'
+          : `Resposta inesperada: ${texto.substring(0, 100)}`);
+      }
       const dados = await res.json();
       alert(dados.msg);
       onBaixas();

@@ -867,6 +867,17 @@ app.post('/api/extrair-boleto', upload.single('documento'), async (req, res) => 
           dadosExtraidos.descricao = dadosExtraidos.descricao.replace(/^[a-z\s]+/, '').trim();
         }
 
+        // Verifica se extraiu dados uteis
+        const temDadosUteis = dadosExtraidos.descricao || dadosExtraidos.valor || dadosExtraidos.dataVencimento;
+        if (!temDadosUteis && ocrWarning) {
+          dadosExtraidos.aviso = ocrWarning;
+        } else if (!temDadosUteis && textoCompleto) {
+          dadosExtraidos.aviso = 'Texto extraido do documento, mas nao foi possivel identificar descricao, valor ou data. Verifique os dados manualmente.';
+          dadosExtraidos.textoBruto = textoCompleto.substring(0, 1000);
+        } else if (!temDadosUteis) {
+          dadosExtraidos.aviso = 'Nao foi possivel extrair texto do documento. Verifique se e uma imagem legivel ou PDF com texto.';
+        }
+
     // INTEGRAÇÃO DRIVE
     console.log(`[DRIVE] Armazenando arquivo na nuvem...`);
     const dataAtual = new Date();
