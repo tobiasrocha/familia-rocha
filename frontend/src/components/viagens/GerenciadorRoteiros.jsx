@@ -250,7 +250,7 @@ export default function GerenciadorRoteiros({ viagemId, cores }) {
                 loading="lazy"
                 allowFullScreen=""
                 referrerPolicy="no-referrer-when-downgrade"
-                src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd4Qg2WkASJvHSutJYAVo&q=${latitude},${longitude}`}
+                src={`https://www.google.com/maps/embed/v1/place?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&q=${latitude},${longitude}`}
                 title="Mapa do Local"
               />
               <div style={{ padding: '12px', backgroundColor: '#f8f9fa', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
