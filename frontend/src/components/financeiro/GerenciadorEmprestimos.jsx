@@ -155,9 +155,14 @@ export default function GerenciadorEmprestimos({ cores, formatarMoeda, obterNome
             <label style={{ fontSize: '14px', fontWeight: 'bold' }}>Responsável</label>
             <select value={perfilId} onChange={e => setPerfilId(e.target.value)} style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }}><option value="">Selecione...</option>{perfis.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}</select>
           </div>
+const naturezasBancarias = ['Consignado', 'Financiamento', 'Cheque Especial', 'Imobiliário', 'Veículo'];
+
           <div style={{ flex: '1 1 150px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
             <label style={{ fontSize: '14px', fontWeight: 'bold' }}>Conta Vinculada</label>
-            <select value={contaId} onChange={e => setContaId(e.target.value)} style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }}><option value="">Nenhuma</option>{contasBancarias.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}</select>
+            <select value={contaId} onChange={e => setContaId(e.target.value)} style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }}>
+              <option value="">Nenhuma</option>
+              {naturezasBancarias.includes(natureza) && contasBancarias.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+            </select>
           </div>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
             <button type="button" onClick={resetForm} style={{ padding: '10px 20px', height: '40px', border: '1px solid #ccc', borderRadius: '6px', background: '#fff', cursor: 'pointer' }}>Cancelar</button>

@@ -6,6 +6,7 @@ import { Plus, Landmark, User, Calendar, Trash2, TrendingDown, Pencil } from 'lu
 
 export default function GerenciadorContas({ cores, contasBancarias, perfis, calcularSaldoConta, formatarMoeda, obterNomePerfil, recarregarContas }) {
   const [exibirFormConta, setExibirFormConta] = useState(false);
+  const [editandoContaId, setEditandoContaId] = useState(null);
   const [nomeConta, setNomeConta] = useState('');
   const [saldoInicialConta, setSaldoInicialConta] = useState('');
   const [limiteChequeEspecial, setLimiteChequeEspecial] = useState('');
@@ -22,15 +23,30 @@ export default function GerenciadorContas({ cores, contasBancarias, perfis, calc
 
   const handleSalvarConta = async (e) => {
     e.preventDefault();
-    await addDoc(collection(db, 'contas_bancarias'), {
+    const payload = {
       nome: nomeConta,
       saldoInicial: parseFloat(saldoInicialConta) || 0,
       limiteChequeEspecial: parseFloat(limiteChequeEspecial) || 0,
       perfilId: perfilContaId,
       dataSaldo: dataSaldoConta,
-      criadoEm: new Date().toISOString()
-    });
-    setNomeConta(''); setSaldoInicialConta(''); setDataSaldoConta(new Date().toISOString().slice(0, 10)); setExibirFormConta(false); recarregarContas();
+    };
+    if (editandoContaId) {
+      await updateDoc(doc(db, 'contas_bancarias', editandoContaId), { ...payload, atualizadoEm: new Date().toISOString() });
+    } else {
+      await addDoc(collection(db, 'contas_bancarias'), { ...payload, criadoEm: new Date().toISOString() });
+    }
+    setNomeConta(''); setSaldoInicialConta(''); setLimiteChequeEspecial(''); setDataSaldoConta(new Date().toISOString().slice(0, 10));
+    setExibirFormConta(false); setEditandoContaId(null); recarregarContas();
+  };
+
+  const handleEditarConta = (conta) => {
+    setNomeConta(conta.nome);
+    setSaldoInicialConta(conta.saldoInicial?.toString() || '');
+    setLimiteChequeEspecial(conta.limiteChequeEspecial?.toString() || '');
+    setPerfilContaId(conta.perfilId || '');
+    setDataSaldoConta(conta.dataSaldo || new Date().toISOString().slice(0, 10));
+    setEditandoContaId(conta.id);
+    setExibirFormConta(true);
   };
 
   const handleExcluirConta = async (id) => {
@@ -97,14 +113,14 @@ export default function GerenciadorContas({ cores, contasBancarias, perfis, calc
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}><button type="button" onClick={() => setExibirFormConta(!exibirFormConta)} style={{ padding: '10px 20px', backgroundColor: cores?.dourado, color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}><Plus size={18}/> Nova Conta / Carteira</button></div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}><button type="button" onClick={() => { setEditandoContaId(null); setNomeConta(''); setSaldoInicialConta(''); setLimiteChequeEspecial(''); setDataSaldoConta(new Date().toISOString().slice(0,10)); setExibirFormConta(!exibirFormConta); }} style={{ padding: '10px 20px', backgroundColor: cores?.dourado, color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}><Plus size={18}/> {exibirFormConta ? 'Cancelar' : 'Nova Conta / Carteira'}</button></div>
       {exibirFormConta && (
         <form onSubmit={handleSalvarConta} style={{ backgroundColor: cores?.branco, padding: '20px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', display: 'flex', gap: '15px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
           <div style={{ flex: '1 1 150px', display: 'flex', flexDirection: 'column', gap: '5px' }}><label style={{ fontSize: '14px', fontWeight: 'bold' }}><User size={14} style={{verticalAlign: 'middle'}}/> Titular da Conta</label><select value={perfilContaId} onChange={e => setPerfilContaId(e.target.value)} required style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }}><option value="" disabled>Selecione...</option>{perfis.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}</select></div>
           <div style={{ flex: '2 1 200px', display: 'flex', flexDirection: 'column', gap: '5px' }}><label style={{ fontSize: '14px', fontWeight: 'bold' }}>Nome do Banco</label><input type="text" value={nomeConta} onChange={e => setNomeConta(e.target.value)} required style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
           <div style={{ flex: '1 1 150px', display: 'flex', flexDirection: 'column', gap: '5px' }}><label style={{ fontSize: '14px', fontWeight: 'bold' }}><Calendar size={14} style={{verticalAlign:'middle'}}/> Data do Saldo</label><input type="date" value={dataSaldoConta} onChange={e => setDataSaldoConta(e.target.value)} required style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
           <div style={{ flex: '1 1 150px', display: 'flex', flexDirection: 'column', gap: '5px' }}><label style={{ fontSize: '14px', fontWeight: 'bold' }}>Saldo Inicial (R$)</label><input type="number" step="0.01" value={saldoInicialConta} onChange={e => setSaldoInicialConta(e.target.value)} required style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
-          <button type="submit" style={{ padding: '10px 20px', height: '40px', backgroundColor: '#28a745', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Salvar Conta</button>
+          <button type="submit" style={{ padding: '10px 20px', height: '40px', backgroundColor: '#28a745', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>{editandoContaId ? 'Atualizar Conta' : 'Salvar Conta'}</button>
           <div style={{ flex: '1 1 100%', display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
             <div style={{ flex: '1 1 150px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
               <label style={{ fontSize: '14px', fontWeight: 'bold' }}>Limite Cheque Especial (R$)</label>
@@ -122,7 +138,7 @@ export default function GerenciadorContas({ cores, contasBancarias, perfis, calc
           return (
             <div key={conta.id} style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #eee', borderTop: `4px solid ${cores?.dourado}`, boxShadow: '0 4px 15px rgba(0,0,0,0.03)', position: 'relative' }}>
               <button type="button" onClick={() => handleExcluirConta(conta.id)} style={{ position: 'absolute', top: '15px', right: '15px', background: 'none', border: 'none', cursor: 'pointer', color: '#dc3545' }}><Trash2 size={16}/></button>
-              <button type="button" onClick={() => { setExibirFormConta(false); /* futura edicao */ alert('Edição de conta em desenvolvimento.'); }} style={{ position: 'absolute', top: '15px', right: '45px', background: 'none', border: 'none', cursor: 'pointer', color: '#0056b3' }}><Pencil size={16}/></button>
+              <button type="button" onClick={() => handleEditarConta(conta)} style={{ position: 'absolute', top: '15px', right: '45px', background: 'none', border: 'none', cursor: 'pointer', color: '#0056b3' }}><Pencil size={16}/></button>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px' }}><div style={{ padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '50%' }}><Landmark size={24} color="#2c3e50" /></div><h3 style={{ margin: 0, fontSize: '18px', color: '#333' }}>{conta.nome}</h3></div>
               <div style={{ marginBottom: '10px', fontSize: '12px', color: '#666' }}><User size={12}/> Titular: <strong>{obterNomePerfil(conta.perfilId)}</strong></div>
 

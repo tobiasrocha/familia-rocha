@@ -191,7 +191,7 @@ export default function PainelFinanceiro({ cores }) {
             <Bell size={18} /> {executandoAlertas ? 'Enviando...' : 'Testar Alertas'}
           </button>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', backgroundColor: cores?.branco, padding: '5px', borderRadius: '10px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', backgroundColor: cores?.branco, padding: '5px', borderRadius: '10px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', overflowX: 'auto', maxWidth: '100%', flexShrink: 1 }}>
             <button type="button" onClick={() => setAbaAtiva('dashboard')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'dashboard' ? cores?.dourado : 'transparent', color: abaAtiva === 'dashboard' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Métricas</button>
             <button type="button" onClick={() => setAbaAtiva('contas')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'contas' ? cores?.dourado : 'transparent', color: abaAtiva === 'contas' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Bancos</button>
             <button type="button" onClick={() => setAbaAtiva('lancamentos')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'lancamentos' ? cores?.dourado : 'transparent', color: abaAtiva === 'lancamentos' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Lançamentos</button>
