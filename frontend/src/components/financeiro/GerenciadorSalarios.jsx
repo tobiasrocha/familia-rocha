@@ -228,7 +228,8 @@ export default function GerenciadorSalarios({ cores, formatarMoeda, perfis, obte
 
               {/* Lançamentos deste salário */}
               {(() => {
-                const lancs = (lancamentosGlobais || []).filter(l => l.categoria === 'Pagamentos Recebidos' && l.tipo === 'Receita' && l.descricao?.includes(s.descricao));
+                const tipoLabel = tiposSalario.find(t => t.key === s.tipo)?.label || s.tipo;
+                const lancs = (lancamentosGlobais || []).filter(l => l.categoria === 'Pagamentos Recebidos' && l.tipo === 'Receita' && l.descricao?.startsWith(`${tipoLabel}:`));
                 if (lancs.length === 0) return null;
                 return (
                   <div style={{ borderTop: '1px solid #eee', marginTop: '10px', paddingTop: '8px', maxHeight: '120px', overflowY: 'auto' }}>
