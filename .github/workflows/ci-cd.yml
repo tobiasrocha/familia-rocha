@@ -162,12 +162,7 @@ jobs:
           path: frontend/dist
 
       - name: Deploy to Firebase Hosting (Production)
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.GCP_SA_KEY }}
-          channelId: live
-          projectId: ${{ env.PROJECT_ID }}
+        run: npx firebase deploy --only hosting --project=${{ env.PROJECT_ID }} --token=${{ secrets.FIREBASE_TOKEN }}
 
   # ──────────────────────────────────────────────
   # JOB 5: DEPLOY FRONTEND — PREVIEW (homolog)
@@ -187,9 +182,4 @@ jobs:
           path: frontend/dist
 
       - name: Deploy to Firebase Preview Channel
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.GCP_SA_KEY }}
-          channelId: homolog
-          projectId: ${{ env.PROJECT_ID }}
+        run: npx firebase hosting:channel:deploy homolog --project=${{ env.PROJECT_ID }} --token=${{ secrets.FIREBASE_TOKEN }}
