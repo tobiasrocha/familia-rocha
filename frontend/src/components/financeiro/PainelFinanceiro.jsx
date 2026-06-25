@@ -315,7 +315,7 @@ export default function PainelFinanceiro({ cores }) {
               handleAtualizarParcela={handleAtualizarParcela}
             />
           )}
-          <ConciliadorExtrato cores={cores} onBaixas={recarregar} />
+          <ConciliadorExtrato cores={cores} onBaixas={recarregar} dadosMesFiltro={dadosMesFiltroCompleto} />
           <TabelaLancamentos
             dadosMesFiltro={dadosMesFiltroCompleto}
             contasBancarias={contasBancarias}
