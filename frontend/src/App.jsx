@@ -111,6 +111,25 @@ export default function App() {
     await signOut(auth);
   };
 
+  // Sessão 30 minutos — pergunta se quer continuar
+  useEffect(() => {
+    if (!user) return;
+    const TIMEOUT = 30 * 60 * 1000;
+    let timer = setTimeout(() => {
+      const continuar = window.confirm('Sua sessão expirou por inatividade. Deseja continuar?');
+      if (continuar) {
+        timer = setTimeout(() => handleLogout(), TIMEOUT);
+      } else {
+        handleLogout();
+      }
+    }, TIMEOUT);
+    const resetar = () => { clearTimeout(timer); timer = setTimeout(() => { const c = window.confirm('Sua sessão expirou. Continuar?'); if (c) resetar(); else handleLogout(); }, TIMEOUT); };
+    window.addEventListener('mousemove', resetar);
+    window.addEventListener('keydown', resetar);
+    window.addEventListener('click', resetar);
+    return () => { clearTimeout(timer); window.removeEventListener('mousemove', resetar); window.removeEventListener('keydown', resetar); window.removeEventListener('click', resetar); };
+  }, [user]);
+
   if (user === undefined) return <Carregando />;
 
   const temPermissao = (modulo) => isSuperadmin || (permissoes[modulo] === true);

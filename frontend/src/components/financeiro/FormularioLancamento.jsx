@@ -11,7 +11,7 @@ export default function FormularioLancamento({
   multa, setMulta, juros, setJuros,
   isParcelado, setIsParcelado, qtdParcelas, setQtdParcelas,
   listaParcelas,
-  linkArquivo, extraindoDados, avisoUpload, tipoAviso,
+  linkArquivo, extraindoDados, progressoUpload, avisoUpload, tipoAviso,
   salvando, onSalvar, onUploadDocumento,
   categoriesDespesa, categoriasReceita,
   handleGerarCronogramaParcelas, handleAtualizarParcela,
@@ -28,10 +28,15 @@ export default function FormularioLancamento({
         <div>
           <input type="file" onChange={onUploadDocumento} style={{ display: 'none' }} id="fileUploadOcr" />
           <label htmlFor="fileUploadOcr" style={{ cursor: 'pointer', padding: '8px 15px', backgroundColor: '#0056b3', color: '#fff', borderRadius: '6px', fontSize: '13px', fontWeight: 'bold' }}>
-            {extraindoDados ? 'Extraindo dados...' : 'Selecionar Arquivo'}
+            {extraindoDados ? `Enviando... ${progressoUpload || 0}%` : 'Selecionar Arquivo'}
           </label>
         </div>
       </div>
+      {extraindoDados && (
+        <div style={{ width: '100%', height: '6px', backgroundColor: '#e5e7eb', borderRadius: '3px', overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${progressoUpload || 0}%`, backgroundColor: '#0056b3', borderRadius: '3px', transition: 'width 0.3s' }} />
+        </div>
+      )}
       {avisoUpload && (
         <div style={{ width: '100%', padding: '12px 15px', marginBottom: '15px', borderRadius: '10px', backgroundColor: tipoAviso === 'erro' ? '#f8d7da' : '#fff3cd', border: tipoAviso === 'erro' ? '1px solid #f5c6cb' : '1px solid #ffeeba', color: tipoAviso === 'erro' ? '#721c24' : '#856404' }}>
           <strong>{tipoAviso === 'erro' ? 'Erro:' : 'Aviso:'}</strong> {avisoUpload}
