@@ -21,8 +21,10 @@ export default function TelaLogin({ cores, logo }) {
         setErro('Muitas tentativas. Aguarde um momento.');
       } else if (code.includes('user-disabled')) {
         setErro('Sua conta foi desativada. Contate o administrador.');
+      } else if (code.includes('network-request-failed') || code.includes('internal-error')) {
+        setErro('Falha de conexao. Verifique sua internet.');
       } else {
-        setErro('Erro ao acessar. Verifique suas credenciais.');
+        setErro('Erro ao acessar: ' + code);
       }
     }
   };
