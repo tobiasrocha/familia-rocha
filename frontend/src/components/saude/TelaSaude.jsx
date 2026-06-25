@@ -18,6 +18,7 @@ export default function TelaSaude({ cores }) {
   const [tipo, setTipo] = useState('Consulta'); 
   const [titulo, setTitulo] = useState('');
   const [dataEvento, setDataEvento] = useState('');
+  const [horaEvento, setHoraEvento] = useState('');
   const [localProfissional, setLocalProfissional] = useState('');
   const [observacoes, setObservacoes] = useState('');
   const [linkAnexo, setLinkAnexo] = useState('');
@@ -46,7 +47,7 @@ export default function TelaSaude({ cores }) {
   const { enviando: enviandoAnexo, enviarArquivo } = useUploadSaude();
 
   const resetarFormulario = () => {
-    setPerfilId(''); setTipo('Consulta'); setTitulo(''); setDataEvento('');
+    setPerfilId(''); setTipo('Consulta'); setTitulo(''); setDataEvento(''); setHoraEvento('');
     setLocalProfissional(''); setObservacoes(''); setLinkAnexo('');
     setIdEditando(null); setExibirForm(false);
   };
@@ -65,7 +66,7 @@ export default function TelaSaude({ cores }) {
     setSalvando(true);
     try {
       const novoRegistro = {
-        perfilId, tipo, titulo, dataEvento, localProfissional, observacoes, linkAnexo,
+        perfilId, tipo, titulo, dataEvento, horaEvento, localProfissional, observacoes, linkAnexo,
         criadoEm: new Date().toISOString()
       };
       if (idEditando) await updateDoc(doc(db, 'saude', idEditando), { ...novoRegistro, atualizadoEm: new Date().toISOString() });
@@ -81,7 +82,8 @@ export default function TelaSaude({ cores }) {
 
   const handleEditar = (item) => {
     setPerfilId(item.perfilId); setTipo(item.tipo); setTitulo(item.titulo);
-    setDataEvento(item.dataEvento); setLocalProfissional(item.localProfissional || '');
+    setDataEvento(item.dataEvento); setHoraEvento(item.horaEvento || '');
+    setLocalProfissional(item.localProfissional || '');
     setObservacoes(item.observacoes || ''); setLinkAnexo(item.linkAnexo || '');
     setIdEditando(item.id); setExibirForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -136,7 +138,8 @@ export default function TelaSaude({ cores }) {
           <div style={{ flex: '1 1 200px', display: 'flex', flexDirection: 'column', gap: '5px' }}><label style={{ fontSize: '14px', fontWeight: 'bold' }}>Paciente / Perfil</label><select value={perfilId} onChange={e => setPerfilId(e.target.value)} required style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc', backgroundColor: '#fff' }}><option value="">Selecione...</option>{perfis.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}</select></div>
           <div style={{ flex: '1 1 150px', display: 'flex', flexDirection: 'column', gap: '5px' }}><label style={{ fontSize: '14px', fontWeight: 'bold' }}>Categoria</label><select value={tipo} onChange={e => setTipo(e.target.value)} style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc', backgroundColor: '#fff' }}><option value="Consulta">Consulta Médica/Vet</option><option value="Exame">Exame (Sangue, Imagem...)</option><option value="Vacina">Vacina / Imunização</option><option value="Medicação">Medicação Contínua</option></select></div>
           <div style={{ flex: '2 1 250px', display: 'flex', flexDirection: 'column', gap: '5px' }}><label style={{ fontSize: '14px', fontWeight: 'bold' }}>Descrição (Ex: Vacina V10, Cardiologista...)</label><input type="text" value={titulo} onChange={e => setTitulo(e.target.value)} required style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
-          <div style={{ flex: '1 1 150px', display: 'flex', flexDirection: 'column', gap: '5px' }}><label style={{ fontSize: '14px', fontWeight: 'bold' }}>Data</label><input type="date" value={dataEvento} onChange={e => setDataEvento(e.target.value)} required style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
+          <div style={{ flex: '1 1 130px', display: 'flex', flexDirection: 'column', gap: '5px' }}><label style={{ fontSize: '14px', fontWeight: 'bold' }}>Data</label><input type="date" value={dataEvento} onChange={e => setDataEvento(e.target.value)} required style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
+          <div style={{ flex: '0 0 110px', display: 'flex', flexDirection: 'column', gap: '5px' }}><label style={{ fontSize: '14px', fontWeight: 'bold' }}>Hora</label><input type="time" value={horaEvento} onChange={e => setHoraEvento(e.target.value)} style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
           <div style={{ flex: '2 1 250px', display: 'flex', flexDirection: 'column', gap: '5px' }}><label style={{ fontSize: '14px', fontWeight: 'bold' }}>Profissional ou Clínica</label><input type="text" placeholder="Nome do médico ou laboratório" value={localProfissional} onChange={e => setLocalProfissional(e.target.value)} style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
           <div style={{ flex: '1 1 100%', display: 'flex', flexDirection: 'column', gap: '5px' }}><label style={{ fontSize: '14px', fontWeight: 'bold' }}>Anotações / Posologia</label><textarea value={observacoes} onChange={e => setObservacoes(e.target.value)} style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc', minHeight: '60px' }} /></div>
 
@@ -178,7 +181,7 @@ export default function TelaSaude({ cores }) {
                 <div key={item.id} style={{ backgroundColor: cores?.branco, padding: '15px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', display: 'flex', gap: '15px', borderLeft: `4px solid ${cores?.dourado}` }}>
                   <div style={{ width: '45px', height: '45px', borderRadius: '50%', backgroundColor: '#f8f9fa', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{renderIconeTipo(item.tipo)}</div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><strong style={{ fontSize: '15px', color: cores?.texto }}>{item.titulo}</strong><span style={{ fontSize: '12px', fontWeight: 'bold', color: '#dc3545' }}>{item.dataEvento.split('-').reverse().join('/')}</span></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><strong style={{ fontSize: '15px', color: cores?.texto }}>{item.titulo}</strong><span style={{ fontSize: '12px', fontWeight: 'bold', color: '#dc3545' }}>{item.dataEvento.split('-').reverse().join('/')}{item.horaEvento ? ` ${item.horaEvento}` : ''}</span></div>
                     <div style={{ fontSize: '13px', color: '#666', marginTop: '4px' }}>Paciente: <strong>{obterNomePerfil(item.perfilId)}</strong></div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
                       {item.linkAnexo ? <a href={item.linkAnexo} target="_blank" rel="noreferrer" style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', color: '#0056b3', textDecoration: 'none', fontWeight: 'bold' }}><FileText size={14} /> Ver Anexo</a> : <span></span>}
@@ -202,7 +205,7 @@ export default function TelaSaude({ cores }) {
                 <div key={item.id} style={{ backgroundColor: '#fdfdfd', padding: '15px', borderRadius: '12px', border: '1px solid #eaeaea', display: 'flex', gap: '15px' }}>
                   <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: '#f1f3f5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{renderIconeTipo(item.tipo)}</div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><strong style={{ fontSize: '14px', color: '#555' }}>{item.titulo}</strong><span style={{ fontSize: '12px', color: '#888' }}>{item.dataEvento.split('-').reverse().join('/')}</span></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><strong style={{ fontSize: '14px', color: '#555' }}>{item.titulo}</strong><span style={{ fontSize: '12px', color: '#888' }}>{item.dataEvento.split('-').reverse().join('/')}{item.horaEvento ? ` ${item.horaEvento}` : ''}</span></div>
                     <div style={{ fontSize: '12px', color: '#777', marginTop: '2px' }}>Paciente: {obterNomePerfil(item.perfilId)}</div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
                       {item.linkAnexo ? <a href={item.linkAnexo} target="_blank" rel="noreferrer" style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', color: '#0056b3', textDecoration: 'none', fontWeight: 'bold' }}><FileText size={14} /> Ver Anexo</a> : <span></span>}

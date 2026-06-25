@@ -154,7 +154,7 @@ export default function Dashboard({ cores }) {
                       <strong style={{ fontSize: '13px', color: cores?.texto, display: 'block' }}>{item.titulo}</strong>
                       <span style={{ fontSize: '11px', color: '#666' }}>{item.tipo}</span>
                     </div>
-                    <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#495057' }}>{formatarData(item.dataEvento)}</span>
+                    <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#495057' }}>{formatarData(item.dataEvento)}{item.horaEvento ? ` ${item.horaEvento}` : ''}</span>
                   </div>
                 ))
               )}
