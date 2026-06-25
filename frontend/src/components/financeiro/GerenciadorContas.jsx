@@ -8,6 +8,9 @@ export default function GerenciadorContas({ cores, contasBancarias, perfis, calc
   const [exibirFormConta, setExibirFormConta] = useState(false);
   const [editandoContaId, setEditandoContaId] = useState(null);
   const [nomeConta, setNomeConta] = useState('');
+  const [agencia, setAgencia] = useState('');
+  const [numeroConta, setNumeroConta] = useState('');
+  const [operacao, setOperacao] = useState('');
   const [saldoInicialConta, setSaldoInicialConta] = useState('');
   const [limiteChequeEspecial, setLimiteChequeEspecial] = useState('');
   const [perfilContaId, setPerfilContaId] = useState('');
@@ -25,6 +28,9 @@ export default function GerenciadorContas({ cores, contasBancarias, perfis, calc
     e.preventDefault();
     const payload = {
       nome: nomeConta,
+      agencia: agencia || '',
+      numeroConta: numeroConta || '',
+      operacao: operacao || '',
       saldoInicial: parseFloat(saldoInicialConta) || 0,
       limiteChequeEspecial: parseFloat(limiteChequeEspecial) || 0,
       perfilId: perfilContaId,
@@ -35,12 +41,15 @@ export default function GerenciadorContas({ cores, contasBancarias, perfis, calc
     } else {
       await addDoc(collection(db, 'contas_bancarias'), { ...payload, criadoEm: new Date().toISOString() });
     }
-    setNomeConta(''); setSaldoInicialConta(''); setLimiteChequeEspecial(''); setDataSaldoConta(new Date().toISOString().slice(0, 10));
+    setNomeConta(''); setAgencia(''); setNumeroConta(''); setOperacao(''); setSaldoInicialConta(''); setLimiteChequeEspecial(''); setDataSaldoConta(new Date().toISOString().slice(0, 10));
     setExibirFormConta(false); setEditandoContaId(null); recarregarContas();
   };
 
   const handleEditarConta = (conta) => {
     setNomeConta(conta.nome);
+    setAgencia(conta.agencia || '');
+    setNumeroConta(conta.numeroConta || '');
+    setOperacao(conta.operacao || '');
     setSaldoInicialConta(conta.saldoInicial?.toString() || '');
     setLimiteChequeEspecial(conta.limiteChequeEspecial?.toString() || '');
     setPerfilContaId(conta.perfilId || '');
@@ -113,7 +122,7 @@ export default function GerenciadorContas({ cores, contasBancarias, perfis, calc
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}><button type="button" onClick={() => { setEditandoContaId(null); setNomeConta(''); setSaldoInicialConta(''); setLimiteChequeEspecial(''); setDataSaldoConta(new Date().toISOString().slice(0,10)); setExibirFormConta(!exibirFormConta); }} style={{ padding: '10px 20px', backgroundColor: cores?.dourado, color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}><Plus size={18}/> {exibirFormConta ? 'Cancelar' : 'Nova Conta / Carteira'}</button></div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}><button type="button" onClick={() => { setEditandoContaId(null); setNomeConta(''); setAgencia(''); setNumeroConta(''); setOperacao(''); setSaldoInicialConta(''); setLimiteChequeEspecial(''); setDataSaldoConta(new Date().toISOString().slice(0,10)); setExibirFormConta(!exibirFormConta); }} style={{ padding: '10px 20px', backgroundColor: cores?.dourado, color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}><Plus size={18}/> {exibirFormConta ? 'Cancelar' : 'Nova Conta / Carteira'}</button></div>
       {exibirFormConta && (
         <form onSubmit={handleSalvarConta} style={{ backgroundColor: cores?.branco, padding: '20px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', display: 'flex', gap: '15px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
           <div style={{ flex: '1 1 150px', display: 'flex', flexDirection: 'column', gap: '5px' }}><label style={{ fontSize: '14px', fontWeight: 'bold' }}><User size={14} style={{verticalAlign: 'middle'}}/> Titular da Conta</label><select value={perfilContaId} onChange={e => setPerfilContaId(e.target.value)} required style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }}><option value="" disabled>Selecione...</option>{perfis.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}</select></div>
@@ -121,7 +130,19 @@ export default function GerenciadorContas({ cores, contasBancarias, perfis, calc
           <div style={{ flex: '1 1 150px', display: 'flex', flexDirection: 'column', gap: '5px' }}><label style={{ fontSize: '14px', fontWeight: 'bold' }}><Calendar size={14} style={{verticalAlign:'middle'}}/> Data do Saldo</label><input type="date" value={dataSaldoConta} onChange={e => setDataSaldoConta(e.target.value)} required style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
           <div style={{ flex: '1 1 150px', display: 'flex', flexDirection: 'column', gap: '5px' }}><label style={{ fontSize: '14px', fontWeight: 'bold' }}>Saldo Inicial (R$)</label><input type="number" step="0.01" value={saldoInicialConta} onChange={e => setSaldoInicialConta(e.target.value)} required style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
           <button type="submit" style={{ padding: '10px 20px', height: '40px', backgroundColor: '#28a745', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>{editandoContaId ? 'Atualizar Conta' : 'Salvar Conta'}</button>
-          <div style={{ flex: '1 1 100%', display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+          <div style={{ flex: '1 1 100%', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 100px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              <label style={{ fontSize: '14px', fontWeight: 'bold' }}>Agência</label>
+              <input type="text" value={agencia} onChange={e => setAgencia(e.target.value)} placeholder="0000" style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
+            </div>
+            <div style={{ flex: '1 1 130px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              <label style={{ fontSize: '14px', fontWeight: 'bold' }}>Nº Conta</label>
+              <input type="text" value={numeroConta} onChange={e => setNumeroConta(e.target.value)} placeholder="00000-0" style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
+            </div>
+            <div style={{ flex: '1 1 90px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              <label style={{ fontSize: '14px', fontWeight: 'bold' }}>Operação</label>
+              <input type="text" value={operacao} onChange={e => setOperacao(e.target.value)} placeholder="001" style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
+            </div>
             <div style={{ flex: '1 1 150px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
               <label style={{ fontSize: '14px', fontWeight: 'bold' }}>Limite Cheque Especial (R$)</label>
               <input type="number" step="0.01" min="0" value={limiteChequeEspecial} onChange={e => setLimiteChequeEspecial(e.target.value)} placeholder="0,00" style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
@@ -140,7 +161,15 @@ export default function GerenciadorContas({ cores, contasBancarias, perfis, calc
               <button type="button" onClick={() => handleExcluirConta(conta.id)} style={{ position: 'absolute', top: '15px', right: '15px', background: 'none', border: 'none', cursor: 'pointer', color: '#dc3545' }}><Trash2 size={16}/></button>
               <button type="button" onClick={() => handleEditarConta(conta)} style={{ position: 'absolute', top: '15px', right: '45px', background: 'none', border: 'none', cursor: 'pointer', color: '#0056b3' }}><Pencil size={16}/></button>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px' }}><div style={{ padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '50%' }}><Landmark size={24} color="#2c3e50" /></div><h3 style={{ margin: 0, fontSize: '18px', color: '#333' }}>{conta.nome}</h3></div>
-              <div style={{ marginBottom: '10px', fontSize: '12px', color: '#666' }}><User size={12}/> Titular: <strong>{obterNomePerfil(conta.perfilId)}</strong></div>
+              <div style={{ marginBottom: '10px', fontSize: '12px', color: '#666' }}>
+                <User size={12}/> Titular: <strong>{obterNomePerfil(conta.perfilId)}</strong>
+                {(conta.agencia || conta.numeroConta) && (
+                  <span style={{ marginLeft: 8, fontSize: '11px', color: '#999' }}>
+                    {conta.agencia && <>Ag. {conta.agencia}</>}
+                    {conta.numeroConta && <> | C/C {conta.numeroConta}{conta.operacao ? `-${conta.operacao}` : ''}</>}
+                  </span>
+                )}
+              </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '10px' }}>
                 <div>
