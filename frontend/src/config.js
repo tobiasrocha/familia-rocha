@@ -13,11 +13,14 @@ export async function apiFetch(url, options = {}) {
 
   const user = auth.currentUser;
   if (user) {
-    try {
-      const token = await user.getIdToken();
-      headers['Authorization'] = `Bearer ${token}`;
-    } catch {
-      // token refresh falhou — tenta sem token
+    for (let tentativa = 0; tentativa < 3; tentativa++) {
+      try {
+        const token = await user.getIdToken();
+        headers['Authorization'] = `Bearer ${token}`;
+        break;
+      } catch {
+        if (tentativa < 2) await new Promise(r => setTimeout(r, 500));
+      }
     }
   }
 

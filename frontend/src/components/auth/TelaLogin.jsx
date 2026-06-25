@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { signInWithEmailAndPassword, signInWithRedirect, getRedirectResult } from 'firebase/auth';
+import { useState } from 'react';
+import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider } from '../../firebaseConfig';
 
 export default function TelaLogin({ cores, logo }) {
@@ -7,11 +7,6 @@ export default function TelaLogin({ cores, logo }) {
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState('');
   const [carregandoGoogle, setCarregandoGoogle] = useState(false);
-
-  // Processa retorno do redirect
-  useEffect(() => {
-    getRedirectResult(auth).catch(() => {});
-  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -36,12 +31,16 @@ export default function TelaLogin({ cores, logo }) {
     setErro('');
     setCarregandoGoogle(true);
     try {
-      await signInWithRedirect(auth, googleProvider);
+      await signInWithPopup(auth, googleProvider);
     } catch (error) {
-      if (error.code === 'auth/unauthorized-domain') {
+      if (error.code === 'auth/popup-closed-by-user') {
+        // usuario fechou o popup
+      } else if (error.code === 'auth/unauthorized-domain') {
         setErro('Dominio nao autorizado. Contate o administrador.');
-      } else if (error.code !== 'auth/popup-closed-by-user') {
-        setErro('Falha ao autenticar com Google. Tente novamente.');
+      } else if (error.code === 'auth/cancelled-popup-request') {
+        // conflito de popup — ignorar
+      } else {
+        setErro('Falha ao autenticar com Google.');
       }
     } finally {
       setCarregandoGoogle(false);
