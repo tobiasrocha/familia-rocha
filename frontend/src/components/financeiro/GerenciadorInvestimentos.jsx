@@ -1,9 +1,35 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { collection, addDoc, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
-import { Plus, TrendingUp, Trash2, Pencil, Check, X, DollarSign, BarChart3 } from 'lucide-react';
+import { Plus, TrendingUp, Trash2, Pencil, Check, X, DollarSign, BarChart3, Globe } from 'lucide-react';
 
-const tiposInvestimento = ['Renda Fixa', 'Renda Variável', 'Fundos', 'Imóveis', 'Criptomoedas', 'Previdência', 'Ações', 'Outros'];
+const tiposInvestimento = ['Renda Fixa', 'Renda Variável', 'Fundos', 'Imóveis', 'Criptomoedas', 'Previdência', 'Ações', 'Moeda Estrangeira', 'Outros'];
+
+const MOEDAS = [
+  { sigla: 'USD', nome: 'Dólar', cor: '#2563eb', bg: '#eff6ff' },
+  { sigla: 'EUR', nome: 'Euro', cor: '#d97706', bg: '#fef3c7' },
+  { sigla: 'GBP', nome: 'Libra', cor: '#7c3aed', bg: '#ede9fe' },
+  { sigla: 'BTC', nome: 'Bitcoin', cor: '#f59e0b', bg: '#fffbeb' },
+  { sigla: 'ARS', nome: 'Peso AR', cor: '#059669', bg: '#ecfdf5' },
+];
+
+function MiniGrafico({ dados, cor, altura = 40 }) {
+  if (!dados || dados.length < 2) return <div style={{ height: altura, background: '#f5f5f5', borderRadius: 6 }} />;
+  const vals = dados.map(d => d.valor);
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  const range = max - min || 1;
+  const w = 100;
+  const h = altura;
+  const pts = vals.map((v, i) => `${(i / (vals.length - 1)) * w},${h - ((v - min) / range) * h}`).join(' ');
+  const ptsArea = `0,${h} ${pts} ${w},${h}`;
+  return (
+    <svg width="100%" height={h} style={{ display: 'block' }}>
+      <polygon points={ptsArea} fill={`${cor}15`} />
+      <polyline points={pts} fill="none" stroke={cor} strokeWidth="1.5" />
+    </svg>
+  );
+}
 
 export default function GerenciadorInvestimentos({ cores, investimentos, formatarMoeda, recarregarInvestimentos }) {
   const [exibirForm, setExibirForm] = useState(false);
@@ -17,29 +43,74 @@ export default function GerenciadorInvestimentos({ cores, investimentos, formata
   const [observacoes, setObservacoes] = useState('');
   const [ticker, setTicker] = useState('');
   const [quantidade, setQuantidade] = useState('');
+  const [moeda, setMoeda] = useState('USD');
+  const [cotacaoCompra, setCotacaoCompra] = useState('');
 
   const [editandoSaldoId, setEditandoSaldoId] = useState(null);
   const [novoSaldo, setNovoSaldo] = useState('');
 
-  const [cotacoes, setCotacoes] = useState({ usd: null, eur: null });
-  const [carregandoCotacoes, setCarregandoCotacoes] = useState(true);
+  const [cotacoes, setCotacoes] = useState({});
+  const [historicoDolar, setHistoricoDolar] = useState([]);
+  const [indiceB3, setIndiceB3] = useState(null);
+  const [carregando, setCarregando] = useState(true);
 
-  useEffect(() => {
-    fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL')
-      .then(r => r.json())
-      .then(data => {
-        setCotacoes({
-          usd: parseFloat(data.USDBRL?.bid || 0),
-          eur: parseFloat(data.EURBRL?.bid || 0),
-        });
-        setCarregandoCotacoes(false);
-      })
-      .catch(() => setCarregandoCotacoes(false));
+  const carregarDados = useCallback(async () => {
+    try {
+      // Moedas
+      const moedasRes = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL,GBP-BRL,BTC-BRL,ARS-BRL');
+      const moedasData = await moedasRes.json();
+      const mapa = {};
+      if (moedasData.USDBRL) mapa.USD = { bid: parseFloat(moedasData.USDBRL.bid), var: parseFloat(moedasData.USDBRL.pctChange || 0) };
+      if (moedasData.EURBRL) mapa.EUR = { bid: parseFloat(moedasData.EURBRL.bid), var: parseFloat(moedasData.EURBRL.pctChange || 0) };
+      if (moedasData.GBPBRL) mapa.GBP = { bid: parseFloat(moedasData.GBPBRL.bid), var: parseFloat(moedasData.GBPBRL.pctChange || 0) };
+      if (moedasData.BTCBRL) mapa.BTC = { bid: parseFloat(moedasData.BTCBRL.bid), var: parseFloat(moedasData.BTCBRL.pctChange || 0) };
+      if (moedasData.ARSBRL) mapa.ARS = { bid: parseFloat(moedasData.ARSBRL.bid), var: parseFloat(moedasData.ARSBRL.pctChange || 0) };
+      setCotacoes(mapa);
+    } catch { /* offline */ }
+
+    try {
+      // Historico 7 dias USD
+      const histRes = await fetch('https://economia.awesomeapi.com.br/json/daily/USD-BRL/7');
+      const histData = await histRes.json();
+      const serie = (histData || []).reverse().map(d => ({ valor: parseFloat(d.bid) }));
+      setHistoricoDolar(serie);
+    } catch { /* offline */ }
+
+    try {
+      // IBOVESPA via brapi
+      const b3Res = await fetch('https://brapi.dev/api/quote/%5EBVSP?range=1d&interval=1d');
+      const b3Data = await b3Res.json();
+      if (b3Data?.results?.[0]) {
+        const r = b3Data.results[0];
+        setIndiceB3({ valor: r.regularMarketPrice, var: r.regularMarketChangePercent || 0 });
+      }
+    } catch {
+      try {
+        // fallback: Alpha Vantage free
+        const avRes = await fetch('https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=IBOV&apikey=demo');
+        const avData = await avRes.json();
+        const q = avData?.['Global Quote'];
+        if (q?.['05. price']) {
+          setIndiceB3({ valor: parseFloat(q['05. price']), var: parseFloat(q['10. change percent']?.replace('%', '') || 0) });
+        }
+      } catch { /* offline */ }
+    } finally {
+      setCarregando(false);
+    }
   }, []);
+
+  useEffect(() => { carregarDados(); }, [carregarDados]);
+
+  // Atualiza a cada 60s
+  useEffect(() => {
+    const id = setInterval(carregarDados, 60000);
+    return () => clearInterval(id);
+  }, [carregarDados]);
 
   const resetForm = () => {
     setNome(''); setTipo('Renda Fixa'); setValor(''); setDataInicio('');
     setRentabilidade(''); setCorretora(''); setObservacoes(''); setTicker(''); setQuantidade('');
+    setMoeda('USD'); setCotacaoCompra('');
     setEditandoId(null); setExibirForm(false);
   };
 
@@ -54,6 +125,8 @@ export default function GerenciadorInvestimentos({ cores, investimentos, formata
       observacoes: observacoes || null,
       ticker: ticker || null,
       quantidade: quantidade ? parseInt(quantidade) : null,
+      moeda: tipo === 'Moeda Estrangeira' ? moeda : null,
+      cotacaoCompra: tipo === 'Moeda Estrangeira' && cotacaoCompra ? parseFloat(cotacaoCompra) : null,
     };
 
     if (editandoId) {
@@ -75,6 +148,7 @@ export default function GerenciadorInvestimentos({ cores, investimentos, formata
     setDataInicio(inv.dataInicio || ''); setRentabilidade(inv.rentabilidade || '');
     setCorretora(inv.corretora || ''); setObservacoes(inv.observacoes || '');
     setTicker(inv.ticker || ''); setQuantidade(inv.quantidade?.toString() || '');
+    setMoeda(inv.moeda || 'USD'); setCotacaoCompra(inv.cotacaoCompra?.toString() || '');
     setEditandoId(inv.id); setExibirForm(true);
   };
 
@@ -94,32 +168,57 @@ export default function GerenciadorInvestimentos({ cores, investimentos, formata
 
   const totalInvestido = (investimentos || []).reduce((acc, i) => acc + Number(i.valor || 0), 0);
 
+  const infoMoeda = (sigla) => MOEDAS.find(m => m.sigla === sigla) || {};
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
-      {/* COTAÇÕES */}
-      <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
-        <div style={{ flex: '1 1 200px', backgroundColor: '#eff6ff', padding: '12px 18px', borderRadius: '10px', border: '1px solid #bfdbfe', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <DollarSign size={22} color="#2563eb" />
-          <div>
-            <span style={{ fontSize: '11px', color: '#6b7280', display: 'block' }}>Dólar (USD)</span>
-            <strong style={{ fontSize: '16px', color: '#2563eb' }}>
-              {carregandoCotacoes ? '...' : cotacoes.usd ? `R$ ${cotacoes.usd.toFixed(2)}` : 'Indisponível'}
-            </strong>
+      {/* LINHA 1: COTAÇÕES DE MOEDAS */}
+      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+        {MOEDAS.map(m => {
+          const c = cotacoes[m.sigla];
+          return (
+            <div key={m.sigla} style={{ flex: '1 1 150px', backgroundColor: m.bg, padding: '12px 14px', borderRadius: '10px', border: `1px solid ${m.cor}30`, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <DollarSign size={20} color={m.cor} />
+              <div style={{ flex: 1 }}>
+                <span style={{ fontSize: '10px', color: '#666', display: 'block' }}>{m.nome}</span>
+                <strong style={{ fontSize: '14px', color: m.cor }}>
+                  {carregando ? '...' : c ? `R$ ${m.sigla === 'BTC' ? c.bid.toLocaleString('pt-BR') : c.bid.toFixed(2)}` : '—'}
+                </strong>
+                {c && c.var !== 0 && (
+                  <span style={{ fontSize: '10px', color: c.var >= 0 ? '#059669' : '#dc2626' }}>
+                    {c.var > 0 ? '+' : ''}{c.var.toFixed(2)}%
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* LINHA 2: IBOVESPA + GRÁFICO DÓLAR + TOTAL */}
+      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+        {indiceB3 && (
+          <div style={{ flex: '1 1 200px', backgroundColor: '#f0fdf4', padding: '12px 14px', borderRadius: '10px', border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <BarChart3 size={22} color="#16a34a" />
+            <div>
+              <span style={{ fontSize: '10px', color: '#666', display: 'block' }}>IBOVESPA</span>
+              <strong style={{ fontSize: '15px', color: '#16a34a' }}>{indiceB3.valor.toLocaleString('pt-BR')} pts</strong>
+              {indiceB3.var !== 0 && (
+                <span style={{ fontSize: '10px', color: indiceB3.var >= 0 ? '#059669' : '#dc2626', marginLeft: 4 }}>
+                  {indiceB3.var > 0 ? '+' : ''}{indiceB3.var.toFixed(2)}%
+                </span>
+              )}
+            </div>
           </div>
+        )}
+        <div style={{ flex: '2 1 280px', backgroundColor: '#fff', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e5e7eb' }}>
+          <span style={{ fontSize: '10px', color: '#666', display: 'block', marginBottom: 4 }}>Dólar — 7 dias</span>
+          <MiniGrafico dados={historicoDolar} cor="#2563eb" altura={40} />
         </div>
-        <div style={{ flex: '1 1 200px', backgroundColor: '#fef3c7', padding: '12px 18px', borderRadius: '10px', border: '1px solid #fcd34d', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <DollarSign size={22} color="#d97706" />
-          <div>
-            <span style={{ fontSize: '11px', color: '#92400e', display: 'block' }}>Euro (EUR)</span>
-            <strong style={{ fontSize: '16px', color: '#d97706' }}>
-              {carregandoCotacoes ? '...' : cotacoes.eur ? `R$ ${cotacoes.eur.toFixed(2)}` : 'Indisponível'}
-            </strong>
-          </div>
-        </div>
-        <div style={{ flex: '1 1 180px', backgroundColor: '#ecfdf5', padding: '12px 18px', borderRadius: '10px', border: '1px solid #a7f3d0' }}>
-          <span style={{ fontSize: '11px', color: '#6b7280', display: 'block' }}>Total Investido</span>
-          <strong style={{ fontSize: '18px', color: '#059669' }}>{formatarMoeda(totalInvestido)}</strong>
+        <div style={{ flex: '1 1 160px', backgroundColor: '#ecfdf5', padding: '12px 14px', borderRadius: '10px', border: '1px solid #a7f3d0' }}>
+          <span style={{ fontSize: '10px', color: '#6b7280', display: 'block' }}>Total Investido</span>
+          <strong style={{ fontSize: '17px', color: '#059669' }}>{formatarMoeda(totalInvestido)}</strong>
         </div>
       </div>
 
@@ -133,7 +232,7 @@ export default function GerenciadorInvestimentos({ cores, investimentos, formata
         <form onSubmit={handleSalvar} style={{ backgroundColor: cores?.branco, padding: '20px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
           <div style={{ flex: '2 1 200px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
             <label style={{ fontSize: '14px', fontWeight: 'bold' }}>Nome do Investimento</label>
-            <input type="text" value={nome} onChange={e => setNome(e.target.value)} required placeholder="Ex: Tesouro Selic, FII XPML11" style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
+            <input type="text" value={nome} onChange={e => setNome(e.target.value)} required placeholder="Ex: Tesouro Selic, Compra USD" style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
           </div>
           <div style={{ flex: '1 1 140px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
             <label style={{ fontSize: '14px', fontWeight: 'bold' }}>Tipo</label>
@@ -145,6 +244,22 @@ export default function GerenciadorInvestimentos({ cores, investimentos, formata
             <label style={{ fontSize: '14px', fontWeight: 'bold' }}>Valor (R$)</label>
             <input type="number" step="0.01" value={valor} onChange={e => setValor(e.target.value)} required style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
           </div>
+
+          {tipo === 'Moeda Estrangeira' && (
+            <>
+              <div style={{ flex: '0 0 100px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                <label style={{ fontSize: '13px', fontWeight: 'bold' }}>Moeda</label>
+                <select value={moeda} onChange={e => setMoeda(e.target.value)} style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }}>
+                  {MOEDAS.filter(m => m.sigla !== 'BTC').map(m => <option key={m.sigla} value={m.sigla}>{m.sigla}</option>)}
+                </select>
+              </div>
+              <div style={{ flex: '0 0 90px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                <label style={{ fontSize: '13px', fontWeight: 'bold' }}>Cotação</label>
+                <input type="number" step="0.0001" value={cotacaoCompra} onChange={e => setCotacaoCompra(e.target.value)} placeholder={cotacoes[moeda]?.bid?.toFixed(2)} style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
+              </div>
+            </>
+          )}
+
           {tipo === 'Ações' && (
             <>
               <div style={{ flex: '0 0 100px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
@@ -180,27 +295,36 @@ export default function GerenciadorInvestimentos({ cores, investimentos, formata
         </form>
       )}
 
+      {/* CARDS DE INVESTIMENTOS */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '20px' }}>
-        {(investimentos || []).map(inv => (
-          <div key={inv.id} style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #eee', borderTop: `4px solid ${inv.tipo === 'Ações' ? '#8b5cf6' : '#2563eb'}`, boxShadow: '0 4px 15px rgba(0,0,0,0.03)', position: 'relative' }}>
+        {(investimentos || []).map(inv => {
+          const info = inv.moeda ? infoMoeda(inv.moeda) : {};
+          const borderColor = inv.tipo === 'Moeda Estrangeira' ? (info.cor || '#2563eb')
+            : inv.tipo === 'Ações' ? '#8b5cf6' : '#2563eb';
+          const bgIcon = inv.tipo === 'Moeda Estrangeira' ? (info.bg || '#eff6ff')
+            : inv.tipo === 'Ações' ? '#ede9fe' : '#eff6ff';
+          return (
+          <div key={inv.id} style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #eee', borderTop: `4px solid ${borderColor}`, boxShadow: '0 4px 15px rgba(0,0,0,0.03)', position: 'relative' }}>
             <div style={{ display: 'flex', gap: '4px', position: 'absolute', top: '15px', right: '15px' }}>
               <button type="button" onClick={() => handleEditar(inv)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0056b3', padding: '2px' }}><Pencil size={14}/></button>
               <button type="button" onClick={() => handleExcluir(inv.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc3545', padding: '2px' }}><Trash2 size={14}/></button>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-              <div style={{ padding: '10px', backgroundColor: inv.tipo === 'Ações' ? '#ede9fe' : '#eff6ff', borderRadius: '50%' }}>
-                {inv.tipo === 'Ações' ? <BarChart3 size={24} color="#8b5cf6" /> : <TrendingUp size={24} color="#2563eb" />}
+              <div style={{ padding: '10px', backgroundColor: bgIcon, borderRadius: '50%' }}>
+                {inv.tipo === 'Moeda Estrangeira' ? <Globe size={24} color={info.cor || '#2563eb'} />
+                  : inv.tipo === 'Ações' ? <BarChart3 size={24} color="#8b5cf6" />
+                  : <TrendingUp size={24} color="#2563eb" />}
               </div>
               <div>
                 <h3 style={{ margin: 0, fontSize: '18px', color: '#333' }}>{inv.nome}</h3>
-                <div style={{ display: 'flex', gap: '4px', marginTop: '2px' }}>
+                <div style={{ display: 'flex', gap: '4px', marginTop: '2px', flexWrap: 'wrap' }}>
                   <span style={{ fontSize: '11px', color: '#888', padding: '2px 8px', backgroundColor: '#f1f5f9', borderRadius: '10px' }}>{inv.tipo}</span>
                   {inv.ticker && <span style={{ fontSize: '11px', color: '#8b5cf6', padding: '2px 8px', backgroundColor: '#ede9fe', borderRadius: '10px', fontWeight: 'bold' }}>{inv.ticker}</span>}
+                  {inv.moeda && <span style={{ fontSize: '11px', color: info.cor || '#2563eb', padding: '2px 8px', backgroundColor: info.bg || '#eff6ff', borderRadius: '10px', fontWeight: 'bold' }}>{inv.moeda}</span>}
                 </div>
               </div>
             </div>
 
-            {/* SALDO EDITÁVEL */}
             <div style={{ marginBottom: '10px' }}>
               <span style={{ fontSize: '11px', color: '#888', display: 'block' }}>Valor Investido</span>
               {editandoSaldoId === inv.id ? (
@@ -220,6 +344,12 @@ export default function GerenciadorInvestimentos({ cores, investimentos, formata
               )}
             </div>
 
+            {inv.moeda && inv.cotacaoCompra && inv.valor > 0 && (
+              <div style={{ fontSize: '12px', color: '#666', marginBottom: '6px' }}>
+                Comprado a R$ {inv.cotacaoCompra.toFixed(2)} → {cotacoes[inv.moeda] ? <>Cotação atual: R$ {cotacoes[inv.moeda].bid.toFixed(2)}</> : ''}
+              </div>
+            )}
+
             {inv.quantidade && inv.valor > 0 && (
               <div style={{ fontSize: '12px', color: '#666', marginBottom: '6px' }}>
                 {inv.quantidade} un. &times; {formatarMoeda(inv.valor / inv.quantidade)} /un.
@@ -232,12 +362,10 @@ export default function GerenciadorInvestimentos({ cores, investimentos, formata
               {inv.corretora && <span>| {inv.corretora}</span>}
             </div>
             {inv.observacoes && (
-              <div style={{ borderTop: '1px solid #eee', marginTop: '10px', paddingTop: '8px', fontSize: '12px', color: '#999' }}>
-                {inv.observacoes}
-              </div>
+              <div style={{ borderTop: '1px solid #eee', marginTop: '10px', paddingTop: '8px', fontSize: '12px', color: '#999' }}>{inv.observacoes}</div>
             )}
           </div>
-        ))}
+        )})}
       </div>
 
       {(investimentos || []).length === 0 && (
