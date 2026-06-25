@@ -73,6 +73,7 @@ export default function GerenciadorSalarios({ cores, formatarMoeda, perfis, obte
         contaId: regContaId || null,
         perfilId: regPerfilId || s.perfilId || null,
         formaPagamento: regContaId ? 'PIX' : 'Dinheiro',
+        salarioId: s.id,
         criadoEm: new Date().toISOString(),
       });
       setRegId(null); setRegContaId(''); setRegPerfilId(''); recarregar();
@@ -228,9 +229,7 @@ export default function GerenciadorSalarios({ cores, formatarMoeda, perfis, obte
 
               {/* Lançamentos deste salário */}
               {(() => {
-                const tipoLabel = tiposSalario.find(t => t.key === s.tipo)?.label || s.tipo;
-                const prefixo = `${tipoLabel}: ${s.descricao}`;
-                const lancs = (lancamentosGlobais || []).filter(l => l.categoria === 'Pagamentos Recebidos' && l.tipo === 'Receita' && l.descricao === prefixo);
+                const lancs = (lancamentosGlobais || []).filter(l => l.categoria === 'Pagamentos Recebidos' && l.tipo === 'Receita' && l.salarioId === s.id);
                 if (lancs.length === 0) return null;
                 return (
                   <div style={{ borderTop: '1px solid #eee', marginTop: '10px', paddingTop: '8px', maxHeight: '120px', overflowY: 'auto' }}>
