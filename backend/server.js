@@ -131,7 +131,7 @@ const schemaPermissoes = z.object({
 const schemaResetSenha = z.object({
   senha: z.string().min(6, 'Senha deve ter no minimo 6 caracteres.'),
 });
-async function verificarPermissao(modulo) {
+function verificarPermissao(modulo) {
   return async (req, res, next) => {
     if (!req.usuario) return res.status(401).json({ erro: 'Autenticacao necessaria.' });
     if (!firestoreDb) return res.status(503).json({ erro: 'Banco de dados indisponivel.' });
