@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { TrendingUp, CreditCard, Landmark, X } from 'lucide-react';
+import { TrendingUp, CreditCard, Landmark, Vault, X } from 'lucide-react';
 
 const coresGrafico = ['#C5A059', '#2c3e50', '#e74c3c', '#17a2b8', '#28a745', '#6f42c1', '#fd7e14', '#6c757d'];
 
-export default function DashboardFinanceiro({ cores, formatarMoeda, saldoGlobalConsolidado, saldoBancario, saldoInvestimentos, debitoCartoes, totalReceitas, totalDespesasPagas, totalDespesasPendentes, mesFiltro, despesasPorCategoria }) {
+export default function DashboardFinanceiro({ cores, formatarMoeda, saldoGlobalConsolidado, saldoBancario, saldoInvestimentos, saldoCofre, debitoCartoes, totalReceitas, totalDespesasPagas, totalDespesasPendentes, mesFiltro, despesasPorCategoria }) {
   const [exibirPopupSaldo, setExibirPopupSaldo] = useState(false);
 
   return (
@@ -33,6 +33,11 @@ export default function DashboardFinanceiro({ cores, formatarMoeda, saldoGlobalC
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px', backgroundColor: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><TrendingUp size={18} color="#2563eb" /><span style={{ fontWeight: 'bold', color: '#333' }}>Investimentos</span></div>
                 <strong style={{ color: '#2563eb', fontSize: '16px' }}>{formatarMoeda(saldoInvestimentos || 0)}</strong>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px', backgroundColor: '#fef3c7', borderRadius: '8px', border: '1px solid #fcd34d' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Vault size={18} color="#d97706" /><span style={{ fontWeight: 'bold', color: '#333' }}>Cofre (Reserva)</span></div>
+                <strong style={{ color: '#d97706', fontSize: '16px' }}>{formatarMoeda(saldoCofre || 0)}</strong>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px', backgroundColor: '#fef2f2', borderRadius: '8px', border: '1px solid #fecaca' }}>

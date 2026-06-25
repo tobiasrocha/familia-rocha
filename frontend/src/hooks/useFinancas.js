@@ -88,6 +88,7 @@ export function useFinancas({ lancamentosGlobais, contasBancarias, patrimonio, c
     calcularSaldoConta,
     saldoBancario,
     saldoInvestimentos,
+    saldoCofre,
     debitoCartoes,
     saldoGlobalConsolidado,
     dadosMesFiltro,
