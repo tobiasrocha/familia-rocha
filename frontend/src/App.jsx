@@ -15,6 +15,7 @@ const TelaViagens = lazy(() => import('./components/viagens/TelaViagens'));
 const TelaEspiritual = lazy(() => import('./components/espiritual/TelaEspiritual'));
 const TelaLogin = lazy(() => import('./components/auth/TelaLogin'));
 const AdminUsuarios = lazy(() => import('./components/admin/AdminUsuarios'));
+const Inicio = lazy(() => import('./components/Inicio'));
 
 import { 
   LayoutDashboard, Wallet, ClipboardList, 
@@ -124,8 +125,9 @@ export default function App() {
           <main style={{ paddingBottom: '40px' }}>
             <Suspense fallback={<Carregando />}>
             <Routes>
-              <Route path="/" element={<Dashboard cores={coresApp} />} />
+              <Route path="/" element={<Inicio cores={coresApp} />} />
               <Route path="/login" element={<TelaLogin cores={coresApp} logo={logoFamiliarocha} />} />
+              <Route path="/dashboard" element={<Dashboard cores={coresApp} />} />
               {temPermissao('financeiro') && <Route path="/financeiro" element={<PainelFinanceiro cores={coresApp} />} />}
               {temPermissao('tarefas') && <Route path="/tarefas" element={<TelaTarefas cores={coresApp} />} />}
               {temPermissao('saude') && <Route path="/saude" element={<TelaSaude cores={coresApp} />} />}
