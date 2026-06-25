@@ -64,7 +64,7 @@ export default function GerenciadorCarteira({ cores, formatarMoeda, contasBancar
     } else {
       await addDoc(collection(db, 'carteira'), { ...payload, criadoEm: new Date().toISOString() });
     }
-    // Se for Cofre vinculado, debita do saldo
+    // Se for Cofre vinculado, debita do saldo e lança no financeiro
     if (forma === 'Cofre' && vinculoId && valorNum > 0) {
       const item = cofre?.find(i => i.id === vinculoId);
       if (item) {
@@ -72,15 +72,36 @@ export default function GerenciadorCarteira({ cores, formatarMoeda, contasBancar
           saldo: Math.max(0, (item.saldo || 0) - valorNum),
           atualizadoEm: new Date().toISOString(),
         });
+        // Cria lançamento para interligar o movimento
+        await addDoc(collection(db, 'financas'), {
+          descricao: `Retirada Cofre: ${item.nome} — ${descricao}`,
+          valor: valorNum,
+          tipo: 'Despesa',
+          categoria: 'Reserva Familiar',
+          dataVencimento: data,
+          status: 'Pago',
+          formaPagamento: 'Dinheiro',
+          criadoEm: new Date().toISOString(),
+        });
       }
     }
-    // Se for Investimento vinculado, debita do saldo
+    // Se for Investimento vinculado, debita do saldo e lança no financeiro
     if (forma === 'Investimento' && vinculoId && valorNum > 0) {
       const inv = investimentos?.find(i => i.id === vinculoId);
       if (inv) {
         await updateDoc(doc(db, 'investimentos', vinculoId), {
           valor: Math.max(0, (inv.valor || 0) - valorNum),
           atualizadoEm: new Date().toISOString(),
+        });
+        await addDoc(collection(db, 'financas'), {
+          descricao: `Retirada Investimento: ${inv.nome} — ${descricao}`,
+          valor: valorNum,
+          tipo: 'Despesa',
+          categoria: 'Investimentos',
+          dataVencimento: data,
+          status: 'Pago',
+          formaPagamento: 'Dinheiro',
+          criadoEm: new Date().toISOString(),
         });
       }
     }
