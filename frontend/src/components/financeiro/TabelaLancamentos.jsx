@@ -120,8 +120,14 @@ export default function TabelaLancamentos({ dadosMesFiltro, contasBancarias, car
                     <span style={{ padding: '6px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', backgroundColor: item.status === 'Pago' ? '#d4edda' : (isVencido ? '#f8d7da' : '#fff3cd'), color: item.status === 'Pago' ? '#155724' : (isVencido ? '#721c24' : '#856404') }}>{isVencido ? 'ATRASADA' : item.status}</span>
                   </td>
                   <td style={{ padding: '15px', textAlign: 'center' }}>
-                    <button type="button" onClick={() => onEditar(item)} style={{ background: 'none', border: 'none', color: '#0056b3', cursor: 'pointer', padding: '5px' }}><Pencil size={18} /></button>
-                    <button type="button" onClick={() => onExcluir(item.id)} style={{ background: 'none', border: 'none', color: '#dc3545', cursor: 'pointer', padding: '5px' }}><Trash2 size={18} /></button>
+                    {item._carteira ? (
+                      <span style={{ fontSize: '10px', color: '#7c3aed', backgroundColor: '#ede9fe', padding: '2px 6px', borderRadius: '8px' }}>CARTEIRA</span>
+                    ) : (
+                      <>
+                        <button type="button" onClick={() => onEditar(item)} style={{ background: 'none', border: 'none', color: '#0056b3', cursor: 'pointer', padding: '5px' }}><Pencil size={18} /></button>
+                        <button type="button" onClick={() => onExcluir(item.id)} style={{ background: 'none', border: 'none', color: '#dc3545', cursor: 'pointer', padding: '5px' }}><Trash2 size={18} /></button>
+                      </>
+                    )}
                   </td>
                 </tr>
               );

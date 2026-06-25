@@ -26,6 +26,7 @@ export default function PainelFinanceiro({ cores }) {
   const { dados: patrimonio } = useFirestore('patrimonio');
   const { dados: cartoes, recarregar: recarregarCartoes } = useFirestore('cartoes');
   const { dados: investimentos, recarregar: recarregarInvestimentos } = useFirestore('investimentos');
+  const { dados: carteira } = useFirestore('carteira');
 
   const [abaAtiva, setAbaAtiva] = useState('dashboard');
   const [exibirForm, setExibirForm] = useState(false);
@@ -56,8 +57,32 @@ export default function PainelFinanceiro({ cores }) {
   const [perfilContabil, setPerfilContabil] = useState('Todos');
 
   const hoje = new Date().toISOString().slice(0, 10);
-  const categoriesDespesa = ['Alimentação', 'Moradia', 'Transporte', 'Educação', 'Saúde', 'Lazer', 'Igreja/Célula', 'Impostos', 'Outros'];
+  const categoriesDespesa = ['Alimentação', 'Cartão de Crédito', 'Educação', 'Igreja/Célula', 'Impostos', 'Lazer', 'Moradia', 'Prestadores de Serviço', 'Saúde', 'Transporte', 'Outros'];
   const categoriasReceita = ['Salário', 'Serviços', 'Investimentos', 'Presente', 'Outros'];
+
+  // Merge carteira nos lançamentos para exibição
+  const carteiraComoLancamento = (carteira || []).map(c => ({
+    id: `cart-${c.id}`,
+    descricao: c.descricao,
+    valor: c.valor || 0,
+    tipo: 'Despesa',
+    categoria: c.categoria || 'Outros',
+    dataVencimento: c.data,
+    status: 'Pago',
+    formaPagamento: c.forma,
+    contaId: c.forma === 'Debito' ? c.vinculoId : (c.forma === 'Credito' ? c.vinculoId : null),
+    perfilId: null,
+    _carteira: true,
+  }));
+
+  const todosLancamentos = [...(lancamentosGlobais || []), ...carteiraComoLancamento];
+
+  // Filtro mês/ano considerando também a carteira
+  const dadosMesFiltroCompleto = todosLancamentos.filter(item => {
+    if (!item.dataVencimento) return false;
+    const [ano, mes] = item.dataVencimento.split('-').map(Number);
+    return ano === anoFiltro && mes === mesNumFiltro;
+  });
 
   const { extraindo: extraindoDados, erro: erroOcr, dadosExtraidos, extrairDados } = useUploadOcr();
 
@@ -275,7 +300,7 @@ export default function PainelFinanceiro({ cores }) {
           )}
           <ConciliadorExtrato cores={cores} onBaixas={recarregar} />
           <TabelaLancamentos
-            dadosMesFiltro={dadosMesFiltro}
+            dadosMesFiltro={dadosMesFiltroCompleto}
             contasBancarias={contasBancarias}
             cartoes={cartoes}
             cores={cores}
