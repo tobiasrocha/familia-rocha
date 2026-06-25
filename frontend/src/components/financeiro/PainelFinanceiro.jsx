@@ -164,9 +164,28 @@ export default function PainelFinanceiro({ cores }) {
 
   return (
     <div style={{ padding: '30px', maxWidth: '1200px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px', flexWrap: 'wrap', gap: '15px' }}>
+      {/* Linha 1: Título + Seletor Mês/Ano alinhados */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
         <h2 style={{ color: cores?.texto, margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}><Wallet size={28} color={cores?.dourado} /> BI & Fluxo de Caixa</h2>
 
+        {abaAtiva !== 'relatorios' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: cores?.branco, padding: '6px 12px', borderRadius: '8px', border: '1px solid #e0e0e0' }}>
+            <Calendar size={18} color={cores?.dourado} />
+            <select value={anoFiltro} onChange={(e) => setAnoFiltro(parseInt(e.target.value))} style={{ border: 'none', outline: 'none', fontSize: '14px', fontWeight: 'bold', color: cores?.texto, backgroundColor: 'transparent', cursor: 'pointer' }}>
+              {[anoAtual - 1, anoAtual, anoAtual + 1, anoAtual + 2].map(a => <option key={a} value={a}>{a}</option>)}
+            </select>
+            <select value={mesNumFiltro} onChange={(e) => setMesNumFiltro(parseInt(e.target.value))} style={{ border: 'none', outline: 'none', fontSize: '14px', fontWeight: 'bold', color: cores?.texto, backgroundColor: 'transparent', cursor: 'pointer' }}>
+              <option value={1}>Janeiro</option><option value={2}>Fevereiro</option><option value={3}>Março</option>
+              <option value={4}>Abril</option><option value={5}>Maio</option><option value={6}>Junho</option>
+              <option value={7}>Julho</option><option value={8}>Agosto</option><option value={9}>Setembro</option>
+              <option value={10}>Outubro</option><option value={11}>Novembro</option><option value={12}>Dezembro</option>
+            </select>
+          </div>
+        )}
+      </div>
+
+      {/* Linha 2: Tabs + Botão Alertas */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px', flexWrap: 'wrap', gap: '10px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           <button type="button" onClick={handleDispararAlertas} disabled={executandoAlertas} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px', backgroundColor: '#dc3545', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
             <Bell size={18} /> {executandoAlertas ? 'Enviando...' : 'Testar Alertas'}
@@ -181,29 +200,6 @@ export default function PainelFinanceiro({ cores }) {
             <button type="button" onClick={() => setAbaAtiva('emprestimos')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'emprestimos' ? cores?.dourado : 'transparent', color: abaAtiva === 'emprestimos' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}><TrendingDown size={14}/> Empréstimos</button>
             <button type="button" onClick={() => setAbaAtiva('relatorios')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'relatorios' ? cores?.primaria : 'transparent', color: abaAtiva === 'relatorios' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}><FileText size={16} style={{verticalAlign:'middle'}}/> Contábil</button>
           </div>
-
-          {abaAtiva !== 'relatorios' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: cores?.branco, padding: '6px 12px', borderRadius: '8px', border: '1px solid #e0e0e0' }}>
-              <Calendar size={18} color={cores?.dourado} />
-              <select value={anoFiltro} onChange={(e) => setAnoFiltro(parseInt(e.target.value))} style={{ border: 'none', outline: 'none', fontSize: '14px', fontWeight: 'bold', color: cores?.texto, backgroundColor: 'transparent', cursor: 'pointer' }}>
-                {[anoAtual - 1, anoAtual, anoAtual + 1, anoAtual + 2].map(a => <option key={a} value={a}>{a}</option>)}
-              </select>
-              <select value={mesNumFiltro} onChange={(e) => setMesNumFiltro(parseInt(e.target.value))} style={{ border: 'none', outline: 'none', fontSize: '14px', fontWeight: 'bold', color: cores?.texto, backgroundColor: 'transparent', cursor: 'pointer' }}>
-                <option value={1}>Janeiro</option>
-                <option value={2}>Fevereiro</option>
-                <option value={3}>Março</option>
-                <option value={4}>Abril</option>
-                <option value={5}>Maio</option>
-                <option value={6}>Junho</option>
-                <option value={7}>Julho</option>
-                <option value={8}>Agosto</option>
-                <option value={9}>Setembro</option>
-                <option value={10}>Outubro</option>
-                <option value={11}>Novembro</option>
-                <option value={12}>Dezembro</option>
-              </select>
-            </div>
-          )}
         </div>
       </div>
 

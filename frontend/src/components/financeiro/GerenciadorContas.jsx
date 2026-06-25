@@ -122,6 +122,7 @@ export default function GerenciadorContas({ cores, contasBancarias, perfis, calc
           return (
             <div key={conta.id} style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #eee', borderTop: `4px solid ${cores?.dourado}`, boxShadow: '0 4px 15px rgba(0,0,0,0.03)', position: 'relative' }}>
               <button type="button" onClick={() => handleExcluirConta(conta.id)} style={{ position: 'absolute', top: '15px', right: '15px', background: 'none', border: 'none', cursor: 'pointer', color: '#dc3545' }}><Trash2 size={16}/></button>
+              <button type="button" onClick={() => { setExibirFormConta(false); /* futura edicao */ alert('Edição de conta em desenvolvimento.'); }} style={{ position: 'absolute', top: '15px', right: '45px', background: 'none', border: 'none', cursor: 'pointer', color: '#0056b3' }}><Pencil size={16}/></button>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px' }}><div style={{ padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '50%' }}><Landmark size={24} color="#2c3e50" /></div><h3 style={{ margin: 0, fontSize: '18px', color: '#333' }}>{conta.nome}</h3></div>
               <div style={{ marginBottom: '10px', fontSize: '12px', color: '#666' }}><User size={12}/> Titular: <strong>{obterNomePerfil(conta.perfilId)}</strong></div>
 
