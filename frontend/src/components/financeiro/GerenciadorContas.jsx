@@ -218,13 +218,17 @@ export default function GerenciadorContas({ cores, contasBancarias, perfis, calc
               )}
 
               {conta.limiteChequeEspecial > 0 && saldoAtual < 0 && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px', borderRadius: '6px', backgroundColor: '#fee2e2', fontSize: '12px', fontWeight: 'bold', marginBottom: '10px' }}>
-                  <TrendingDown size={14} color='#dc2626' /> Cheque Especial: {formatarMoeda(Math.abs(saldoAtual))} usado de {formatarMoeda(conta.limiteChequeEspecial)}
-                </div>
-              )}
-              {conta.limiteChequeEspecial > 0 && saldoAtual < conta.limiteChequeEspecial * -1 && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px', borderRadius: '6px', backgroundColor: '#fecaca', fontSize: '12px', fontWeight: 'bold', marginBottom: '10px' }}>
-                  ⚠️ Limite do cheque especial estourado!
+                <div style={{ marginBottom: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#dc2626', marginBottom: '4px' }}>
+                    <span>Cheque Especial usado: {formatarMoeda(Math.abs(saldoAtual))}</span>
+                    <span>Limite: {formatarMoeda(conta.limiteChequeEspecial)}</span>
+                  </div>
+                  <div style={{ height: '6px', backgroundColor: '#e5e7eb', borderRadius: '3px', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${Math.min(100, (Math.abs(saldoAtual) / conta.limiteChequeEspecial) * 100)}%`, backgroundColor: Math.abs(saldoAtual) > conta.limiteChequeEspecial ? '#dc2626' : '#f59e0b', borderRadius: '3px', transition: 'width .3s' }} />
+                  </div>
+                  {Math.abs(saldoAtual) > conta.limiteChequeEspecial && (
+                    <div style={{ fontSize: '10px', color: '#dc2626', fontWeight: 'bold', marginTop: '2px' }}>⚠️ Limite estourado!</div>
+                  )}
                 </div>
               )}
 
@@ -281,15 +285,22 @@ export default function GerenciadorContas({ cores, contasBancarias, perfis, calc
                 return movsMes.length > 0 && (
                   <div style={{ borderTop: '1px solid #eee', paddingTop: '8px', marginTop: '6px', maxHeight: '180px', overflowY: 'auto' }}>
                     <span style={{ fontSize: '11px', color: '#999', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>Movimentações do mês ({movsMes.length}):</span>
-                    {movsMes.map(m => (
+                    {movsMes.map(m => {
+                      const tags = [];
+                      if (m.descricao?.includes('Cofre')) tags.push({ label: 'Cofre', cor: '#d97706', bg: '#fef3c7' });
+                      if (m.descricao?.includes('Herança')) tags.push({ label: 'Herança', cor: '#7c3aed', bg: '#ede9fe' });
+                      if (m.descricao?.includes('Salário') || m.descricao?.includes('Premiação') || m.descricao?.includes('Ajuda') || m.descricao?.includes('Auxílio')) tags.push({ label: 'Salário', cor: '#2563eb', bg: '#eff6ff' });
+                      if (m.descricao?.includes('Depósito')) tags.push({ label: 'Depósito', cor: '#059669', bg: '#ecfdf5' });
+                      if (m.categoria === 'Empréstimo') tags.push({ label: 'Empréstimo', cor: '#dc2626', bg: '#fef2f2' });
+                      return (
                       <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: '#666', padding: '2px 0', borderBottom: '1px solid #f5f5f5' }}>
                         <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 'bold' }}>{m.descricao}</span>
-                        {m.perfilId && <span style={{ fontSize: '9px', color: '#C5A059', minWidth: '50px' }}>{obterNomePerfil(m.perfilId)}</span>}
+                        {tags.map((t, i) => <span key={i} style={{ fontSize: '8px', padding: '1px 4px', borderRadius: '6px', backgroundColor: t.bg, color: t.cor, fontWeight: 'bold' }}>{t.label}</span>)}
                         <span style={{ fontWeight: 'bold', color: m.tipo === 'Receita' ? '#16a34a' : '#dc2626', minWidth: '55px', textAlign: 'right' }}>{m.tipo === 'Receita' ? '+' : '-'}{formatarMoeda(m.valor)}</span>
                         <button type="button" onClick={() => onEditarLancamento && onEditarLancamento(m)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0056b3', padding: '0 2px' }}><Pencil size={11}/></button>
                         <button type="button" onClick={() => onExcluirLancamento && onExcluirLancamento(m.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc3545', padding: '0 2px' }}><Trash2 size={11}/></button>
                       </div>
-                    ))}
+                    )})}
                   </div>
                 );
               })()}
