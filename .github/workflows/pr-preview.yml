@@ -33,15 +33,4 @@ jobs:
           VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
 
       - name: Deploy to Firebase Preview Channel
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.GCP_SA_KEY }}
-          projectId: familia-rocha-7ea1a
-        id: deploy
-
-      - name: Comment PR with Preview URL
-        uses: marocchino/sticky-pull-request-comment@v2
-        with:
-          message: |
-            🔍 **Preview disponível:** ${{ steps.deploy.outputs.details_url }}
+        run: npx firebase hosting:channel:deploy preview-pr-${{ github.event.number }} --project=familia-rocha-7ea1a --token=${{ secrets.FIREBASE_TOKEN }} --expires=7d
