@@ -104,19 +104,7 @@ jobs:
           service: ${{ env.SERVICE_NAME }}
           region: ${{ env.REGION }}
           image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-          secrets: |
-            GOOGLE_APPLICATION_CREDENTIALS=credenciais-google:latest
-            GOOGLE_OAUTH_CLIENT_ID=oauth-client-id:latest
-            GOOGLE_OAUTH_CLIENT_SECRET=oauth-client-secret:latest
-            GOOGLE_OAUTH_REFRESH_TOKEN=oauth-refresh-token:latest
-          env_vars: |
-            GOOGLE_CLOUD_PROJECT_ID=${{ env.PROJECT_ID }}
-            GOOGLE_CLOUD_LOCATION=us
-            DOCUMENT_AI_PROCESSOR_ID=4cad7feb06d834dd
-            TESSERACT_ENABLED=false
-            CRON_ENABLED=false
-            CLOUD_LOGGING_ONLY=true
-          flags: --memory=512Mi --timeout=300 --allow-unauthenticated --no-cpu-throttling
+          flags: --memory=512Mi --timeout=300 --allow-unauthenticated --no-cpu-throttling --service-account=firebase-adminsdk-fbsvc@familia-rocha-7ea1a.iam.gserviceaccount.com
 
   # ──────────────────────────────────────────────
   # JOB 3: BUILD FRONTEND (master + homolog)
