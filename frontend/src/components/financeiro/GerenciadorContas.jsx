@@ -4,7 +4,7 @@ import { db } from '../../firebaseConfig';
 import { useFirestore } from '../../hooks/useFirestore';
 import { Plus, Landmark, User, Calendar, Trash2, TrendingDown, Pencil, ArrowUpCircle } from 'lucide-react';
 
-export default function GerenciadorContas({ cores, contasBancarias, perfis, calcularSaldoConta, formatarMoeda, obterNomePerfil, recarregarContas, onRegistrarDeposito }) {
+export default function GerenciadorContas({ cores, contasBancarias, perfis, calcularSaldoConta, formatarMoeda, obterNomePerfil, recarregarContas, onRegistrarDeposito, lancamentosGlobais, onEditarLancamento, onExcluirLancamento }) {
   const [exibirFormConta, setExibirFormConta] = useState(false);
   const [editandoContaId, setEditandoContaId] = useState(null);
   const [nomeConta, setNomeConta] = useState('');
@@ -272,6 +272,25 @@ export default function GerenciadorContas({ cores, contasBancarias, perfis, calc
                   ))}
                 </div>
               )}
+
+              {/* Movimentações da conta (lançamentos) */}
+              {(() => {
+                const movs = (lancamentosGlobais || []).filter(l => l.contaId === conta.id).sort((a, b) => new Date(b.dataVencimento) - new Date(a.dataVencimento)).slice(0, 5);
+                return movs.length > 0 && (
+                  <div style={{ borderTop: '1px solid #eee', paddingTop: '8px', marginTop: '6px' }}>
+                    <span style={{ fontSize: '11px', color: '#999', fontWeight: 'bold' }}>Últimas movimentações:</span>
+                    {movs.map(m => (
+                      <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#666', padding: '2px 0' }}>
+                        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.descricao}</span>
+                        <span style={{ fontWeight: 'bold', color: m.tipo === 'Receita' ? '#16a34a' : '#dc2626', margin: '0 6px', minWidth: '60px', textAlign: 'right' }}>{m.tipo === 'Receita' ? '+' : '-'}{formatarMoeda(m.valor)}</span>
+                        <span style={{ fontSize: '10px', color: '#999', marginRight: '4px' }}>{m.dataVencimento?.split('-').reverse().join('/')}</span>
+                        <button type="button" onClick={() => onEditarLancamento && onEditarLancamento(m)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0056b3', padding: '0 2px' }}><Pencil size={11}/></button>
+                        <button type="button" onClick={() => onExcluirLancamento && onExcluirLancamento(m.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc3545', padding: '0 2px' }}><Trash2 size={11}/></button>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           );
         })}

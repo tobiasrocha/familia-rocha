@@ -70,7 +70,7 @@ export default function GerenciadorSalarios({ cores, formatarMoeda, perfis, obte
         dataVencimento: regData,
         status: 'Pago',
         contaId: regContaId || null,
-        formaPagamento: 'PIX',
+        formaPagamento: regContaId ? 'PIX' : 'Dinheiro',
         criadoEm: new Date().toISOString(),
       });
       setRegId(null); setRegContaId(''); recarregar();
