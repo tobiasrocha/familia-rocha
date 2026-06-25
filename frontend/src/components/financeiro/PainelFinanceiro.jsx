@@ -5,7 +5,7 @@ import { useFirestore } from '../../hooks/useFirestore';
 import { useFinancas } from '../../hooks/useFinancas';
 import { useUploadOcr } from '../../hooks/useUploadOcr';
 import { apiFetch } from '../../config';
-import { Wallet, Calendar, FileText, Bell, CreditCard, TrendingUp, TrendingDown } from 'lucide-react';
+import { Wallet, Calendar, FileText, Bell, CreditCard, TrendingUp, TrendingDown, Wrench } from 'lucide-react';
 
 import DashboardFinanceiro from './DashboardFinanceiro';
 import GerenciadorContas from './GerenciadorContas';
@@ -18,6 +18,7 @@ import GerenciadorInvestimentos from './GerenciadorInvestimentos';
 import GerenciadorEmprestimos from './GerenciadorEmprestimos';
 import GerenciadorSalarios from './GerenciadorSalarios';
 import GerenciadorCarteira from './GerenciadorCarteira';
+import GerenciadorPrestadores from './GerenciadorPrestadores';
 
 export default function PainelFinanceiro({ cores }) {
   const { dados: lancamentosGlobais, recarregar } = useFirestore('financas');
@@ -222,6 +223,7 @@ export default function PainelFinanceiro({ cores }) {
             <button type="button" onClick={() => setAbaAtiva('dashboard')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'dashboard' ? cores?.dourado : 'transparent', color: abaAtiva === 'dashboard' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Métricas</button>
             <button type="button" onClick={() => setAbaAtiva('contas')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'contas' ? cores?.dourado : 'transparent', color: abaAtiva === 'contas' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Bancos</button>
             <button type="button" onClick={() => setAbaAtiva('carteira')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'carteira' ? cores?.dourado : 'transparent', color: abaAtiva === 'carteira' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}><Wallet size={14}/> Carteira</button>
+            <button type="button" onClick={() => setAbaAtiva('prestadores')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'prestadores' ? cores?.dourado : 'transparent', color: abaAtiva === 'prestadores' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}><Wrench size={14}/> Prestadores</button>
             <button type="button" onClick={() => setAbaAtiva('lancamentos')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'lancamentos' ? cores?.dourado : 'transparent', color: abaAtiva === 'lancamentos' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Lançamentos</button>
             <button type="button" onClick={() => setAbaAtiva('cartoes')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'cartoes' ? cores?.dourado : 'transparent', color: abaAtiva === 'cartoes' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}><CreditCard size={14}/> Cartões</button>
             <button type="button" onClick={() => setAbaAtiva('investimentos')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'investimentos' ? cores?.dourado : 'transparent', color: abaAtiva === 'investimentos' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}><TrendingUp size={14}/> Investir</button>
@@ -383,6 +385,14 @@ export default function PainelFinanceiro({ cores }) {
           contasBancarias={contasBancarias}
           cartoes={cartoes}
           investimentos={investimentos}
+        />
+      )}
+
+      {abaAtiva === 'prestadores' && (
+        <GerenciadorPrestadores
+          cores={cores}
+          formatarMoeda={formatarMoeda}
+          contasBancarias={contasBancarias}
         />
       )}
     </div>

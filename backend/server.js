@@ -1434,6 +1434,66 @@ app.get('/api/admin/permissoes', autenticar, async (req, res) => {
   }
 });
 
+// Alerta de prestador
+app.post('/api/disparar-alerta-prestador', autenticar, async (req, res) => {
+  try {
+    const { prestadorId } = req.body;
+    if (!prestadorId || !firestoreDb) return res.status(400).json({ erro: 'Dados invalidos.' });
+
+    const doc = await firestoreDb.collection('prestadores').doc(prestadorId).get();
+    if (!doc.exists) return res.status(404).json({ erro: 'Prestador nao encontrado.' });
+    const p = doc.data();
+
+    const corpo = [
+      '🔧 *ERP Familia Rocha — Alerta de Prestador*', '',
+      `*Nome:* ${p.nome}`,
+      `*Tipo:* ${p.tipoServico || '-'}`,
+      `*Telefone:* ${p.telefone || '-'}`,
+      p.dataAgendamento ? `*Agendamento:* ${p.dataAgendamento.split('-').reverse().join('/')}${p.horaAgendamento ? ' às ' + p.horaAgendamento : ''}` : '',
+      p.valorServico > 0 ? `*Valor:* R$ ${Number(p.valorServico).toFixed(2).replace('.', ',')}` : '',
+      p.materiais ? `*Materiais:* ${p.materiais}` : '',
+      p.alimentos ? `*Alimentos:* ${p.alimentos}` : '',
+      p.providencias ? `*Providencias:* ${p.providencias}` : '',
+      p.banco ? `*Banco:* ${p.banco}` : '',
+      p.conta ? `*Conta:* ${p.conta}` : '',
+      p.pix ? `*PIX:* ${p.pix}` : '',
+    ].filter(Boolean).join('\n');
+
+    const assunto = `🔧 Prestador: ${p.nome} — ${p.dataAgendamento?.split('-').reverse().join('/') || 'Sem data'}`;
+    const corpoPlain = corpo.replace(/\*/g, '');
+
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.SMTP_PORT) || 587, secure: false,
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+    });
+
+    await transporter.sendMail({
+      from: `"ERP Familia Rocha" <${process.env.SMTP_USER}>`,
+      to: 'tobiasrocha@gmail.com',
+      subject: assunto,
+      text: corpoPlain,
+      headers: { 'X-Priority': '1', 'X-MSMail-Priority': 'High', 'Auto-Submitted': 'auto-generated' },
+    });
+
+    if (process.env.WHATSAPP_API_URL && p.telefone) {
+      let numero = p.telefone.replace(/[^\d]/g, '');
+      if (!numero.startsWith('55') && (numero.length === 10 || numero.length === 11)) numero = '55' + numero;
+      if (numero) {
+        await fetch(process.env.WHATSAPP_API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': process.env.WHATSAPP_API_TOKEN, 'Authorization': `Bearer ${process.env.WHATSAPP_API_TOKEN}` },
+          body: JSON.stringify({ number: numero, text: corpo }),
+        });
+      }
+    }
+
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ erro: 'Falha ao enviar alerta.', detalhes: error.message });
+  }
+});
+
 // Health check para Cloud Run
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
