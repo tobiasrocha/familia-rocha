@@ -267,6 +267,7 @@ export default function PainelFinanceiro({ cores }) {
           formatarMoeda={formatarMoeda}
           obterNomePerfil={obterNomePerfil}
           recarregarContas={recarregarContas}
+          onRegistrarDeposito={recarregar}
         />
       )}
 
@@ -384,6 +385,7 @@ export default function PainelFinanceiro({ cores }) {
           perfis={perfis}
           obterNomePerfil={obterNomePerfil}
           contasBancarias={contasBancarias}
+          onRegistrarRecebimento={recarregar}
         />
       )}
 

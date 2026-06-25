@@ -125,7 +125,7 @@ export default function App() {
           <main style={{ paddingBottom: '40px' }}>
             <Suspense fallback={<Carregando />}>
             <Routes>
-              <Route path="/" element={<Inicio cores={coresApp} />} />
+              <Route path="/" element={window.Capacitor?.isNativePlatform?.() ? <Inicio cores={coresApp} /> : <Dashboard cores={coresApp} />} />
               <Route path="/login" element={<TelaLogin cores={coresApp} logo={logoFamiliarocha} />} />
               <Route path="/dashboard" element={<Dashboard cores={coresApp} />} />
               {temPermissao('financeiro') && <Route path="/financeiro" element={<PainelFinanceiro cores={coresApp} />} />}
