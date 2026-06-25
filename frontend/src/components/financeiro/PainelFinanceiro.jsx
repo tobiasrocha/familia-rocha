@@ -4,7 +4,7 @@ import { db } from '../../firebaseConfig';
 import { useFirestore } from '../../hooks/useFirestore';
 import { useFinancas } from '../../hooks/useFinancas';
 import { useUploadOcr } from '../../hooks/useUploadOcr';
-import { API_BASE } from '../../config';
+import { apiFetch } from '../../config';
 import { Wallet, Calendar, FileText, Bell, CreditCard, TrendingUp } from 'lucide-react';
 
 import DashboardFinanceiro from './DashboardFinanceiro';
@@ -92,7 +92,7 @@ export default function PainelFinanceiro({ cores }) {
   const handleDispararAlertas = async () => {
     setExecutandoAlertas(true);
     try {
-      const res = await fetch(`${API_BASE}/disparar-alertas`, { method: 'POST' });
+      const res = await apiFetch('/disparar-alertas', { method: 'POST' });
       const dados = await res.json();
       if (dados.ok) {
         alert(`📬 Alertas enviados!\n\n` +

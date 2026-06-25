@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Shield, Plus, Trash2, Key, Mail, User, Settings, CheckSquare, Square, Pencil, PawPrint, Baby, Calendar, Droplet, AlertTriangle, Phone } from 'lucide-react'
-import { API_BASE } from '../../config'
+import { apiFetch } from '../../config'
 
 const MODULOS = [
   { key: 'financeiro', label: 'Financeiro' },
@@ -40,7 +40,7 @@ export default function AdminUsuarios({ cores }) {
     setCarregando(true)
     setErro('')
     try {
-      const res = await fetch(`${API_BASE}/admin/usuarios`)
+      const res = await apiFetch('/admin/usuarios')
       if (!res.ok) throw new Error('Erro ao buscar')
       const data = await res.json()
       setMembros(data.usuarios || [])
@@ -57,7 +57,7 @@ export default function AdminUsuarios({ cores }) {
       setCarregando(true);
       setErro('');
       try {
-        const res = await fetch(`${API_BASE}/admin/usuarios`);
+        const res = await apiFetch('/admin/usuarios');
         if (!res.ok) throw new Error('Erro ao buscar');
         const data = await res.json();
         if (!ignore) setMembros(data.usuarios || []);
@@ -114,11 +114,11 @@ export default function AdminUsuarios({ cores }) {
       if (!editandoId) body.senha = senha
 
       const url = editandoId
-        ? `${API_BASE}/admin/usuarios/${editandoId}`
-        : `${API_BASE}/admin/usuarios`
+        ? `/admin/usuarios/${editandoId}`
+        : `/admin/usuarios`
       const method = editandoId ? 'PUT' : 'POST'
 
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -139,7 +139,7 @@ export default function AdminUsuarios({ cores }) {
     const msg = m.temAuth ? `Excluir permanentemente ${m.nome} (${m.email})?` : `Excluir permanentemente ${m.nome}?`
     if (!window.confirm(msg)) return
     try {
-      const res = await fetch(`${API_BASE}/admin/usuarios/${m.id}`, { method: 'DELETE' })
+      const res = await apiFetch(`/admin/usuarios/${m.id}`, { method: 'DELETE' })
       const data = await res.json()
       if (!res.ok) throw new Error(data.erro || 'Erro ao excluir')
       buscarMembros()
@@ -152,7 +152,7 @@ export default function AdminUsuarios({ cores }) {
     e.preventDefault()
     if (!novaSenha || novaSenha.length < 6) return alert('Minimo 6 caracteres')
     try {
-      const res = await fetch(`${API_BASE}/admin/usuarios/${resetId}/reset-senha`, {
+      const res = await apiFetch(`/admin/usuarios/${resetId}/reset-senha`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ novaSenha }),
@@ -177,7 +177,7 @@ export default function AdminUsuarios({ cores }) {
 
   const handleSalvarPermissoes = async () => {
     try {
-      const res = await fetch(`${API_BASE}/admin/usuarios/${permId}/permissoes`, {
+      const res = await apiFetch(`/admin/usuarios/${permId}/permissoes`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ permissoes: perm }),

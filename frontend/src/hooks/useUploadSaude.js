@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { API_BASE } from '../config';
+import { apiFetch } from '../config';
 
 export function useUploadSaude() {
   const [enviando, setEnviando] = useState(false);
@@ -14,7 +14,7 @@ export function useUploadSaude() {
     formData.append('documento', file);
 
     try {
-      const resposta = await fetch(`${API_BASE}/upload-saude`, {
+      const resposta = await apiFetch(`/upload-saude`, {
         method: 'POST',
         body: formData,
       });

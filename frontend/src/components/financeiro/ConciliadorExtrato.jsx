@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { UploadCloud, CheckCircle, AlertCircle, FileSearch } from 'lucide-react';
-import { API_BASE } from '../../config';
+import { apiFetch } from '../../config';
 
 export default function ConciliadorExtrato({ cores, onBaixas }) {
   const [enviando, setEnviando] = useState(false);
@@ -21,7 +21,7 @@ export default function ConciliadorExtrato({ cores, onBaixas }) {
     formData.append('documento', file);
 
     try {
-      const res = await fetch(`${API_BASE}/conciliar-extrato`, { method: 'POST', body: formData });
+      const res = await apiFetch(`/conciliar-extrato`, { method: 'POST', body: formData });
       const contentType = res.headers.get('content-type') || '';
       if (!contentType.includes('application/json')) {
         const texto = await res.text();
@@ -58,7 +58,7 @@ export default function ConciliadorExtrato({ cores, onBaixas }) {
     if (selecionados.size === 0) return;
     setBaixando(true);
     try {
-      const res = await fetch(`${API_BASE}/baixar-conciliados`, {
+      const res = await apiFetch(`/baixar-conciliados`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids: [...selecionados] })

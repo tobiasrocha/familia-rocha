@@ -4,7 +4,7 @@ import { db } from '../../firebaseConfig';
 import { useFirestore } from '../../hooks/useFirestore';
 import { useUploadSaude } from '../../hooks/useUploadSaude';
 import { HeartPulse, Plus, Calendar, Activity, Syringe, Pill, Stethoscope, FileText, Trash2, Pencil, AlertCircle, UploadCloud, CheckCircle, Bell } from 'lucide-react';
-import { API_BASE } from '../../config';
+import { apiFetch } from '../../config';
 
 export default function TelaSaude({ cores }) {
   const { dados: registros, carregando: carregandoRegistros, recarregar: recarregarRegistros } = useFirestore('saude');
@@ -27,7 +27,7 @@ export default function TelaSaude({ cores }) {
   const handleDispararAlertas = async () => {
     setDisparandoAlertas(true);
     try {
-      const res = await fetch(`${API_BASE}/disparar-alertas-saude`, { method: 'POST' });
+      const res = await apiFetch(`/disparar-alertas-saude`, { method: 'POST' });
       const dados = await res.json();
       if (dados.ok) {
         alert(`📬 Alertas de Saúde enviados!\n\n` +

@@ -2,7 +2,7 @@ import { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from './firebaseConfig';
-import { API_BASE } from './config';
+import { apiFetch } from './config';
 import logoFamiliarocha from './assets/familiarocha.png';
 
 const Dashboard = lazy(() => import('./components/Dashboard'));
@@ -91,7 +91,7 @@ export default function App() {
       setUser(u);
       if (u?.email) {
         try {
-          const res = await fetch(`${API_BASE}/admin/permissoes?email=${encodeURIComponent(u.email)}`);
+          const res = await apiFetch(`/admin/permissoes?email=${encodeURIComponent(u.email)}`);
           const data = await res.json();
           setPermissoes(data.permissoes || {});
           setIsSuperadmin(data.isSuperadmin || false);

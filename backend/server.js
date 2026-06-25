@@ -3,6 +3,9 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const { z } = require('zod');
 const { DocumentProcessorServiceClient } = require('@google-cloud/documentai').v1;
 const { google } = require('googleapis');
 const streamifier = require('streamifier');
@@ -11,7 +14,7 @@ const cron = require('node-cron');
 const { pdf: pdfToImg } = require('pdf-to-img');
 const { execFile } = require('child_process');
 const { promisify } = require('util');
-const execFileAsync = promisify(execFile); 
+const execFileAsync = promisify(execFile);
 
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
@@ -42,18 +45,122 @@ const origensPermitidas = [
   'https://familia-rocha-7ea1a.firebaseapp.com'
 ];
 
+// ── Security Middleware ──
+app.use(helmet({
+  contentSecurityPolicy: false,  // CSP gerenciada pelo frontend
+  crossOriginEmbedderPolicy: false,
+}));
+
+const limiterGlobal = rateLimit({
+  windowMs: 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { erro: 'Muitas requisicoes. Tente novamente mais tarde.' },
+});
+app.use(limiterGlobal);
+
+const limiterUpload = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { erro: 'Limite de uploads excedido. Aguarde um minuto.' },
+});
+
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin || origensPermitidas.includes(origin)) {
       callback(null, true);
     } else {
-      callback(null, true); // Permite tudo em producao (Cloud Run com IAM)
+      callback(null, true);
     }
   }
 }));
 app.use(express.json());
 
 const upload = multer({ storage: multer.memoryStorage() });
+
+// ── Auth Middleware ──
+async function autenticar(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ erro: 'Token de autenticacao ausente.' });
+  }
+  const token = authHeader.split('Bearer ')[1];
+  if (!token) {
+    return res.status(401).json({ erro: 'Token de autenticacao invalido.' });
+  }
+  try {
+    if (!authAdmin) return res.status(503).json({ erro: 'Servico de autenticacao indisponivel.' });
+    const decoded = await authAdmin.verifyIdToken(token);
+    req.usuario = { uid: decoded.uid, email: decoded.email };
+    next();
+  } catch (err) {
+    console.warn('[AUTH] Token invalido:', err.code || err.message);
+    return res.status(401).json({ erro: 'Token de autenticacao invalido ou expirado.' });
+  }
+}
+
+// ── Validation Schemas (Zod) ──
+const schemaCriarUsuario = z.object({
+  nome: z.string().min(1, 'Nome obrigatorio.'),
+  email: z.string().email('Email invalido.').optional(),
+  senha: z.string().min(6, 'Senha deve ter no minimo 6 caracteres.').optional(),
+  tipo: z.enum(['Adulto', 'Crianca', 'Pet']).default('Adulto'),
+  dataNascimento: z.string().optional().default(''),
+  tipoSanguineo: z.string().optional().default(''),
+  alergias: z.string().optional().default(''),
+  telefone: z.string().optional().default(''),
+});
+
+const schemaAtualizarUsuario = z.object({
+  nome: z.string().min(1).optional(),
+  email: z.string().email().optional(),
+  tipo: z.enum(['Adulto', 'Crianca', 'Pet']).optional(),
+  dataNascimento: z.string().optional(),
+  tipoSanguineo: z.string().optional(),
+  alergias: z.string().optional(),
+  telefone: z.string().optional(),
+});
+
+const schemaPermissoes = z.object({
+  permissoes: z.record(z.string(), z.boolean()),
+});
+
+const schemaResetSenha = z.object({
+  senha: z.string().min(6, 'Senha deve ter no minimo 6 caracteres.'),
+});
+async function verificarPermissao(modulo) {
+  return async (req, res, next) => {
+    if (!req.usuario) return res.status(401).json({ erro: 'Autenticacao necessaria.' });
+    if (!firestoreDb) return res.status(503).json({ erro: 'Banco de dados indisponivel.' });
+
+    const SUPERADMIN_EMAIL = 'tobiasrocha@gmail.com';
+    if (req.usuario.email === SUPERADMIN_EMAIL) return next();
+
+    try {
+      const userRecord = await authAdmin.getUserByEmail(req.usuario.email);
+      const meta = await firestoreDb.collection('usuarios').doc(userRecord.uid).get();
+      const metaData = meta.exists ? meta.data() : {};
+      const permissoes = metaData.permissoes || {};
+
+      if (permissoes[modulo]) return next();
+      return res.status(403).json({ erro: 'Acesso negado a este modulo.' });
+    } catch (err) {
+      console.error('[PERMISSAO] Erro:', err.message);
+      return res.status(500).json({ erro: 'Falha ao verificar permissoes.' });
+    }
+  };
+}
+
+// Permissão admin — apenas superadmin
+async function verificarAdmin(req, res, next) {
+  if (!req.usuario) return res.status(401).json({ erro: 'Autenticacao necessaria.' });
+  const SUPERADMIN_EMAIL = 'tobiasrocha@gmail.com';
+  if (req.usuario.email === SUPERADMIN_EMAIL) return next();
+  return res.status(403).json({ erro: 'Acesso restrito ao administrador.' });
+}
 
 // Inicializacao dos clientes Google (lazy — criados apenas quando necessario)
 let docAiClient = null;
@@ -381,7 +488,7 @@ if (process.env.CRON_ENABLED !== 'false') {
 // ---------------------------------------------------------
 // ROTA: DISPARO MANUAL (Acionado pelo Botao do Frontend)
 // ---------------------------------------------------------
-app.post('/api/disparar-alertas', async (req, res) => {
+app.post('/api/disparar-alertas', autenticar, verificarPermissao('financeiro'), async (req, res) => {
   if (!firestoreDb) return res.status(503).json({ erro: 'Banco de dados indisponivel.' });
   try {
     const resultado = await verificarEVenciarAlertas();
@@ -567,7 +674,7 @@ if (process.env.CRON_ENABLED !== 'false') {
 }
 
 // Rota manual de alertas de saude
-app.post('/api/disparar-alertas-saude', async (req, res) => {
+app.post('/api/disparar-alertas-saude', autenticar, verificarPermissao('saude'), async (req, res) => {
   if (!firestoreDb) return res.status(503).json({ erro: 'Banco de dados indisponivel.' });
   try {
     const resultado = await verificarAlertasSaude();
@@ -592,7 +699,7 @@ app.post('/api/disparar-alertas-saude', async (req, res) => {
 // ---------------------------------------------------------
 // ROTA: IMPORTAÇÃO DE EXTRATOS BANCÁRIOS
 // ---------------------------------------------------------
-app.post('/api/importar-extrato', upload.single('documento'), async (req, res) => {
+app.post('/api/importar-extrato', autenticar, verificarPermissao('financeiro'), limiterUpload, upload.single('documento'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ erro: 'Arquivo de extrato ausente.' });
     console.log(`Indexando Extrato Bancário: ${req.file.originalname}`);
@@ -611,7 +718,7 @@ app.post('/api/importar-extrato', upload.single('documento'), async (req, res) =
 // ---------------------------------------------------------
 // ROTA: CONCILIACAO BANCARIA (Upload de extrato + matching)
 // ---------------------------------------------------------
-app.post('/api/conciliar-extrato', upload.single('documento'), async (req, res) => {
+app.post('/api/conciliar-extrato', autenticar, verificarPermissao('financeiro'), limiterUpload, upload.single('documento'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ erro: 'Arquivo de extrato ausente.' });
     console.log(`[CONCILIACAO] Processando extrato: ${req.file.originalname} (${req.file.mimetype})`);
@@ -729,7 +836,7 @@ app.post('/api/conciliar-extrato', upload.single('documento'), async (req, res) 
 // ---------------------------------------------------------
 // ROTA: BAIXA EM LOTE de conciliados
 // ---------------------------------------------------------
-app.post('/api/baixar-conciliados', async (req, res) => {
+app.post('/api/baixar-conciliados', autenticar, verificarPermissao('financeiro'), async (req, res) => {
   try {
     const { ids } = req.body;
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
@@ -752,7 +859,7 @@ app.post('/api/baixar-conciliados', async (req, res) => {
 // ---------------------------------------------------------
 // ROTA: OCR FINANCEIRO BOLETOS (Refatorada com tratamento de erro robusto)
 // ---------------------------------------------------------
-app.post('/api/extrair-boleto', upload.single('documento'), async (req, res) => {
+app.post('/api/extrair-boleto', autenticar, verificarPermissao('financeiro'), limiterUpload, upload.single('documento'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ erro: 'Nenhum documento enviado.' });
     
@@ -1019,7 +1126,7 @@ app.post('/api/extrair-boleto', upload.single('documento'), async (req, res) => 
 // ---------------------------------------------------------
 // ROTA: UPLOAD HISTÓRICO DE SAÚDE
 // ---------------------------------------------------------
-app.post('/api/upload-saude', upload.single('documento'), async (req, res) => {
+app.post('/api/upload-saude', autenticar, verificarPermissao('saude'), limiterUpload, upload.single('documento'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ erro: 'Nenhum documento recebido.' });
     const client = getDriveClient(false);
@@ -1072,7 +1179,7 @@ const formatarMembro = (doc) => {
 };
 
 // Lista todos os membros (auth users + pets + dados antigos de perfis)
-app.get('/api/admin/usuarios', async (req, res) => {
+app.get('/api/admin/usuarios', autenticar, verificarAdmin, async (req, res) => {
   try {
     // Garante que o superadmin tem doc no Firestore
     try {
@@ -1112,11 +1219,13 @@ app.get('/api/admin/usuarios', async (req, res) => {
 });
 
 // Cria novo membro (auth user ou pet)
-app.post('/api/admin/usuarios', async (req, res) => {
+app.post('/api/admin/usuarios', autenticar, verificarAdmin, async (req, res) => {
   try {
-    const { nome, email, senha, tipo, dataNascimento, tipoSanguineo, alergias, telefone } = req.body;
-
-    if (!nome) return res.status(400).json({ erro: 'Nome obrigatorio.' });
+    const parsed = schemaCriarUsuario.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ erro: parsed.error.issues.map(i => i.message).join('; ') });
+    }
+    const { nome, email, senha, tipo, dataNascimento, tipoSanguineo, alergias, telefone } = parsed.data;
 
     const dadosFirestore = {
       nome,
@@ -1170,10 +1279,14 @@ app.post('/api/admin/usuarios', async (req, res) => {
 });
 
 // Atualiza membro (todos os campos)
-app.put('/api/admin/usuarios/:id', async (req, res) => {
+app.put('/api/admin/usuarios/:id', autenticar, verificarAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { nome, email, tipo, dataNascimento, tipoSanguineo, alergias, telefone } = req.body;
+    const parsed = schemaAtualizarUsuario.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ erro: parsed.error.issues.map(i => i.message).join('; ') });
+    }
+    const { nome, email, tipo, dataNascimento, tipoSanguineo, alergias, telefone } = parsed.data;
 
     const docRef = firestoreDb.collection('usuarios').doc(id);
     const doc = await docRef.get();
@@ -1217,7 +1330,7 @@ app.put('/api/admin/usuarios/:id', async (req, res) => {
 });
 
 // Exclui membro
-app.delete('/api/admin/usuarios/:id', async (req, res) => {
+app.delete('/api/admin/usuarios/:id', autenticar, verificarAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const docRef = firestoreDb.collection('usuarios').doc(id);
@@ -1238,13 +1351,14 @@ app.delete('/api/admin/usuarios/:id', async (req, res) => {
 });
 
 // Redefine senha (apenas auth users)
-app.post('/api/admin/usuarios/:id/reset-senha', async (req, res) => {
+app.post('/api/admin/usuarios/:id/reset-senha', autenticar, verificarAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { novaSenha } = req.body;
-    if (!novaSenha || novaSenha.length < 6) {
-      return res.status(400).json({ erro: 'Senha deve ter no minimo 6 caracteres.' });
+    const parsed = schemaResetSenha.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ erro: parsed.error.issues.map(i => i.message).join('; ') });
     }
+    const { senha: novaSenha } = parsed.data;
 
     const doc = await firestoreDb.collection('usuarios').doc(id).get();
     if (!doc.exists || !doc.data().uid) {
@@ -1261,13 +1375,14 @@ app.post('/api/admin/usuarios/:id/reset-senha', async (req, res) => {
 });
 
 // Atualiza permissoes (apenas auth users)
-app.put('/api/admin/usuarios/:id/permissoes', async (req, res) => {
+app.put('/api/admin/usuarios/:id/permissoes', autenticar, verificarAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { permissoes } = req.body;
-    if (!permissoes || typeof permissoes !== 'object') {
-      return res.status(400).json({ erro: 'Permissoes invalidas.' });
+    const parsed = schemaPermissoes.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ erro: parsed.error.issues.map(i => i.message).join('; ') });
     }
+    const { permissoes } = parsed.data;
     const docRef = firestoreDb.collection('usuarios').doc(id);
     const doc = await docRef.get();
     if (!doc.exists || !doc.data().uid) {
@@ -1283,7 +1398,7 @@ app.put('/api/admin/usuarios/:id/permissoes', async (req, res) => {
 });
 
 // Obtem permissoes do usuario logado
-app.get('/api/admin/permissoes', async (req, res) => {
+app.get('/api/admin/permissoes', autenticar, async (req, res) => {
   try {
     const email = req.query.email;
     if (!email) return res.status(400).json({ erro: 'Email obrigatorio.' });

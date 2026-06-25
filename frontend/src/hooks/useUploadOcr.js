@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { API_BASE } from '../config';
+import { apiFetch } from '../config';
 
 export function useUploadOcr() {
   const [extraindo, setExtraindo] = useState(false);
@@ -16,7 +16,7 @@ export function useUploadOcr() {
     formData.append('documento', file);
 
     try {
-      const resposta = await fetch(`${API_BASE}/extrair-boleto`, {
+      const resposta = await apiFetch(`/extrair-boleto`, {
         method: 'POST',
         body: formData,
       });
