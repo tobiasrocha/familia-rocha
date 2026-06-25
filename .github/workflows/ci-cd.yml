@@ -162,7 +162,7 @@ jobs:
           path: frontend/dist
 
       - name: Deploy to Firebase Hosting (Production)
-        run: npx firebase deploy --only hosting --project=${{ env.PROJECT_ID }} --token=${{ secrets.FIREBASE_TOKEN }}
+        run: npx --yes firebase-tools deploy --only hosting --project=${{ env.PROJECT_ID }} --token=${{ secrets.FIREBASE_TOKEN }}
 
   # ──────────────────────────────────────────────
   # JOB 5: DEPLOY FRONTEND — PREVIEW (homolog)
@@ -182,4 +182,4 @@ jobs:
           path: frontend/dist
 
       - name: Deploy to Firebase Preview Channel
-        run: npx firebase hosting:channel:deploy homolog --project=${{ env.PROJECT_ID }} --token=${{ secrets.FIREBASE_TOKEN }}
+        run: npx --yes firebase-tools hosting:channel:deploy homolog --project=${{ env.PROJECT_ID }} --token=${{ secrets.FIREBASE_TOKEN }}

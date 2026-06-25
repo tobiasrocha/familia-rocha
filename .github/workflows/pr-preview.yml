@@ -33,4 +33,4 @@ jobs:
           VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
 
       - name: Deploy to Firebase Preview Channel
-        run: npx firebase hosting:channel:deploy preview-pr-${{ github.event.number }} --project=familia-rocha-7ea1a --token=${{ secrets.FIREBASE_TOKEN }} --expires=7d
+        run: npx --yes firebase-tools hosting:channel:deploy preview-pr-${{ github.event.number }} --project=familia-rocha-7ea1a --token=${{ secrets.FIREBASE_TOKEN }} --expires=7d
