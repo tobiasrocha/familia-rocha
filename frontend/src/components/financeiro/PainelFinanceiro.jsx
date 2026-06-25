@@ -17,6 +17,7 @@ import GerenciadorCartoes from './GerenciadorCartoes';
 import GerenciadorInvestimentos from './GerenciadorInvestimentos';
 import GerenciadorEmprestimos from './GerenciadorEmprestimos';
 import GerenciadorSalarios from './GerenciadorSalarios';
+import GerenciadorCarteira from './GerenciadorCarteira';
 
 export default function PainelFinanceiro({ cores }) {
   const { dados: lancamentosGlobais, recarregar } = useFirestore('financas');
@@ -195,6 +196,7 @@ export default function PainelFinanceiro({ cores }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '5px', backgroundColor: cores?.branco, padding: '5px', borderRadius: '10px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', overflowX: 'auto', maxWidth: '100%', flexShrink: 1 }}>
             <button type="button" onClick={() => setAbaAtiva('dashboard')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'dashboard' ? cores?.dourado : 'transparent', color: abaAtiva === 'dashboard' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Métricas</button>
             <button type="button" onClick={() => setAbaAtiva('contas')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'contas' ? cores?.dourado : 'transparent', color: abaAtiva === 'contas' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Bancos</button>
+            <button type="button" onClick={() => setAbaAtiva('carteira')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'carteira' ? cores?.dourado : 'transparent', color: abaAtiva === 'carteira' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}><Wallet size={14}/> Carteira</button>
             <button type="button" onClick={() => setAbaAtiva('lancamentos')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'lancamentos' ? cores?.dourado : 'transparent', color: abaAtiva === 'lancamentos' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Lançamentos</button>
             <button type="button" onClick={() => setAbaAtiva('cartoes')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'cartoes' ? cores?.dourado : 'transparent', color: abaAtiva === 'cartoes' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}><CreditCard size={14}/> Cartões</button>
             <button type="button" onClick={() => setAbaAtiva('investimentos')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'investimentos' ? cores?.dourado : 'transparent', color: abaAtiva === 'investimentos' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}><TrendingUp size={14}/> Investir</button>
@@ -346,6 +348,13 @@ export default function PainelFinanceiro({ cores }) {
           formatarMoeda={formatarMoeda}
           perfis={perfis}
           obterNomePerfil={obterNomePerfil}
+        />
+      )}
+
+      {abaAtiva === 'carteira' && (
+        <GerenciadorCarteira
+          cores={cores}
+          formatarMoeda={formatarMoeda}
         />
       )}
     </div>
