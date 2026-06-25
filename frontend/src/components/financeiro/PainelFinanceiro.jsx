@@ -19,7 +19,8 @@ import GerenciadorEmprestimos from './GerenciadorEmprestimos';
 import GerenciadorSalarios from './GerenciadorSalarios';
 import GerenciadorCarteira from './GerenciadorCarteira';
 import GerenciadorCofre from './GerenciadorCofre';
-import { Vault } from 'lucide-react';
+import GerenciadorHeranca from './GerenciadorHeranca';
+import { Vault, Gem } from 'lucide-react';
 
 export default function PainelFinanceiro({ cores }) {
   const { dados: lancamentosGlobais, recarregar } = useFirestore('financas');
@@ -90,7 +91,7 @@ export default function PainelFinanceiro({ cores }) {
     return ano === anoFiltro && mes === mesNumFiltro;
   });
 
-  const { extraindo: extraindoDados, erro: erroOcr, dadosExtraidos, extrairDados } = useUploadOcr();
+  const { extraindo: extraindoDados, erro: erroOcr, progresso: progressoUpload, dadosExtraidos, extrairDados } = useUploadOcr();
 
   const {
     calcularSaldoConta, saldoGlobalConsolidado, saldoBancario, saldoInvestimentos, debitoCartoes, saldoCofre, dadosMesFiltro,
@@ -231,6 +232,7 @@ export default function PainelFinanceiro({ cores }) {
             <button type="button" onClick={() => setAbaAtiva('contas')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'contas' ? cores?.dourado : 'transparent', color: abaAtiva === 'contas' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Bancos</button>
             <button type="button" onClick={() => setAbaAtiva('carteira')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'carteira' ? cores?.dourado : 'transparent', color: abaAtiva === 'carteira' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}><Wallet size={14}/> Carteira</button>
             <button type="button" onClick={() => setAbaAtiva('cofre')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'cofre' ? cores?.dourado : 'transparent', color: abaAtiva === 'cofre' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}><Vault size={14}/> Cofre</button>
+            <button type="button" onClick={() => setAbaAtiva('heranca')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'heranca' ? cores?.dourado : 'transparent', color: abaAtiva === 'heranca' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}><Gem size={14}/> Herança</button>
             <button type="button" onClick={() => setAbaAtiva('lancamentos')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'lancamentos' ? cores?.dourado : 'transparent', color: abaAtiva === 'lancamentos' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Lançamentos</button>
             <button type="button" onClick={() => setAbaAtiva('cartoes')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'cartoes' ? cores?.dourado : 'transparent', color: abaAtiva === 'cartoes' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}><CreditCard size={14}/> Cartões</button>
             <button type="button" onClick={() => setAbaAtiva('investimentos')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'investimentos' ? cores?.dourado : 'transparent', color: abaAtiva === 'investimentos' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}><TrendingUp size={14}/> Investir</button>
@@ -301,6 +303,7 @@ export default function PainelFinanceiro({ cores }) {
               listaParcelas={listaParcelas} setListaParcelas={setListaParcelas}
               linkArquivo={linkArquivo}
               extraindoDados={extraindoDados}
+              progressoUpload={progressoUpload}
               avisoUpload={avisoUpload}
               tipoAviso={tipoAviso}
               salvando={salvando}
@@ -407,6 +410,17 @@ export default function PainelFinanceiro({ cores }) {
           cores={cores}
           formatarMoeda={formatarMoeda}
           contasBancarias={contasBancarias}
+        />
+      )}
+
+      {abaAtiva === 'heranca' && (
+        <GerenciadorHeranca
+          cores={cores}
+          formatarMoeda={formatarMoeda}
+          perfis={perfis}
+          obterNomePerfil={obterNomePerfil}
+          contasBancarias={contasBancarias}
+          onRegistrarReceita={recarregar}
         />
       )}
     </div>
