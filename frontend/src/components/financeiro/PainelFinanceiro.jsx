@@ -268,6 +268,9 @@ export default function PainelFinanceiro({ cores }) {
           obterNomePerfil={obterNomePerfil}
           recarregarContas={recarregarContas}
           onRegistrarDeposito={recarregar}
+          lancamentosGlobais={lancamentosGlobais}
+          onEditarLancamento={handleEditar}
+          onExcluirLancamento={handleExcluir}
         />
       )}
 
