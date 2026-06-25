@@ -183,7 +183,8 @@ const firebaseProjectId = process.env.GOOGLE_CLOUD_PROJECT_ID || 'familia-rocha-
 let firestoreDb = null;
 let authAdmin = null;
 
-const temCredenciaisGoogle = Boolean(serviceAccount || process.env.GOOGLE_APPLICATION_CREDENTIALS);
+const estaNoCloudRun = Boolean(process.env.K_SERVICE);
+const temCredenciaisGoogle = Boolean(serviceAccount || process.env.GOOGLE_APPLICATION_CREDENTIALS || estaNoCloudRun);
 
 if (temCredenciaisGoogle && getApps().length === 0) {
   try {
