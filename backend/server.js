@@ -605,7 +605,7 @@ async function verificarAlertasSaude() {
       const assunto = `🏥 ${eventos.length} compromisso(s) de saude`;
       const corpoPlain = corpo.replace(/\*/g, '');
 
-      // WhatsApp para o telefone do perfil
+      // WhatsApp para o telefone do perfil vinculado
       if (whatsappHabilitado && perfil.telefone) {
         let numero = perfil.telefone.replace(/[^\d]/g, '');
         if (!numero.startsWith('55') && (numero.length === 10 || numero.length === 11)) numero = '55' + numero;
@@ -626,20 +626,18 @@ async function verificarAlertasSaude() {
         }
       }
 
-      // Email para o perfil (se tiver email) + superadmin
-      const destEmail = [SUPERADMIN_EMAIL];
-      if (perfil.email && perfil.email !== SUPERADMIN_EMAIL) destEmail.push(perfil.email);
+      // Email apenas para o superadmin — evita enviar para emails de familia no perfil
       try {
         await transporter.sendMail({
           from: `"ERP Familia Rocha" <${process.env.SMTP_USER}>`,
-          to: destEmail,
+          to: SUPERADMIN_EMAIL,
           subject: assunto,
           text: corpoPlain,
           headers: { 'X-Priority': '1', 'X-MSMail-Priority': 'High', 'Auto-Submitted': 'auto-generated' },
         });
-        resultado.emailsEnviados += destEmail.length;
+        resultado.emailsEnviados++;
       } catch (errEmail) {
-        resultado.emailsFalhas += destEmail.length;
+        resultado.emailsFalhas++;
         console.error(`[EMAIL SAUDE ERROR] ${errEmail.message}`);
       }
     }
