@@ -4,7 +4,7 @@ import { db } from '../../firebaseConfig';
 import { useFirestore } from '../../hooks/useFirestore';
 import { Plus, Landmark, User, Calendar, Trash2, TrendingDown, Pencil, ArrowUpCircle } from 'lucide-react';
 
-export default function GerenciadorContas({ cores, contasBancarias, perfis, calcularSaldoConta, formatarMoeda, obterNomePerfil, recarregarContas }) {
+export default function GerenciadorContas({ cores, contasBancarias, perfis, calcularSaldoConta, formatarMoeda, obterNomePerfil, recarregarContas, onRegistrarDeposito }) {
   const [exibirFormConta, setExibirFormConta] = useState(false);
   const [editandoContaId, setEditandoContaId] = useState(null);
   const [nomeConta, setNomeConta] = useState('');
@@ -143,6 +143,7 @@ export default function GerenciadorContas({ cores, contasBancarias, perfis, calc
       });
       setDepositoContaId(null); setDepValor(''); setDepOrigem('');
       recarregarContas();
+      if (onRegistrarDeposito) onRegistrarDeposito();
     } catch { alert('Erro ao registrar depósito.'); }
   };
 

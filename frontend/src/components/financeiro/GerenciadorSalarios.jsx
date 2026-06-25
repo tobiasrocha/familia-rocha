@@ -11,7 +11,7 @@ const tiposSalario = [
   { key: 'Premiacao', label: 'Premiação', icon: <Trophy size={18} />, cor: '#d97706', bg: '#fef3c7' },
 ];
 
-export default function GerenciadorSalarios({ cores, formatarMoeda, perfis, obterNomePerfil, contasBancarias }) {
+export default function GerenciadorSalarios({ cores, formatarMoeda, perfis, obterNomePerfil, contasBancarias, onRegistrarRecebimento }) {
   const { dados: salarios, recarregar } = useFirestore('salarios');
   const [exibirForm, setExibirForm] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
@@ -74,6 +74,7 @@ export default function GerenciadorSalarios({ cores, formatarMoeda, perfis, obte
         criadoEm: new Date().toISOString(),
       });
       setRegId(null); setRegContaId(''); recarregar();
+      if (onRegistrarRecebimento) onRegistrarRecebimento();
     } catch { alert('Erro ao registrar.'); }
   };
 
