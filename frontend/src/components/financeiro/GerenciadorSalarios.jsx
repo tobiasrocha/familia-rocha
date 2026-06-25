@@ -23,6 +23,7 @@ export default function GerenciadorSalarios({ cores, formatarMoeda, perfis, obte
   const [regId, setRegId] = useState(null);
   const [regContaId, setRegContaId] = useState('');
   const [regData, setRegData] = useState(new Date().toISOString().slice(0,10));
+  const [regPerfilId, setRegPerfilId] = useState('');
 
   const resetForm = () => {
     setTipo('Salario'); setDescricao(''); setValor(''); setPerfilId(''); setDiaPagamento('1');
@@ -70,10 +71,11 @@ export default function GerenciadorSalarios({ cores, formatarMoeda, perfis, obte
         dataVencimento: regData,
         status: 'Pago',
         contaId: regContaId || null,
+        perfilId: regPerfilId || s.perfilId || null,
         formaPagamento: regContaId ? 'PIX' : 'Dinheiro',
         criadoEm: new Date().toISOString(),
       });
-      setRegId(null); setRegContaId(''); recarregar();
+      setRegId(null); setRegContaId(''); setRegPerfilId(''); recarregar();
       if (onRegistrarRecebimento) onRegistrarRecebimento();
     } catch { alert('Erro ao registrar.'); }
   };
@@ -206,8 +208,12 @@ export default function GerenciadorSalarios({ cores, formatarMoeda, perfis, obte
                 <div style={{ marginTop: '10px', padding: '8px', backgroundColor: '#f0fdf4', borderRadius: '6px', border: '1px solid #bbf7d0' }}>
                   <div style={{ display: 'flex', gap: '6px', marginBottom: '6px', flexWrap: 'wrap' }}>
                     <select value={regContaId} onChange={e => setRegContaId(e.target.value)} style={{ padding: '6px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '12px', flex: 1 }}>
-                      <option value="">Conta (opcional)</option>
+                      <option value="">Dinheiro (avulso)</option>
                       {(contasBancarias || []).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                    </select>
+                    <select value={regPerfilId} onChange={e => setRegPerfilId(e.target.value)} style={{ padding: '6px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '12px', flex: 1 }}>
+                      <option value="">Quem recebeu?</option>
+                      {(perfis || []).map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
                     </select>
                     <input type="date" value={regData} onChange={e => setRegData(e.target.value)} style={{ padding: '6px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '12px' }} />
                     <button type="button" onClick={() => handleRegistrarRecebimento(s)} style={{ padding: '6px 10px', backgroundColor: '#16a34a', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', fontSize: '12px' }}>Confirmar</button>
@@ -215,7 +221,7 @@ export default function GerenciadorSalarios({ cores, formatarMoeda, perfis, obte
                   </div>
                 </div>
               ) : (
-                <button type="button" onClick={() => { setRegId(s.id); setRegContaId(''); setRegData(new Date().toISOString().slice(0,10)); }} style={{ marginTop: '10px', width: '100%', padding: '7px', backgroundColor: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>
+                <button type="button" onClick={() => { setRegId(s.id); setRegContaId(''); setRegPerfilId(''); setRegData(new Date().toISOString().slice(0,10)); }} style={{ marginTop: '10px', width: '100%', padding: '7px', backgroundColor: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>
                   <ArrowUpCircle size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} /> Registrar Recebimento
                 </button>
               )}

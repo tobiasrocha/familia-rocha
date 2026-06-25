@@ -273,17 +273,19 @@ export default function GerenciadorContas({ cores, contasBancarias, perfis, calc
                 </div>
               )}
 
-              {/* Movimentações da conta (lançamentos) */}
+              {/* Movimentações da conta — mês atual */}
               {(() => {
-                const movs = (lancamentosGlobais || []).filter(l => l.contaId === conta.id).sort((a, b) => new Date(b.dataVencimento) - new Date(a.dataVencimento)).slice(0, 5);
-                return movs.length > 0 && (
-                  <div style={{ borderTop: '1px solid #eee', paddingTop: '8px', marginTop: '6px' }}>
-                    <span style={{ fontSize: '11px', color: '#999', fontWeight: 'bold' }}>Últimas movimentações:</span>
-                    {movs.map(m => (
-                      <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#666', padding: '2px 0' }}>
-                        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.descricao}</span>
-                        <span style={{ fontWeight: 'bold', color: m.tipo === 'Receita' ? '#16a34a' : '#dc2626', margin: '0 6px', minWidth: '60px', textAlign: 'right' }}>{m.tipo === 'Receita' ? '+' : '-'}{formatarMoeda(m.valor)}</span>
-                        <span style={{ fontSize: '10px', color: '#999', marginRight: '4px' }}>{m.dataVencimento?.split('-').reverse().join('/')}</span>
+                const mesAtual = new Date().toISOString().slice(0, 7);
+                const movs = (lancamentosGlobais || []).filter(l => l.contaId === conta.id).sort((a, b) => new Date(b.dataVencimento) - new Date(a.dataVencimento));
+                const movsMes = movs.filter(l => l.dataVencimento?.startsWith(mesAtual));
+                return movsMes.length > 0 && (
+                  <div style={{ borderTop: '1px solid #eee', paddingTop: '8px', marginTop: '6px', maxHeight: '180px', overflowY: 'auto' }}>
+                    <span style={{ fontSize: '11px', color: '#999', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>Movimentações do mês ({movsMes.length}):</span>
+                    {movsMes.map(m => (
+                      <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: '#666', padding: '2px 0', borderBottom: '1px solid #f5f5f5' }}>
+                        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 'bold' }}>{m.descricao}</span>
+                        {m.perfilId && <span style={{ fontSize: '9px', color: '#C5A059', minWidth: '50px' }}>{obterNomePerfil(m.perfilId)}</span>}
+                        <span style={{ fontWeight: 'bold', color: m.tipo === 'Receita' ? '#16a34a' : '#dc2626', minWidth: '55px', textAlign: 'right' }}>{m.tipo === 'Receita' ? '+' : '-'}{formatarMoeda(m.valor)}</span>
                         <button type="button" onClick={() => onEditarLancamento && onEditarLancamento(m)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0056b3', padding: '0 2px' }}><Pencil size={11}/></button>
                         <button type="button" onClick={() => onExcluirLancamento && onExcluirLancamento(m.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc3545', padding: '0 2px' }}><Trash2 size={11}/></button>
                       </div>
