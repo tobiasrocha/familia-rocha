@@ -357,6 +357,7 @@ export default function PainelFinanceiro({ cores }) {
           formatarMoeda={formatarMoeda}
           contasBancarias={contasBancarias}
           cartoes={cartoes}
+          investimentos={investimentos}
         />
       )}
     </div>

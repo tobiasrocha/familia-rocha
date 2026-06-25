@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { collection, addDoc, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useFirestore } from '../../hooks/useFirestore';
-import { Plus, Trash2, Pencil, CreditCard, Banknote, Landmark, Coffee, ShoppingCart, Car, Heart, Home, Smartphone, Tag } from 'lucide-react';
+import { Plus, Trash2, Pencil, CreditCard, Banknote, Landmark, TrendingUp, Coffee, ShoppingCart, Car, Heart, Home, Smartphone, Tag } from 'lucide-react';
 
 const categoriasRapidas = [
   { key: 'Alimentacao', label: 'Alimentação', icon: <Coffee size={14} /> },
@@ -18,9 +18,10 @@ const formasPagamento = [
   { key: 'Dinheiro', label: 'Dinheiro', icon: <Banknote size={14} />, cor: '#059669', bg: '#ecfdf5' },
   { key: 'Debito', label: 'Débito', icon: <Landmark size={14} />, cor: '#2563eb', bg: '#eff6ff' },
   { key: 'Credito', label: 'Crédito', icon: <CreditCard size={14} />, cor: '#dc2626', bg: '#fef2f2' },
+  { key: 'Investimento', label: 'Invest.', icon: <TrendingUp size={14} />, cor: '#7c3aed', bg: '#ede9fe' },
 ];
 
-export default function GerenciadorCarteira({ cores, formatarMoeda, contasBancarias, cartoes }) {
+export default function GerenciadorCarteira({ cores, formatarMoeda, contasBancarias, cartoes, investimentos }) {
   const { dados: gastos, recarregar } = useFirestore('carteira');
   const [editandoId, setEditandoId] = useState(null);
   const [descricao, setDescricao] = useState('');
@@ -71,11 +72,13 @@ export default function GerenciadorCarteira({ cores, formatarMoeda, contasBancar
   const totalDinheiro = gastosHoje.filter(g => g.forma === 'Dinheiro').reduce((a, g) => a + (g.valor || 0), 0);
   const totalDebito = gastosHoje.filter(g => g.forma === 'Debito').reduce((a, g) => a + (g.valor || 0), 0);
   const totalCredito = gastosHoje.filter(g => g.forma === 'Credito').reduce((a, g) => a + (g.valor || 0), 0);
+  const totalInvest = gastosHoje.filter(g => g.forma === 'Investimento').reduce((a, g) => a + (g.valor || 0), 0);
 
   const nomeVinculo = (g) => {
     if (!g.vinculoId) return null;
     if (g.forma === 'Debito') return contasBancarias?.find(c => c.id === g.vinculoId)?.nome;
     if (g.forma === 'Credito') return cartoes?.find(c => c.id === g.vinculoId)?.nome;
+    if (g.forma === 'Investimento') return investimentos?.find(c => c.id === g.vinculoId)?.nome;
     return null;
   };
 
@@ -83,7 +86,7 @@ export default function GerenciadorCarteira({ cores, formatarMoeda, contasBancar
     <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
       <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
         {formasPagamento.map(f => {
-          const total = f.key === 'Dinheiro' ? totalDinheiro : f.key === 'Debito' ? totalDebito : totalCredito;
+          const total = f.key === 'Dinheiro' ? totalDinheiro : f.key === 'Debito' ? totalDebito : f.key === 'Credito' ? totalCredito : totalInvest;
           return (
             <div key={f.key} style={{ flex: '1 1 130px', backgroundColor: f.bg, padding: '12px', borderRadius: '10px', border: `1px solid ${f.cor}30` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
@@ -118,11 +121,12 @@ export default function GerenciadorCarteira({ cores, formatarMoeda, contasBancar
         </div>
         {forma !== 'Dinheiro' && (
           <div style={{ flex: '1 1 160px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <label style={{ fontSize: '12px', fontWeight: 'bold' }}>{forma === 'Debito' ? 'Conta' : 'Cartão'}</label>
+            <label style={{ fontSize: '12px', fontWeight: 'bold' }}>{forma === 'Debito' ? 'Conta' : forma === 'Credito' ? 'Cartão' : 'Investimento'}</label>
             <select value={vinculoId} onChange={e => setVinculoId(e.target.value)} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}>
               <option value="">Não vincular</option>
               {forma === 'Debito' && (contasBancarias || []).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
               {forma === 'Credito' && (cartoes || []).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+              {forma === 'Investimento' && (investimentos || []).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
             </select>
           </div>
         )}
