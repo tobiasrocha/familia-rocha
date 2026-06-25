@@ -16,6 +16,7 @@ import ConciliadorExtrato from './ConciliadorExtrato';
 import GerenciadorCartoes from './GerenciadorCartoes';
 import GerenciadorInvestimentos from './GerenciadorInvestimentos';
 import GerenciadorEmprestimos from './GerenciadorEmprestimos';
+import GerenciadorSalarios from './GerenciadorSalarios';
 
 export default function PainelFinanceiro({ cores }) {
   const { dados: lancamentosGlobais, recarregar } = useFirestore('financas');
@@ -197,8 +198,9 @@ export default function PainelFinanceiro({ cores }) {
             <button type="button" onClick={() => setAbaAtiva('lancamentos')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'lancamentos' ? cores?.dourado : 'transparent', color: abaAtiva === 'lancamentos' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Lançamentos</button>
             <button type="button" onClick={() => setAbaAtiva('cartoes')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'cartoes' ? cores?.dourado : 'transparent', color: abaAtiva === 'cartoes' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}><CreditCard size={14}/> Cartões</button>
             <button type="button" onClick={() => setAbaAtiva('investimentos')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'investimentos' ? cores?.dourado : 'transparent', color: abaAtiva === 'investimentos' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}><TrendingUp size={14}/> Investir</button>
-            <button type="button" onClick={() => setAbaAtiva('emprestimos')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'emprestimos' ? cores?.dourado : 'transparent', color: abaAtiva === 'emprestimos' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}><TrendingDown size={14}/> Empréstimos</button>
-            <button type="button" onClick={() => setAbaAtiva('relatorios')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'relatorios' ? cores?.primaria : 'transparent', color: abaAtiva === 'relatorios' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}><FileText size={16} style={{verticalAlign:'middle'}}/> Contábil</button>
+            <button type="button" onClick={() => setAbaAtiva('emprestimos')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'emprestimos' ? cores?.dourado : 'transparent', color: abaAtiva === 'emprestimos' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}><TrendingDown size={14}/> Empréstimos</button>
+            <button type="button" onClick={() => setAbaAtiva('salarios')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'salarios' ? cores?.dourado : 'transparent', color: abaAtiva === 'salarios' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}><Wallet size={14}/> Salário</button>
+            <button type="button" onClick={() => setAbaAtiva('relatorios')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'relatorios' ? cores?.primaria : 'transparent', color: abaAtiva === 'relatorios' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', flexShrink: 0 }}><FileText size={16} style={{verticalAlign:'middle'}}/> Contábil</button>
           </div>
         </div>
       </div>
@@ -335,6 +337,15 @@ export default function PainelFinanceiro({ cores }) {
           obterNomePerfil={obterNomePerfil}
           perfis={perfis}
           contasBancarias={contasBancarias}
+        />
+      )}
+
+      {abaAtiva === 'salarios' && (
+        <GerenciadorSalarios
+          cores={cores}
+          formatarMoeda={formatarMoeda}
+          perfis={perfis}
+          obterNomePerfil={obterNomePerfil}
         />
       )}
     </div>
