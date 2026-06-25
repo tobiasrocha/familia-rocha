@@ -29,7 +29,7 @@ export default function TabelaLancamentos({ dadosMesFiltro, contasBancarias, car
     return mapa[fp] || '#999';
   };
 
-  const ordenados = [...dadosMesFiltro].sort((a, b) => new Date(a.dataVencimento) - new Date(b.dataVencimento));
+  const ordenados = [...dadosMesFiltro].sort((a, b) => new Date(b.dataVencimento) - new Date(a.dataVencimento));
 
   const filtrados = ordenados.filter(item => {
     if (busca && !item.descricao?.toLowerCase().includes(busca.toLowerCase())) return false;
