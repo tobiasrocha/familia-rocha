@@ -421,6 +421,11 @@ async function verificarEVenciarAlertas() {
         to: emailDestinatarios,
         subject: assunto,
         text: corpo.replace(/\*/g, ''),
+        headers: {
+          'X-Priority': '1',
+          'X-MSMail-Priority': 'High',
+          'Auto-Submitted': 'auto-generated',
+        },
       });
       resultado.emailsEnviados = emailDestinatarios.length;
       console.log(`[EMAIL] Consolidado enviado para ${emailDestinatarios.length} destinatario(s)`);
@@ -618,6 +623,11 @@ async function verificarAlertasSaude() {
         to: emailDestinatarios,
         subject: assunto,
         text: corpo.replace(/\*/g, ''),
+        headers: {
+          'X-Priority': '1',
+          'X-MSMail-Priority': 'High',
+          'Auto-Submitted': 'auto-generated',
+        },
       });
       resultado.emailsEnviados = emailDestinatarios.length;
     } catch (errEmail) {
