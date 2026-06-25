@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { collection, addDoc, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useFirestore } from '../../hooks/useFirestore';
-import { Plus, Trash2, Pencil, CreditCard, Banknote, Landmark, TrendingUp, Coffee, ShoppingCart, Car, Heart, Home, Smartphone, Tag } from 'lucide-react';
+import { Plus, Trash2, Pencil, CreditCard, Banknote, Landmark, TrendingUp, QrCode, Coffee, ShoppingCart, Car, Heart, Home, Smartphone, Wrench, Tag } from 'lucide-react';
 
 const categoriasRapidas = [
   { key: 'Alimentacao', label: 'Alimentação', icon: <Coffee size={14} /> },
@@ -11,11 +11,13 @@ const categoriasRapidas = [
   { key: 'Saude', label: 'Saúde', icon: <Heart size={14} /> },
   { key: 'Moradia', label: 'Moradia', icon: <Home size={14} /> },
   { key: 'Assinaturas', label: 'Assinaturas', icon: <Smartphone size={14} /> },
+  { key: 'Prestadores', label: 'Prestadores', icon: <Wrench size={14} /> },
   { key: 'Outros', label: 'Outros', icon: <Tag size={14} /> },
 ];
 
 const formasPagamento = [
   { key: 'Dinheiro', label: 'Dinheiro', icon: <Banknote size={14} />, cor: '#059669', bg: '#ecfdf5' },
+  { key: 'Pix', label: 'Pix', icon: <QrCode size={14} />, cor: '#0891b2', bg: '#ecfeff' },
   { key: 'Debito', label: 'Débito', icon: <Landmark size={14} />, cor: '#2563eb', bg: '#eff6ff' },
   { key: 'Credito', label: 'Crédito', icon: <CreditCard size={14} />, cor: '#dc2626', bg: '#fef2f2' },
   { key: 'Investimento', label: 'Invest.', icon: <TrendingUp size={14} />, cor: '#7c3aed', bg: '#ede9fe' },
@@ -81,6 +83,7 @@ export default function GerenciadorCarteira({ cores, formatarMoeda, contasBancar
   const infoForma = (k) => formasPagamento.find(f => f.key === k) || {};
 
   const totalDinheiro = gastosHoje.filter(g => g.forma === 'Dinheiro').reduce((a, g) => a + (g.valor || 0), 0);
+  const totalPix = gastosHoje.filter(g => g.forma === 'Pix').reduce((a, g) => a + (g.valor || 0), 0);
   const totalDebito = gastosHoje.filter(g => g.forma === 'Debito').reduce((a, g) => a + (g.valor || 0), 0);
   const totalCredito = gastosHoje.filter(g => g.forma === 'Credito').reduce((a, g) => a + (g.valor || 0), 0);
   const totalInvest = gastosHoje.filter(g => g.forma === 'Investimento').reduce((a, g) => a + (g.valor || 0), 0);
@@ -97,7 +100,7 @@ export default function GerenciadorCarteira({ cores, formatarMoeda, contasBancar
     <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
       <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
         {formasPagamento.map(f => {
-          const total = f.key === 'Dinheiro' ? totalDinheiro : f.key === 'Debito' ? totalDebito : f.key === 'Credito' ? totalCredito : totalInvest;
+          const total = f.key === 'Dinheiro' ? totalDinheiro : f.key === 'Pix' ? totalPix : f.key === 'Debito' ? totalDebito : f.key === 'Credito' ? totalCredito : totalInvest;
           return (
             <div key={f.key} style={{ flex: '1 1 130px', backgroundColor: f.bg, padding: '12px', borderRadius: '10px', border: `1px solid ${f.cor}30` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
@@ -130,7 +133,7 @@ export default function GerenciadorCarteira({ cores, formatarMoeda, contasBancar
             </button>
           ))}
         </div>
-        {forma !== 'Dinheiro' && (
+        {!['Dinheiro', 'Pix'].includes(forma) && (
           <div style={{ flex: '1 1 160px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <label style={{ fontSize: '12px', fontWeight: 'bold' }}>{forma === 'Debito' ? 'Conta' : forma === 'Credito' ? 'Cartão' : 'Investimento'}</label>
             <select value={vinculoId} onChange={e => setVinculoId(e.target.value)} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}>
