@@ -15,17 +15,8 @@ export default function TelaLogin({ cores, logo }) {
       await signInWithEmailAndPassword(auth, email, senha);
     } catch (error) {
       const code = error.code || '';
-      if (code.includes('invalid-credential') || code.includes('wrong-password') || code.includes('user-not-found')) {
-        setErro('Email ou senha incorretos.');
-      } else if (code.includes('too-many-requests')) {
-        setErro('Muitas tentativas. Aguarde um momento.');
-      } else if (code.includes('user-disabled')) {
-        setErro('Sua conta foi desativada. Contate o administrador.');
-      } else if (code.includes('network-request-failed') || code.includes('internal-error')) {
-        setErro('Falha de conexao. Verifique sua internet.');
-      } else {
-        setErro('Erro ao acessar: ' + code);
-      }
+      // Exibe o codigo exato para diagnostico
+      setErro(`Falha no login (${code}). Verifique suas credenciais.`);
     }
   };
 
