@@ -8,6 +8,7 @@ export default function GerenciadorContas({ cores, contasBancarias, perfis, calc
   const [exibirFormConta, setExibirFormConta] = useState(false);
   const [nomeConta, setNomeConta] = useState('');
   const [saldoInicialConta, setSaldoInicialConta] = useState('');
+  const [limiteChequeEspecial, setLimiteChequeEspecial] = useState('');
   const [perfilContaId, setPerfilContaId] = useState('');
   const [dataSaldoConta, setDataSaldoConta] = useState(new Date().toISOString().slice(0, 10));
 
@@ -24,6 +25,7 @@ export default function GerenciadorContas({ cores, contasBancarias, perfis, calc
     await addDoc(collection(db, 'contas_bancarias'), {
       nome: nomeConta,
       saldoInicial: parseFloat(saldoInicialConta) || 0,
+      limiteChequeEspecial: parseFloat(limiteChequeEspecial) || 0,
       perfilId: perfilContaId,
       dataSaldo: dataSaldoConta,
       criadoEm: new Date().toISOString()
@@ -103,6 +105,12 @@ export default function GerenciadorContas({ cores, contasBancarias, perfis, calc
           <div style={{ flex: '1 1 150px', display: 'flex', flexDirection: 'column', gap: '5px' }}><label style={{ fontSize: '14px', fontWeight: 'bold' }}><Calendar size={14} style={{verticalAlign:'middle'}}/> Data do Saldo</label><input type="date" value={dataSaldoConta} onChange={e => setDataSaldoConta(e.target.value)} required style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
           <div style={{ flex: '1 1 150px', display: 'flex', flexDirection: 'column', gap: '5px' }}><label style={{ fontSize: '14px', fontWeight: 'bold' }}>Saldo Inicial (R$)</label><input type="number" step="0.01" value={saldoInicialConta} onChange={e => setSaldoInicialConta(e.target.value)} required style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} /></div>
           <button type="submit" style={{ padding: '10px 20px', height: '40px', backgroundColor: '#28a745', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Salvar Conta</button>
+          <div style={{ flex: '1 1 100%', display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 150px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              <label style={{ fontSize: '14px', fontWeight: 'bold' }}>Limite Cheque Especial (R$)</label>
+              <input type="number" step="0.01" min="0" value={limiteChequeEspecial} onChange={e => setLimiteChequeEspecial(e.target.value)} placeholder="0,00" style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
+            </div>
+          </div>
         </form>
       )}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
@@ -133,6 +141,17 @@ export default function GerenciadorContas({ cores, contasBancarias, perfis, calc
               {diff.tem && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px', borderRadius: '6px', backgroundColor: diff.valor === 0 ? '#d4edda' : '#fff3cd', fontSize: '12px', fontWeight: 'bold', marginBottom: '10px' }}>
                   {diff.valor === 0 ? <span style={{color:'#155724'}}>✓ Conciliado</span> : <><TrendingDown size={14} color='#856404'/> Diferença: {formatarMoeda(diff.valor)}</>}
+                </div>
+              )}
+
+              {conta.limiteChequeEspecial > 0 && saldoAtual < 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px', borderRadius: '6px', backgroundColor: '#fee2e2', fontSize: '12px', fontWeight: 'bold', marginBottom: '10px' }}>
+                  <TrendingDown size={14} color='#dc2626' /> Cheque Especial: {formatarMoeda(Math.abs(saldoAtual))} usado de {formatarMoeda(conta.limiteChequeEspecial)}
+                </div>
+              )}
+              {conta.limiteChequeEspecial > 0 && saldoAtual < conta.limiteChequeEspecial * -1 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px', borderRadius: '6px', backgroundColor: '#fecaca', fontSize: '12px', fontWeight: 'bold', marginBottom: '10px' }}>
+                  ⚠️ Limite do cheque especial estourado!
                 </div>
               )}
 
