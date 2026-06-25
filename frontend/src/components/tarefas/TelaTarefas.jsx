@@ -3,11 +3,9 @@ import { useState } from 'react';
 import { collection, addDoc, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useFirestore } from '../../hooks/useFirestore';
-import { ClipboardList, Calendar, User, ArrowRight, ArrowLeft, Trash2, CheckCircle, AlertTriangle, Wrench } from 'lucide-react';
-import GerenciadorPrestadores from '../financeiro/GerenciadorPrestadores';
+import { ClipboardList, Calendar, User, ArrowRight, ArrowLeft, Trash2, CheckCircle, AlertTriangle } from 'lucide-react';
 
 export default function TelaTarefas({ cores }) {
-  const [view, setView] = useState('tarefas');
   const { dados: tarefas, carregando: carregandoTarefas, recarregar: recarregarTarefas } = useFirestore('tarefas');
   const { dados: perfis, carregando: carregandoPerfis } = useFirestore('perfis');
 
@@ -106,26 +104,15 @@ export default function TelaTarefas({ cores }) {
       {/* SEÇÃO SUPERIOR */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', flexWrap: 'wrap', gap: '15px' }}>
         <h2 style={{ color: cores?.texto, margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {view === 'tarefas' ? <ClipboardList size={28} color={cores?.dourado} /> : <Wrench size={28} color={cores?.dourado} />}
-          {view === 'tarefas' ? 'Tarefas e Rotinas Domésticas' : 'Prestadores de Serviço'}
+          <ClipboardList size={28} color={cores?.dourado} /> Tarefas e Rotinas Domésticas
         </h2>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <select value={view} onChange={e => setView(e.target.value)} style={{ padding: '10px 14px', borderRadius: '8px', border: '2px solid #C5A059', fontWeight: 'bold', cursor: 'pointer', backgroundColor: '#fff' }}>
-            <option value="tarefas">📋 Tarefas</option>
-            <option value="prestadores">🔧 Prestadores</option>
-          </select>
-          {view === 'tarefas' && (
-            <button onClick={() => setExibirForm(!exibirForm)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', cursor: 'pointer', backgroundColor: exibirForm ? '#6c757d' : cores?.dourado, color: cores?.branco, border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>
-              {exibirForm ? 'Ocultar Painel' : '+ Nova Tarefa'}
-            </button>
-          )}
-        </div>
+        <button 
+          onClick={() => setExibirForm(!exibirForm)}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', cursor: 'pointer', backgroundColor: exibirForm ? '#6c757d' : cores?.dourado, color: cores?.branco, border: 'none', borderRadius: '8px', fontWeight: 'bold' }}
+        >
+          {exibirForm ? 'Ocultar Painel' : '+ Nova Tarefa'}
+        </button>
       </div>
-
-      {view === 'prestadores' ? (
-        <GerenciadorPrestadores cores={cores} formatarMoeda={(v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} contasBancarias={[]} />
-      ) : (
-        <>
 
       {/* FORMULÁRIO DE INSERÇÃO */}
       {exibirForm && (
@@ -248,9 +235,6 @@ export default function TelaTarefas({ cores }) {
           );
         })}
       </div>
-
-      </>
-      )}
     </div>
   );
 }
