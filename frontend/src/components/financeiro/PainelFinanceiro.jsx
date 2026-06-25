@@ -34,7 +34,7 @@ export default function PainelFinanceiro({ cores }) {
   const [descricao, setDescricao] = useState(''); const [valor, setValor] = useState('');
   const [tipo, setTipo] = useState('Despesa'); const [categoria, setCategoria] = useState('Moradia');
   const [dataVencimento, setDataVencimento] = useState(''); const [status, setStatus] = useState('Pago');
-  const [codigoBarras, setCodigoBarras] = useState(''); const [multaJuros, setMultaJuros] = useState('');
+  const [codigoBarras, setCodigoBarras] = useState(''); const [multa, setMulta] = useState(''); const [juros, setJuros] = useState('');
   const [linkArquivo, setLinkArquivo] = useState(''); const [contaIdSelecionada, setContaIdSelecionada] = useState('');
   const [perfilTransacaoId, setPerfilTransacaoId] = useState('');
   const [formaPagamento, setFormaPagamento] = useState('');
@@ -125,7 +125,7 @@ export default function PainelFinanceiro({ cores }) {
 
   const resetarFormulario = () => {
     setDescricao(''); setValor(''); setTipo('Despesa'); setCategoria('Moradia'); setDataVencimento(''); setStatus('Pago');
-    setCodigoBarras(''); setMultaJuros(''); setLinkArquivo(''); setIsParcelado(false); setListaParcelas([]);
+    setCodigoBarras(''); setMulta(''); setJuros(''); setLinkArquivo(''); setIsParcelado(false); setListaParcelas([]);
     setContaIdSelecionada(''); setFormaPagamento('');
     setIdEditando(null); setExibirForm(false);
   };
@@ -135,10 +135,10 @@ export default function PainelFinanceiro({ cores }) {
     try {
       if (isParcelado && listaParcelas.length > 0) {
         for (let p of listaParcelas) {
-          await addDoc(collection(db, 'financas'), { descricao: `${descricao} (${p.numero}/${listaParcelas.length})`, valor: parseFloat(p.valor), tipo, categoria, dataVencimento: p.dataVencimento, status, codigoBarras, multaJuros, linkArquivo, contaId: contaIdSelecionada || null, perfilId: perfilTransacaoId, formaPagamento, criadoEm: new Date().toISOString() });
+          await addDoc(collection(db, 'financas'), { descricao: `${descricao} (${p.numero}/${listaParcelas.length})`, valor: parseFloat(p.valor), tipo, categoria, dataVencimento: p.dataVencimento, status, codigoBarras, multa: parseFloat(multa) || 0, juros: parseFloat(juros) || 0, linkArquivo, contaId: contaIdSelecionada || null, perfilId: perfilTransacaoId, formaPagamento, criadoEm: new Date().toISOString() });
         }
       } else {
-        const payload = { descricao, valor: parseFloat(valor), tipo, categoria, dataVencimento, status, codigoBarras, multaJuros, linkArquivo, contaId: contaIdSelecionada || null, perfilId: perfilTransacaoId, formaPagamento };
+        const payload = { descricao, valor: parseFloat(valor), tipo, categoria, dataVencimento, status, codigoBarras, multa: parseFloat(multa) || 0, juros: parseFloat(juros) || 0, linkArquivo, contaId: contaIdSelecionada || null, perfilId: perfilTransacaoId, formaPagamento };
         if (idEditando) await updateDoc(doc(db, 'financas', idEditando), { ...payload, atualizadoEm: new Date().toISOString() });
         else await addDoc(collection(db, 'financas'), { ...payload, criadoEm: new Date().toISOString() });
       }
@@ -149,6 +149,7 @@ export default function PainelFinanceiro({ cores }) {
   const handleEditar = (item) => {
     setDescricao(item.descricao); setValor(item.valor); setTipo(item.tipo); setCategoria(item.categoria);
     setDataVencimento(item.dataVencimento); setStatus(item.status); setCodigoBarras(item.codigoBarras || '');
+    setMulta(item.multa?.toString() || ''); setJuros(item.juros?.toString() || '');
     setContaIdSelecionada(item.contaId || ''); setPerfilTransacaoId(item.perfilId || ''); setLinkArquivo(item.linkArquivo || '');
     setFormaPagamento(item.formaPagamento || '');
     setIdEditando(item.id); setIsParcelado(false); setListaParcelas([]); setExibirForm(true); setAbaAtiva('lancamentos');
@@ -252,6 +253,8 @@ export default function PainelFinanceiro({ cores }) {
               contaIdSelecionada={contaIdSelecionada} setContaIdSelecionada={setContaIdSelecionada}
               perfilTransacaoId={perfilTransacaoId} setPerfilTransacaoId={setPerfilTransacaoId}
               formaPagamento={formaPagamento} setFormaPagamento={setFormaPagamento}
+              multa={multa} setMulta={setMulta}
+              juros={juros} setJuros={setJuros}
               isParcelado={isParcelado} setIsParcelado={setIsParcelado}
               qtdParcelas={qtdParcelas} setQtdParcelas={setQtdParcelas}
               listaParcelas={listaParcelas} setListaParcelas={setListaParcelas}

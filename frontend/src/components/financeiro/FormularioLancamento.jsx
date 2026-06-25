@@ -8,6 +8,7 @@ export default function FormularioLancamento({
   contaIdSelecionada, setContaIdSelecionada,
   perfilTransacaoId, setPerfilTransacaoId,
   formaPagamento, setFormaPagamento,
+  multa, setMulta, juros, setJuros,
   isParcelado, setIsParcelado, qtdParcelas, setQtdParcelas,
   listaParcelas,
   linkArquivo, extraindoDados, avisoUpload, tipoAviso,
@@ -46,6 +47,13 @@ export default function FormularioLancamento({
       <div style={{ flex: '1 1 150px' }}><label>Categoria</label><select value={categoria} onChange={e=>setCategoria(e.target.value)} style={{ width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }}>{(tipo==='Despesa'?categoriesDespesa:categoriasReceita).map(c=><option key={c} value={c}>{c}</option>)}</select></div>
       <div style={{ flex: '2 1 200px' }}><label>Descrição</label><input type="text" value={descricao} onChange={e=>setDescricao(e.target.value)} required style={{ width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }} /></div>
       <div style={{ flex: '1 1 150px' }}><label>Valor Total (R$)</label><input type="number" step="0.01" value={valor} onChange={e=>setValor(e.target.value)} required style={{ width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }} /></div>
+
+      {tipo === 'Despesa' && (
+        <>
+          <div style={{ flex: '0 0 100px' }}><label>Multa (R$)</label><input type="number" step="0.01" min="0" value={multa} onChange={e=>setMulta(e.target.value)} placeholder="0,00" style={{ width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }} /></div>
+          <div style={{ flex: '0 0 100px' }}><label>Juros (R$)</label><input type="number" step="0.01" min="0" value={juros} onChange={e=>setJuros(e.target.value)} placeholder="0,00" style={{ width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }} /></div>
+        </>
+      )}
 
       {tipo === 'Despesa' && (
         <div style={{ flex: '1 1 150px' }}><label>Pagamento</label><select value={formaPagamento} onChange={e=>setFormaPagamento(e.target.value)} style={{ width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }}><option value="">Selecione...</option><option value="PIX">PIX</option><option value="Débito">Débito</option><option value="Crédito">Crédito</option><option value="Dinheiro">Dinheiro</option></select></div>

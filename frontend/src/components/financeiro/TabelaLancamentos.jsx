@@ -65,7 +65,16 @@ export default function TabelaLancamentos({ dadosMesFiltro, contasBancarias, car
                     )}
                   </div>
                 </td>
-                <td style={{ padding: '15px', fontWeight: 'bold', color: item.tipo === 'Receita' ? '#155724' : '#495057' }}>{formatarMoeda(item.valor)}</td>
+                <td style={{ padding: '15px', fontWeight: 'bold', color: item.tipo === 'Receita' ? '#155724' : '#495057' }}>
+                  {formatarMoeda(item.valor)}
+                  {(item.multa > 0 || item.juros > 0) && (
+                    <div style={{ fontSize: '10px', color: '#dc3545', marginTop: '2px' }}>
+                      {item.multa > 0 && <>Multa: {formatarMoeda(item.multa)}</>}
+                      {item.multa > 0 && item.juros > 0 && ' | '}
+                      {item.juros > 0 && <>Juros: {formatarMoeda(item.juros)}</>}
+                    </div>
+                  )}
+                </td>
                 <td style={{ padding: '15px', textAlign: 'center' }}>
                   {fp && <span style={{ padding: '4px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold', backgroundColor: `${corFormaPagamento(item.formaPagamento)}20`, color: corFormaPagamento(item.formaPagamento) }}>{fp}</span>}
                 </td>
