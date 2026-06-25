@@ -39,14 +39,25 @@ export default function GerenciadorCarteira({ cores, formatarMoeda, contasBancar
 
   const handleSalvar = async (e) => {
     e.preventDefault();
+    const valorNum = parseFloat(valor) || 0;
     const payload = {
-      descricao, valor: parseFloat(valor) || 0, categoria, forma, data,
+      descricao, valor: valorNum, categoria, forma, data,
       vinculoId: (forma !== 'Dinheiro') ? (vinculoId || null) : null,
     };
     if (editandoId) {
       await updateDoc(doc(db, 'carteira', editandoId), { ...payload, atualizadoEm: new Date().toISOString() });
     } else {
       await addDoc(collection(db, 'carteira'), { ...payload, criadoEm: new Date().toISOString() });
+    }
+    // Se for Investimento vinculado, debita do saldo
+    if (forma === 'Investimento' && vinculoId && valorNum > 0) {
+      const inv = investimentos?.find(i => i.id === vinculoId);
+      if (inv) {
+        await updateDoc(doc(db, 'investimentos', vinculoId), {
+          valor: Math.max(0, (inv.valor || 0) - valorNum),
+          atualizadoEm: new Date().toISOString(),
+        });
+      }
     }
     resetForm(); recarregar();
   };

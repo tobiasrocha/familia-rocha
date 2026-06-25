@@ -85,6 +85,20 @@ export default function GerenciadorEmprestimos({ cores, formatarMoeda, obterNome
         saldoDevedor: novoSaldo,
         atualizadoEm: new Date().toISOString(),
       });
+      // Se vinculado a banco, lança despesa para refletir no saldo
+      if (emp.contaId && emp.valorParcela > 0 && naturezasBancarias.includes(emp.natureza)) {
+        await addDoc(collection(db, 'financas'), {
+          descricao: `Parcela ${novasPagas}/${emp.numParcelas} - ${emp.nome}`,
+          valor: emp.valorParcela,
+          tipo: 'Despesa',
+          categoria: 'Empréstimo',
+          dataVencimento: new Date().toISOString().slice(0, 10),
+          status: 'Pago',
+          contaId: emp.contaId,
+          formaPagamento: 'Débito',
+          criadoEm: new Date().toISOString(),
+        });
+      }
       recarregar();
     } catch { alert("Erro ao pagar parcela."); }
   };
