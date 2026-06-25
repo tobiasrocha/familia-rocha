@@ -62,15 +62,24 @@ const docAiClient = serviceAccount
 
 const firebaseProjectId = process.env.GOOGLE_CLOUD_PROJECT_ID || 'familia-rocha-7ea1a';
 
-if (getApps().length === 0) {
-  const adminConfig = { projectId: firebaseProjectId };
-  if (serviceAccount) {
-    adminConfig.credential = cert(serviceAccount);
+let firestoreDb = null;
+let authAdmin = null;
+
+try {
+  if (getApps().length === 0) {
+    const adminConfig = { projectId: firebaseProjectId };
+    if (serviceAccount) {
+      adminConfig.credential = cert(serviceAccount);
+    }
+    initializeApp(adminConfig);
   }
-  initializeApp(adminConfig);
+  firestoreDb = getFirestore();
+  authAdmin = getAuth();
+  console.log('[INIT] Firebase Admin inicializado');
+} catch (err) {
+  console.warn('[INIT] Firebase Admin indisponivel:', err.message);
+  console.warn('[INIT] Servidor iniciando sem banco de dados — modo degradado');
 }
-const firestoreDb = getFirestore();
-const authAdmin = getAuth();
 
 // Inicialização segura do Google Drive API via service account
 const GOOGLE_OAUTH_CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT_ID || null;

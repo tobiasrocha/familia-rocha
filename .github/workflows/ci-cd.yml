@@ -48,6 +48,12 @@ jobs:
         run: npm ci
         working-directory: backend
 
+      - name: Setup GCP Credentials (for tests)
+        if: env.GCP_SA_KEY != ''
+        run: echo "$GCP_SA_KEY" > backend/credenciais-google.json
+        env:
+          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+
       - name: Lint Backend
         run: npm run lint
         working-directory: backend
@@ -55,6 +61,8 @@ jobs:
       - name: Test Backend
         run: npm test
         working-directory: backend
+        env:
+          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
 
   # ──────────────────────────────────────────────
   # JOB 2: DEPLOY BACKEND (apenas push na master)
