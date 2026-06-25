@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { collection, addDoc, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useFirestore } from '../../hooks/useFirestore';
-import { Plus, Trash2, Pencil, Wallet, Gift, GraduationCap, Trophy, Calendar } from 'lucide-react';
+import { Plus, Trash2, Pencil, Wallet, Gift, GraduationCap, Trophy, Calendar, ArrowUpCircle } from 'lucide-react';
 
 const tiposSalario = [
   { key: 'Salario', label: 'Salário Fixo', icon: <Wallet size={18} />, cor: '#2563eb', bg: '#eff6ff' },
@@ -11,7 +11,7 @@ const tiposSalario = [
   { key: 'Premiacao', label: 'Premiação', icon: <Trophy size={18} />, cor: '#d97706', bg: '#fef3c7' },
 ];
 
-export default function GerenciadorSalarios({ cores, formatarMoeda, perfis, obterNomePerfil }) {
+export default function GerenciadorSalarios({ cores, formatarMoeda, perfis, obterNomePerfil, contasBancarias }) {
   const { dados: salarios, recarregar } = useFirestore('salarios');
   const [exibirForm, setExibirForm] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
@@ -20,6 +20,9 @@ export default function GerenciadorSalarios({ cores, formatarMoeda, perfis, obte
   const [valor, setValor] = useState('');
   const [perfilId, setPerfilId] = useState('');
   const [diaPagamento, setDiaPagamento] = useState('1');
+  const [regId, setRegId] = useState(null);
+  const [regContaId, setRegContaId] = useState('');
+  const [regData, setRegData] = useState(new Date().toISOString().slice(0,10));
 
   const resetForm = () => {
     setTipo('Salario'); setDescricao(''); setValor(''); setPerfilId(''); setDiaPagamento('1');
@@ -54,6 +57,25 @@ export default function GerenciadorSalarios({ cores, formatarMoeda, perfis, obte
   };
 
   const infoTipo = (t) => tiposSalario.find(x => x.key === t) || {};
+
+  const handleRegistrarRecebimento = async (s) => {
+    if (!s.valor || s.valor <= 0) return;
+    try {
+      const tipoLabel = tiposSalario.find(t => t.key === s.tipo)?.label || s.tipo;
+      await addDoc(collection(db, 'financas'), {
+        descricao: `${tipoLabel}: ${s.descricao}`,
+        valor: s.valor,
+        tipo: 'Receita',
+        categoria: 'Pagamentos Recebidos',
+        dataVencimento: regData,
+        status: 'Pago',
+        contaId: regContaId || null,
+        formaPagamento: 'PIX',
+        criadoEm: new Date().toISOString(),
+      });
+      setRegId(null); setRegContaId(''); recarregar();
+    } catch { alert('Erro ao registrar.'); }
+  };
 
   // Projeção dos próximos 3 meses por tipo
   const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
@@ -177,6 +199,25 @@ export default function GerenciadorSalarios({ cores, formatarMoeda, perfis, obte
                 {s.perfilId && <span><Wallet size={12} /> {obterNomePerfil(s.perfilId)}</span>}
                 <span><Calendar size={12} /> Dia {s.diaPagamento}</span>
               </div>
+
+              {/* Registrar recebimento */}
+              {regId === s.id ? (
+                <div style={{ marginTop: '10px', padding: '8px', backgroundColor: '#f0fdf4', borderRadius: '6px', border: '1px solid #bbf7d0' }}>
+                  <div style={{ display: 'flex', gap: '6px', marginBottom: '6px', flexWrap: 'wrap' }}>
+                    <select value={regContaId} onChange={e => setRegContaId(e.target.value)} style={{ padding: '6px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '12px', flex: 1 }}>
+                      <option value="">Conta (opcional)</option>
+                      {(contasBancarias || []).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                    </select>
+                    <input type="date" value={regData} onChange={e => setRegData(e.target.value)} style={{ padding: '6px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '12px' }} />
+                    <button type="button" onClick={() => handleRegistrarRecebimento(s)} style={{ padding: '6px 10px', backgroundColor: '#16a34a', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', fontSize: '12px' }}>Confirmar</button>
+                    <button type="button" onClick={() => setRegId(null)} style={{ padding: '6px 8px', border: '1px solid #ccc', borderRadius: '4px', background: '#fff', cursor: 'pointer', fontSize: '12px' }}>✕</button>
+                  </div>
+                </div>
+              ) : (
+                <button type="button" onClick={() => { setRegId(s.id); setRegContaId(''); setRegData(new Date().toISOString().slice(0,10)); }} style={{ marginTop: '10px', width: '100%', padding: '7px', backgroundColor: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>
+                  <ArrowUpCircle size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} /> Registrar Recebimento
+                </button>
+              )}
             </div>
           );
         })}

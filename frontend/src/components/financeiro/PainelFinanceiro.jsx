@@ -383,6 +383,7 @@ export default function PainelFinanceiro({ cores }) {
           formatarMoeda={formatarMoeda}
           perfis={perfis}
           obterNomePerfil={obterNomePerfil}
+          contasBancarias={contasBancarias}
         />
       )}
 
