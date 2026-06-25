@@ -90,7 +90,7 @@ export default function PainelFinanceiro({ cores }) {
   const { extraindo: extraindoDados, erro: erroOcr, dadosExtraidos, extrairDados } = useUploadOcr();
 
   const {
-    calcularSaldoConta, saldoGlobalConsolidado, saldoBancario, saldoInvestimentos, debitoCartoes, dadosMesFiltro,
+    calcularSaldoConta, saldoGlobalConsolidado, saldoBancario, saldoInvestimentos, debitoCartoes, saldoCofre, dadosMesFiltro,
     totalReceitas, totalDespesasPagas, totalDespesasPendentes,
     recContabil, despContabil, resultadoExercicio,
     valorBensDireitos, totalAtivos, totalPassivos, patrimonioLiquido,
@@ -245,6 +245,7 @@ export default function PainelFinanceiro({ cores }) {
           saldoGlobalConsolidado={saldoGlobalConsolidado}
           saldoBancario={saldoBancario}
           saldoInvestimentos={saldoInvestimentos}
+          saldoCofre={saldoCofre}
           debitoCartoes={debitoCartoes}
           totalReceitas={totalReceitas}
           totalDespesasPagas={totalDespesasPagas}
