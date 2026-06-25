@@ -16,7 +16,7 @@ export default function TabelaLancamentos({ dadosMesFiltro, contasBancarias, car
     try {
       await updateDoc(doc(db, 'financas', itemId), { contaId, atualizadoEm: new Date().toISOString() });
       setVinculandoId(null);
-    } catch { }
+    } catch { /* vinculação falhou */ }
   };
 
   const rotuloFormaPagamento = (fp) => {

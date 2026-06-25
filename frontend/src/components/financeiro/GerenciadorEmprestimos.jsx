@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { collection, addDoc, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useFirestore } from '../../hooks/useFirestore';
-import { Plus, DollarSign, Trash2, Pencil, Calendar, Landmark, User, TrendingDown } from 'lucide-react';
+import { Plus, Trash2, Pencil, Calendar, Landmark, User, TrendingDown } from 'lucide-react';
 
 const naturezas = ['Pessoal', 'Consignado', 'Financiamento', 'Cheque Especial', 'Cartão de Crédito', 'Imobiliário', 'Veículo', 'Outros'];
+const naturezasBancarias = ['Consignado', 'Financiamento', 'Cheque Especial', 'Imobiliário', 'Veículo'];
 
 export default function GerenciadorEmprestimos({ cores, formatarMoeda, obterNomePerfil, perfis, contasBancarias }) {
   const { dados: emprestimos, recarregar } = useFirestore('emprestimos');
@@ -155,8 +156,6 @@ export default function GerenciadorEmprestimos({ cores, formatarMoeda, obterNome
             <label style={{ fontSize: '14px', fontWeight: 'bold' }}>Responsável</label>
             <select value={perfilId} onChange={e => setPerfilId(e.target.value)} style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }}><option value="">Selecione...</option>{perfis.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}</select>
           </div>
-const naturezasBancarias = ['Consignado', 'Financiamento', 'Cheque Especial', 'Imobiliário', 'Veículo'];
-
           <div style={{ flex: '1 1 150px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
             <label style={{ fontSize: '14px', fontWeight: 'bold' }}>Conta Vinculada</label>
             <select value={contaId} onChange={e => setContaId(e.target.value)} style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }}>

@@ -66,7 +66,7 @@ export default function GerenciadorInvestimentos({ cores, investimentos, formata
       if (moedasData.BTCBRL) mapa.BTC = { bid: parseFloat(moedasData.BTCBRL.bid), var: parseFloat(moedasData.BTCBRL.pctChange || 0) };
       if (moedasData.ARSBRL) mapa.ARS = { bid: parseFloat(moedasData.ARSBRL.bid), var: parseFloat(moedasData.ARSBRL.pctChange || 0) };
       setCotacoes(mapa);
-    } catch { /* offline */ }
+    } catch { console.debug('[Invest] Moedas offline'); }
 
     try {
       // Historico 7 dias USD
@@ -74,7 +74,7 @@ export default function GerenciadorInvestimentos({ cores, investimentos, formata
       const histData = await histRes.json();
       const serie = (histData || []).reverse().map(d => ({ valor: parseFloat(d.bid) }));
       setHistoricoDolar(serie);
-    } catch { /* offline */ }
+    } catch { console.debug('[Invest] Historico offline'); }
 
     try {
       // IBOVESPA via brapi
@@ -99,13 +99,8 @@ export default function GerenciadorInvestimentos({ cores, investimentos, formata
     }
   }, []);
 
-  useEffect(() => { carregarDados(); }, [carregarDados]);
-
-  // Atualiza a cada 60s
-  useEffect(() => {
-    const id = setInterval(carregarDados, 60000);
-    return () => clearInterval(id);
-  }, [carregarDados]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { carregarDados(); const id = setInterval(carregarDados, 60000); return () => clearInterval(id); }, [carregarDados]);
 
   const resetForm = () => {
     setNome(''); setTipo('Renda Fixa'); setValor(''); setDataInicio('');
