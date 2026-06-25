@@ -517,33 +517,14 @@ async function verificarAlertasSaude() {
     const hojeStr = new Date().toISOString().slice(0, 10);
     const hoje = new Date(hojeStr + 'T00:00:00');
 
-    // Busca eventos futuros (dataEvento >= hoje)
     const snapshot = await firestoreDb.collection('saude').get();
     resultado.eventosEscaneados = snapshot.size;
+    if (snapshot.empty) return resultado;
 
-    if (snapshot.empty) {
-      console.log("[ALERTAS SAUDE] Nenhum evento de saude cadastrado.");
-      return resultado;
-    }
-
-    // Busca perfis para telefones
     const perfisSnapshot = await firestoreDb.collection('perfis').get();
     const perfisMap = {};
-    const contatos = [];
+    perfisSnapshot.forEach(doc => { perfisMap[doc.id] = doc.data(); });
 
-    perfisSnapshot.forEach(doc => {
-      const perfil = doc.data();
-      perfisMap[doc.id] = perfil;
-      if (perfil.telefone) {
-        let numero = perfil.telefone.replace(/[^\d]/g, '');
-        if (!numero.startsWith('55') && (numero.length === 10 || numero.length === 11)) {
-          numero = '55' + numero;
-        }
-        if (numero) contatos.push({ nome: perfil.nome, numero });
-      }
-    });
-
-    // Email transport
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || 'smtp.gmail.com',
       port: parseInt(process.env.SMTP_PORT) || 587,
@@ -551,13 +532,14 @@ async function verificarAlertasSaude() {
       auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
     });
 
-    const emailDestinatarios = (process.env.ALERTA_EMAILS || 'tobiasrocha@gmail.com,renallyraiani@gmail.com')
-      .split(',').map(e => e.trim()).filter(Boolean);
+    const SUPERADMIN_EMAIL = 'tobiasrocha@gmail.com';
     const whatsappHabilitado = !!(process.env.WHATSAPP_API_URL && process.env.WHATSAPP_API_TOKEN);
     const prazosAlerta = [5, 0];
 
-    // Coleta eventos no prazo
-    const eventosAlerta = [];
+    // Coleta eventos no prazo, agrupados por perfilId
+    const eventosPorPerfil = {};
+    const todosEventos = [];
+
     for (let doc of snapshot.docs) {
       const evento = doc.data();
       if (!evento.dataEvento) continue;
@@ -568,94 +550,101 @@ async function verificarAlertasSaude() {
       if (diffDias < -1) continue;
       if (!prazosAlerta.includes(diffDias)) continue;
 
-      const nomePaciente = perfisMap[evento.perfilId]?.nome || 'Paciente';
+      const perfil = perfisMap[evento.perfilId] || {};
+      const nomePaciente = perfil.nome || 'Paciente';
       const hora = evento.horaEvento ? ` ${evento.horaEvento}` : '';
-
-      eventosAlerta.push({
+      const ev = {
         paciente: nomePaciente,
+        perfilId: evento.perfilId,
         tipo: evento.tipo || 'Consulta',
         titulo: evento.titulo,
         data: evento.dataEvento.split('-').reverse().join('/') + hora,
         diasRestantes: diffDias >= 0 ? diffDias : 0,
         localProfissional: evento.localProfissional || '',
         observacoes: evento.observacoes || '',
-      });
+      };
+      todosEventos.push(ev);
+      if (!eventosPorPerfil[evento.perfilId]) eventosPorPerfil[evento.perfilId] = { perfil, eventos: [] };
+      eventosPorPerfil[evento.perfilId].eventos.push(ev);
       resultado.eventosNoPrazo++;
     }
 
-    if (eventosAlerta.length === 0) {
-      console.log("[ALERTAS SAUDE] Nenhum evento no prazo.");
-      return resultado;
-    }
+    if (todosEventos.length === 0) return resultado;
 
-    eventosAlerta.sort((a, b) => a.diasRestantes - b.diasRestantes);
+    todosEventos.sort((a, b) => a.diasRestantes - b.diasRestantes);
 
-    const hojeEv = eventosAlerta.filter(e => e.diasRestantes === 0);
-    const proxEv = eventosAlerta.filter(e => e.diasRestantes > 0);
-
-    const linhas = ['🏥 *ERP Familia Rocha — Compromissos de Saude*', ''];
-    if (hojeEv.length > 0) {
-      linhas.push(`⚠️ *Hoje (${hojeEv.length}):*`);
-      for (let e of hojeEv) {
-        linhas.push(`  • ${e.tipo}: ${e.titulo} — ${e.paciente} — ${e.data}`);
-        if (e.localProfissional) linhas.push(`    ${e.localProfissional}`);
+    // Função helper para montar corpo do alerta
+    const montarCorpo = (eventos, nomeDest) => {
+      const hojeEv = eventos.filter(e => e.diasRestantes === 0);
+      const proxEv = eventos.filter(e => e.diasRestantes > 0);
+      const linhas = [`🏥 *ERP Familia Rocha — Compromissos de Saude*`, nomeDest ? `\n👤 *${nomeDest}*` : '', ''];
+      if (hojeEv.length > 0) {
+        linhas.push(`⚠️ *Hoje (${hojeEv.length}):*`);
+        for (let e of hojeEv) {
+          linhas.push(`  • ${e.tipo}: ${e.titulo} — ${e.data}`);
+          if (e.localProfissional) linhas.push(`    ${e.localProfissional}`);
+        }
+        linhas.push('');
       }
-      linhas.push('');
-    }
-    if (proxEv.length > 0) {
-      linhas.push(`📅 *Proximos (${proxEv.length}):*`);
-      for (let e of proxEv) {
-        linhas.push(`  • ${e.tipo}: ${e.titulo} — ${e.paciente} — ${e.data} (${e.diasRestantes} dia(s))`);
-        if (e.localProfissional) linhas.push(`    ${e.localProfissional}`);
+      if (proxEv.length > 0) {
+        linhas.push(`📅 *Proximos (${proxEv.length}):*`);
+        for (let e of proxEv) {
+          linhas.push(`  • ${e.tipo}: ${e.titulo} — ${e.data} (${e.diasRestantes} dia(s))`);
+          if (e.localProfissional) linhas.push(`    ${e.localProfissional}`);
+        }
+        linhas.push('');
       }
-      linhas.push('');
-    }
-    linhas.push('Acesse: https://familia-rocha-7ea1a.web.app/saude');
+      linhas.push('Acesse: https://familia-rocha-7ea1a.web.app/saude');
+      return linhas.join('\n');
+    };
 
-    const corpo = linhas.join('\n');
-    const assunto = hojeEv.length > 0
-      ? `🏥 ${hojeEv.length} compromisso(s) de saude HOJE + ${proxEv.length} proximo(s)`
-      : `📅 ${eventosAlerta.length} compromisso(s) de saude nos proximos dias`;
+    // Envia alertas POR PERFIL (apenas para a pessoa vinculada)
+    for (let grupo of Object.values(eventosPorPerfil)) {
+      const { perfil, eventos } = grupo;
+      const corpo = montarCorpo(eventos, perfil.nome);
+      const assunto = `🏥 ${eventos.length} compromisso(s) de saude`;
+      const corpoPlain = corpo.replace(/\*/g, '');
 
-    try {
-      await transporter.sendMail({
-        from: `"ERP Familia Rocha" <${process.env.SMTP_USER}>`,
-        to: emailDestinatarios,
-        subject: assunto,
-        text: corpo.replace(/\*/g, ''),
-        headers: {
-          'X-Priority': '1',
-          'X-MSMail-Priority': 'High',
-          'Auto-Submitted': 'auto-generated',
-        },
-      });
-      resultado.emailsEnviados = emailDestinatarios.length;
-    } catch (errEmail) {
-      resultado.emailsFalhas = emailDestinatarios.length;
-      console.error(`[EMAIL SAUDE ERROR] ${errEmail.message}`);
-    }
-
-    if (whatsappHabilitado && contatos.length > 0) {
-      for (let contato of contatos) {
-        try {
-          const resWpp = await fetch(process.env.WHATSAPP_API_URL, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'apikey': process.env.WHATSAPP_API_TOKEN,
-              'Authorization': `Bearer ${process.env.WHATSAPP_API_TOKEN}`
-            },
-            body: JSON.stringify({ number: contato.numero, text: corpo }),
-          });
-          if (resWpp.ok) resultado.whatsappsEnviados++;
-          else resultado.whatsappsFalhas++;
-        } catch {
-          resultado.whatsappsFalhas++;
+      // WhatsApp para o telefone do perfil
+      if (whatsappHabilitado && perfil.telefone) {
+        let numero = perfil.telefone.replace(/[^\d]/g, '');
+        if (!numero.startsWith('55') && (numero.length === 10 || numero.length === 11)) numero = '55' + numero;
+        if (numero) {
+          try {
+            const resWpp = await fetch(process.env.WHATSAPP_API_URL, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'apikey': process.env.WHATSAPP_API_TOKEN,
+                'Authorization': `Bearer ${process.env.WHATSAPP_API_TOKEN}`
+              },
+              body: JSON.stringify({ number: numero, text: corpo }),
+            });
+            if (resWpp.ok) resultado.whatsappsEnviados++;
+            else resultado.whatsappsFalhas++;
+          } catch { resultado.whatsappsFalhas++; }
         }
       }
+
+      // Email para o perfil (se tiver email) + superadmin
+      const destEmail = [SUPERADMIN_EMAIL];
+      if (perfil.email && perfil.email !== SUPERADMIN_EMAIL) destEmail.push(perfil.email);
+      try {
+        await transporter.sendMail({
+          from: `"ERP Familia Rocha" <${process.env.SMTP_USER}>`,
+          to: destEmail,
+          subject: assunto,
+          text: corpoPlain,
+          headers: { 'X-Priority': '1', 'X-MSMail-Priority': 'High', 'Auto-Submitted': 'auto-generated' },
+        });
+        resultado.emailsEnviados += destEmail.length;
+      } catch (errEmail) {
+        resultado.emailsFalhas += destEmail.length;
+        console.error(`[EMAIL SAUDE ERROR] ${errEmail.message}`);
+      }
     }
 
-    console.log(`[ALERTAS SAUDE] Finalizado: ${eventosAlerta.length} eventos`);
+    console.log(`[ALERTAS SAUDE] Finalizado: ${todosEventos.length} eventos para ${Object.keys(eventosPorPerfil).length} perfis`);
     return resultado;
   } catch (error) {
     console.error("[ALERTAS SAUDE] Erro critico:", error);
