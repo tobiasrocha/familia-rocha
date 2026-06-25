@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { collection, addDoc, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useFirestore } from '../../hooks/useFirestore';
-import { Plus, Landmark, User, Calendar, Trash2, TrendingDown, Pencil } from 'lucide-react';
+import { Plus, Landmark, User, Calendar, Trash2, TrendingDown, Pencil, ArrowUpCircle } from 'lucide-react';
 
 export default function GerenciadorContas({ cores, contasBancarias, perfis, calcularSaldoConta, formatarMoeda, obterNomePerfil, recarregarContas }) {
   const [exibirFormConta, setExibirFormConta] = useState(false);
@@ -21,6 +21,11 @@ export default function GerenciadorContas({ cores, contasBancarias, perfis, calc
   const [valorSaldoManual, setValorSaldoManual] = useState('');
   const [dataSaldoManual, setDataSaldoManual] = useState(new Date().toISOString().slice(0, 10));
   const [editandoSaldoId, setEditandoSaldoId] = useState(null);
+  const [depositoContaId, setDepositoContaId] = useState(null);
+  const [depValor, setDepValor] = useState('');
+  const [depTipo, setDepTipo] = useState('PIX');
+  const [depData, setDepData] = useState(new Date().toISOString().slice(0,10));
+  const [depOrigem, setDepOrigem] = useState('');
 
   const { dados: saldosBancarios, recarregar: recarregarSaldos } = useFirestore('saldos_bancarios');
 
@@ -120,6 +125,27 @@ export default function GerenciadorContas({ cores, contasBancarias, perfis, calc
     return { valor: calculado - ultimo.valor, tem: true };
   };
 
+  const handleDepositar = async (contaId) => {
+    const valorNum = parseFloat(depValor) || 0;
+    if (!valorNum || valorNum <= 0) return alert('Valor inválido.');
+    const origemLabel = depTipo === 'Transferencia' ? `Transferência${depOrigem ? ' de ' + depOrigem : ''}` : depTipo === 'Envelope' ? 'Depósito em envelope' : 'Depósito PIX';
+    try {
+      await addDoc(collection(db, 'financas'), {
+        descricao: `${origemLabel} — ${contasBancarias.find(c => c.id === contaId)?.nome || ''}`,
+        valor: valorNum,
+        tipo: 'Receita',
+        categoria: 'Pagamentos Recebidos',
+        dataVencimento: depData,
+        status: 'Pago',
+        contaId,
+        formaPagamento: depTipo === 'PIX' ? 'PIX' : 'Débito',
+        criadoEm: new Date().toISOString(),
+      });
+      setDepositoContaId(null); setDepValor(''); setDepOrigem('');
+      recarregarContas();
+    } catch { alert('Erro ao registrar depósito.'); }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}><button type="button" onClick={() => { setEditandoContaId(null); setNomeConta(''); setAgencia(''); setNumeroConta(''); setOperacao(''); setSaldoInicialConta(''); setLimiteChequeEspecial(''); setDataSaldoConta(new Date().toISOString().slice(0,10)); setExibirFormConta(!exibirFormConta); }} style={{ padding: '10px 20px', backgroundColor: cores?.dourado, color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}><Plus size={18}/> {exibirFormConta ? 'Cancelar' : 'Nova Conta / Carteira'}</button></div>
@@ -199,6 +225,31 @@ export default function GerenciadorContas({ cores, contasBancarias, perfis, calc
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px', borderRadius: '6px', backgroundColor: '#fecaca', fontSize: '12px', fontWeight: 'bold', marginBottom: '10px' }}>
                   ⚠️ Limite do cheque especial estourado!
                 </div>
+              )}
+
+              {/* Depósito rápido */}
+              {depositoContaId === conta.id ? (
+                <div style={{ padding: '10px', backgroundColor: '#f0fdf4', borderRadius: '8px', marginBottom: '10px', border: '1px solid #bbf7d0' }}>
+                  <div style={{ fontWeight: 'bold', fontSize: '12px', color: '#166534', marginBottom: '8px' }}>Novo Depósito</div>
+                  <div style={{ display: 'flex', gap: '6px', marginBottom: '6px', flexWrap: 'wrap' }}>
+                    <select value={depTipo} onChange={e => setDepTipo(e.target.value)} style={{ padding: '6px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '12px', flex: 1 }}>
+                      <option value="PIX">PIX</option>
+                      <option value="Envelope">Envelope</option>
+                      <option value="Transferencia">Transferência</option>
+                    </select>
+                    {depTipo === 'Transferencia' && <input type="text" value={depOrigem} onChange={e => setDepOrigem(e.target.value)} placeholder="Conta origem" style={{ padding: '6px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '12px', flex: 1 }} />}
+                    <input type="number" step="0.01" value={depValor} onChange={e => setDepValor(e.target.value)} placeholder="R$" style={{ padding: '6px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '12px', width: '90px' }} />
+                    <input type="date" value={depData} onChange={e => setDepData(e.target.value)} style={{ padding: '6px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '12px' }} />
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button type="button" onClick={() => handleDepositar(conta.id)} style={{ flex: 1, padding: '6px', backgroundColor: '#16a34a', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', fontSize: '12px' }}>Confirmar Depósito</button>
+                    <button type="button" onClick={() => setDepositoContaId(null)} style={{ padding: '6px 12px', border: '1px solid #ccc', borderRadius: '4px', background: '#fff', cursor: 'pointer', fontSize: '12px' }}>Cancelar</button>
+                  </div>
+                </div>
+              ) : (
+                <button type="button" onClick={() => { setDepositoContaId(conta.id); setDepValor(''); setDepTipo('PIX'); setDepData(new Date().toISOString().slice(0,10)); setDepOrigem(''); }} style={{ width: '100%', padding: '8px', backgroundColor: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', marginBottom: '6px' }}>
+                  <ArrowUpCircle size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} /> Novo Depósito
+                </button>
               )}
 
               <button type="button" onClick={() => handleAbrirNovoSaldo(conta.id)} style={{ width: '100%', padding: '8px', backgroundColor: '#e9ecef', color: cores?.texto, border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', marginBottom: '10px' }}>
