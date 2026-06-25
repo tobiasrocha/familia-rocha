@@ -116,7 +116,7 @@ jobs:
             TESSERACT_ENABLED=false
             CRON_ENABLED=false
             CLOUD_LOGGING_ONLY=true
-          flags: --memory=512Mi,--timeout=300,--allow-unauthenticated,--no-cpu-throttling
+          flags: --memory=512Mi --timeout=300 --allow-unauthenticated --no-cpu-throttling
 
   # ──────────────────────────────────────────────
   # JOB 3: BUILD FRONTEND (master + homolog)
