@@ -100,10 +100,10 @@ export default function AdminUsuarios({ cores }) {
     if (!nome.trim()) return alert('Nome obrigatorio.')
 
     const isAuth = tipo !== 'Pet'
-    if (isAuth && !editandoId && (!email || !senha)) {
-      return alert('Email e senha obrigatorios para usuario do sistema.')
+    if (isAuth && !editandoId && !email) {
+      return alert('Email obrigatorio para usuario do sistema.')
     }
-    if (isAuth && !editandoId && senha.length < 6) {
+    if (isAuth && !editandoId && senha && senha.length < 6) {
       return alert('Senha deve ter no minimo 6 caracteres.')
     }
 
@@ -111,7 +111,7 @@ export default function AdminUsuarios({ cores }) {
     try {
       const body = { nome, tipo, dataNascimento, tipoSanguineo, alergias, telefone }
       if (tipo !== 'Pet') body.email = email
-      if (!editandoId) body.senha = senha
+      if (!editandoId && senha) body.senha = senha
 
       const url = editandoId
         ? `/admin/usuarios/${editandoId}`
@@ -245,8 +245,8 @@ export default function AdminUsuarios({ cores }) {
               </div>
               {!editandoId && (
                 <div style={{ flex: '1 1 150px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <label style={{ fontSize: '14px', fontWeight: 'bold' }}>Senha (min. 6)</label>
-                  <input type="password" value={senha} onChange={e => setSenha(e.target.value)} minLength={6} placeholder="******" style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
+                  <label style={{ fontSize: '14px', fontWeight: 'bold' }}>Senha (opcional — use Google)</label>
+                  <input type="password" value={senha} onChange={e => setSenha(e.target.value)} minLength={6} placeholder="Deixe em branco para login Google" style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
                 </div>
               )}
             </>

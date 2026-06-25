@@ -1232,10 +1232,29 @@ app.post('/api/admin/usuarios', autenticar, verificarAdmin, async (req, res) => 
       return res.json(formatarMembro(await docRef.get()));
     }
 
-    // Auth user: requer email e senha
-    if (!email || !senha) {
-      return res.status(400).json({ erro: 'Email e senha obrigatorios para usuario do sistema.' });
+    // Auth user: requer email
+    if (!email) {
+      return res.status(400).json({ erro: 'Email obrigatorio para usuario do sistema.' });
     }
+
+    let uid;
+    // Se nao tem senha, tenta encontrar usuario existente (Google sign-in)
+    if (!senha) {
+      try {
+        const existing = await authAdmin.getUserByEmail(email);
+        uid = existing.uid;
+        dadosFirestore.uid = uid;
+        dadosFirestore.role = 'usuario';
+        dadosFirestore.ativo = true;
+        dadosFirestore.permissoes = {};
+        await firestoreDb.collection('usuarios').doc(uid).set(dadosFirestore);
+        console.log(`[ADMIN] Usuario Google adicionado: ${email} (${uid})`);
+        return res.json(formatarMembro(await firestoreDb.collection('usuarios').doc(uid).get()));
+      } catch {
+        return res.status(400).json({ erro: 'Usuario Google nao encontrado. Faca login com Google primeiro ou defina uma senha.' });
+      }
+    }
+
     if (senha.length < 6) {
       return res.status(400).json({ erro: 'Senha deve ter no minimo 6 caracteres.' });
     }
