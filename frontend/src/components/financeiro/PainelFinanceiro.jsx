@@ -355,6 +355,8 @@ export default function PainelFinanceiro({ cores }) {
         <GerenciadorCarteira
           cores={cores}
           formatarMoeda={formatarMoeda}
+          contasBancarias={contasBancarias}
+          cartoes={cartoes}
         />
       )}
     </div>

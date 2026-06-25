@@ -1,28 +1,46 @@
 import { useState } from 'react';
-import { collection, addDoc, doc, deleteDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
-import { Plus, CreditCard, User, Trash2, AlertCircle } from 'lucide-react';
+import { Plus, CreditCard, User, Trash2, AlertCircle, Pencil } from 'lucide-react';
 
 export default function GerenciadorCartoes({ cores, cartoes, perfis, lancamentosGlobais, formatarMoeda, obterNomePerfil, recarregarCartoes }) {
   const [exibirForm, setExibirForm] = useState(false);
+  const [editandoId, setEditandoId] = useState(null);
   const [nome, setNome] = useState('');
   const [limite, setLimite] = useState('');
   const [fechamento, setFechamento] = useState('');
   const [vencimento, setVencimento] = useState('');
   const [perfilId, setPerfilId] = useState('');
+  const [funcao, setFuncao] = useState('Credito');
+
+  const resetForm = () => {
+    setNome(''); setLimite(''); setFechamento(''); setVencimento(''); setPerfilId(''); setFuncao('Credito');
+    setEditandoId(null); setExibirForm(false);
+  };
 
   const handleSalvar = async (e) => {
     e.preventDefault();
-    await addDoc(collection(db, 'cartoes'), {
+    const payload = {
       nome,
       limite: parseFloat(limite) || 0,
       fechamento: parseInt(fechamento) || 1,
       vencimento: parseInt(vencimento) || 10,
       perfilId: perfilId || null,
-      criadoEm: new Date().toISOString()
-    });
-    setNome(''); setLimite(''); setFechamento(''); setVencimento(''); setPerfilId(''); setExibirForm(false);
-    recarregarCartoes();
+      funcao,
+    };
+    if (editandoId) {
+      await updateDoc(doc(db, 'cartoes', editandoId), { ...payload, atualizadoEm: new Date().toISOString() });
+    } else {
+      await addDoc(collection(db, 'cartoes'), { ...payload, criadoEm: new Date().toISOString() });
+    }
+    resetForm(); recarregarCartoes();
+  };
+
+  const handleEditar = (cartao) => {
+    setNome(cartao.nome); setLimite(cartao.limite?.toString() || '');
+    setFechamento(cartao.fechamento?.toString() || ''); setVencimento(cartao.vencimento?.toString() || '');
+    setPerfilId(cartao.perfilId || ''); setFuncao(cartao.funcao || 'Credito');
+    setEditandoId(cartao.id); setExibirForm(true);
   };
 
   const handleExcluir = async (id) => {
@@ -43,8 +61,8 @@ export default function GerenciadorCartoes({ cores, cartoes, perfis, lancamentos
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <button type="button" onClick={() => setExibirForm(!exibirForm)} style={{ padding: '10px 20px', backgroundColor: cores?.dourado, color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Plus size={18}/> Novo Cartão
+        <button type="button" onClick={() => { resetForm(); setExibirForm(!exibirForm); }} style={{ padding: '10px 20px', backgroundColor: cores?.dourado, color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Plus size={18}/> {exibirForm ? 'Cancelar' : 'Novo Cartão'}
         </button>
       </div>
 
@@ -73,7 +91,14 @@ export default function GerenciadorCartoes({ cores, cartoes, perfis, lancamentos
               {perfis.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
             </select>
           </div>
-          <button type="submit" style={{ padding: '10px 20px', height: '40px', backgroundColor: '#28a745', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Salvar Cartão</button>
+          <div style={{ flex: '1 1 140px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+            <label style={{ fontSize: '14px', fontWeight: 'bold' }}>Função</label>
+            <select value={funcao} onChange={e => setFuncao(e.target.value)} style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }}>
+              <option value="Credito">Crédito</option>
+              <option value="DebitoCredito">Débito + Crédito</option>
+            </select>
+          </div>
+          <button type="submit" style={{ padding: '10px 20px', height: '40px', backgroundColor: '#28a745', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>{editandoId ? 'Atualizar' : 'Salvar Cartão'}</button>
         </form>
       )}
 
@@ -86,12 +111,16 @@ export default function GerenciadorCartoes({ cores, cartoes, perfis, lancamentos
 
           return (
             <div key={cartao.id} style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #eee', borderTop: `4px solid ${pctUso > 80 ? '#dc3545' : '#17a2b8'}`, boxShadow: '0 4px 15px rgba(0,0,0,0.03)', position: 'relative' }}>
-              <button type="button" onClick={() => handleExcluir(cartao.id)} style={{ position: 'absolute', top: '15px', right: '15px', background: 'none', border: 'none', cursor: 'pointer', color: '#dc3545' }}><Trash2 size={16}/></button>
+              <button type="button" onClick={() => handleExcluir(cartao.id)} style={{ position: 'absolute', top: '15px', right: '54px', background: 'none', border: 'none', cursor: 'pointer', color: '#dc3545' }}><Trash2 size={16}/></button>
+              <button type="button" onClick={() => handleEditar(cartao)} style={{ position: 'absolute', top: '15px', right: '15px', background: 'none', border: 'none', cursor: 'pointer', color: '#0056b3' }}><Pencil size={16}/></button>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
                 <div style={{ padding: '10px', backgroundColor: '#e8f5e9', borderRadius: '50%' }}><CreditCard size={24} color="#17a2b8" /></div>
                 <div>
                   <h3 style={{ margin: 0, fontSize: '18px', color: '#333' }}>{cartao.nome}</h3>
-                  {cartao.perfilId && <span style={{ fontSize: '11px', color: '#888' }}><User size={10}/> {obterNomePerfil(cartao.perfilId)}</span>}
+                  <div style={{ display: 'flex', gap: '4px', marginTop: '2px' }}>
+                    {cartao.perfilId && <span style={{ fontSize: '11px', color: '#888' }}><User size={10}/> {obterNomePerfil(cartao.perfilId)}</span>}
+                    {cartao.funcao === 'DebitoCredito' && <span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '8px', backgroundColor: '#e8f5e9', color: '#2e7d32' }}>Débito+Crédito</span>}
+                  </div>
                 </div>
               </div>
 
