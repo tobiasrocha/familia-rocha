@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { collection, addDoc, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useFirestore } from '../../hooks/useFirestore';
-import { Plus, Trash2, Pencil, Wrench, Calendar, Landmark, QrCode, Package, Utensils, AlertTriangle, Bell, Check, X } from 'lucide-react';
+import { Plus, Trash2, Pencil, Wrench, Calendar, Landmark, QrCode, Package, Utensils, AlertTriangle, Bell, Check, X, Copy, ArrowUpCircle } from 'lucide-react';
 
 const tiposServico = ['Encanador', 'Eletricista', 'Pintor', 'Pedreiro', 'Diarista', 'Jardineiro', 'Marceneiro', 'Técnico', 'Motorista', 'Outros'];
 
-export default function GerenciadorPrestadores({ cores, formatarMoeda, contasBancarias }) {
+export default function GerenciadorPrestadores({ cores, formatarMoeda, contasBancarias, lancamentosGlobais, onRegistrarDespesa }) {
   const { dados: prestadores, recarregar } = useFirestore('prestadores');
   const [exibirForm, setExibirForm] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
@@ -33,6 +33,13 @@ export default function GerenciadorPrestadores({ cores, formatarMoeda, contasBan
 
   // Disparar alerta
   const [disparando, setDisparando] = useState(null);
+
+  // Pagamento
+  const [pagId, setPagId] = useState(null);
+  const [pagValor, setPagValor] = useState('');
+  const [pagData, setPagData] = useState(new Date().toISOString().slice(0,10));
+  const [pagContaId, setPagContaId] = useState('');
+  const [copiado, setCopiado] = useState(null);
 
   const resetForm = () => {
     setNome(''); setTipoServico('Encanador'); setTelefone(''); setBanco(''); setConta(''); setPix(''); setContaId('');
@@ -97,6 +104,27 @@ export default function GerenciadorPrestadores({ cores, formatarMoeda, contasBan
       alert(data.ok ? 'Alerta enviado!' : 'Erro: ' + (data.erro || ''));
     } catch { alert('Falha ao enviar alerta.'); }
     finally { setDisparando(null); }
+  };
+
+  const handleRegistrarPagamento = async (p) => {
+    const valorNum = parseFloat(pagValor) || p.valorServico || 0;
+    if (!valorNum || valorNum <= 0) return alert('Valor inválido.');
+    try {
+      await addDoc(collection(db, 'financas'), {
+        descricao: `Prestador: ${p.nome} — ${p.tipoServico}`,
+        valor: valorNum,
+        tipo: 'Despesa',
+        categoria: 'Prestadores de Serviço',
+        dataVencimento: pagData,
+        status: 'Pago',
+        contaId: pagContaId || p.contaId || null,
+        formaPagamento: 'PIX',
+        prestadorId: p.id,
+        criadoEm: new Date().toISOString(),
+      });
+      setPagId(null); setPagValor(''); setPagContaId('');
+      if (onRegistrarDespesa) onRegistrarDespesa();
+    } catch { alert('Erro ao registrar.'); }
   };
 
   const hoje = new Date().toISOString().slice(0, 10);
@@ -223,7 +251,14 @@ export default function GerenciadorPrestadores({ cores, formatarMoeda, contasBan
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', fontSize: '12px', color: '#666', marginBottom: '8px' }}>
                 {p.banco && <span><Landmark size={12} /> {p.banco}</span>}
                 {p.conta && <span>C/C: {p.conta}</span>}
-                {p.pix && <span><QrCode size={12} /> PIX: {p.pix}</span>}
+                {p.pix && (
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <QrCode size={12} /> PIX: {p.pix}
+                    <button onClick={() => { navigator.clipboard.writeText(p.pix); setCopiado(p.id); setTimeout(() => setCopiado(null), 2000); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: copiado === p.id ? '#16a34a' : '#C5A059', fontSize: '10px' }}>
+                      <Copy size={12} /> {copiado === p.id ? 'Copiado!' : ''}
+                    </button>
+                  </span>
+                )}
                 {p.telefone && <span>📞 {p.telefone}</span>}
               </div>
 
@@ -249,6 +284,44 @@ export default function GerenciadorPrestadores({ cores, formatarMoeda, contasBan
                     <button type="button" onClick={() => handleRemoverServico(p, i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc3545', padding: '0 4px' }}><X size={12} /></button>
                   </div>
                 ))}
+              </div>
+
+              {/* Pagamento */}
+              <div style={{ borderTop: '1px solid #eee', paddingTop: '8px', marginTop: '6px' }}>
+                {pagId === p.id ? (
+                  <div style={{ padding: '6px', backgroundColor: '#f0fdf4', borderRadius: '6px', border: '1px solid #bbf7d0' }}>
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                      <input type="number" step="0.01" value={pagValor} onChange={e => setPagValor(e.target.value)} placeholder={formatarMoeda(p.valorServico || 0)} style={{ padding: '6px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '12px', flex: 1 }} />
+                      <select value={pagContaId} onChange={e => setPagContaId(e.target.value)} style={{ padding: '6px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '12px' }}>
+                        <option value="">Conta</option>
+                        {(contasBancarias || []).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                      </select>
+                      <input type="date" value={pagData} onChange={e => setPagData(e.target.value)} style={{ padding: '6px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '12px' }} />
+                      <button onClick={() => handleRegistrarPagamento(p)} style={{ padding: '6px 8px', backgroundColor: '#16a34a', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', fontSize: '11px' }}>Pagar</button>
+                      <button onClick={() => setPagId(null)} style={{ padding: '6px 6px', border: '1px solid #ccc', borderRadius: '4px', background: '#fff', cursor: 'pointer', fontSize: '11px' }}>✕</button>
+                    </div>
+                  </div>
+                ) : (
+                  <button onClick={() => { setPagId(p.id); setPagValor(''); setPagContaId(p.contaId || ''); setPagData(new Date().toISOString().slice(0,10)); }} style={{ width: '100%', padding: '6px', backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>
+                    <ArrowUpCircle size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} /> Registrar Pagamento
+                  </button>
+                )}
+                {/* Histórico de pagamentos */}
+                {(() => {
+                  const pagtos = (lancamentosGlobais || []).filter(l => l.prestadorId === p.id && l.categoria === 'Prestadores de Serviço').sort((a,b) => new Date(b.dataVencimento) - new Date(a.dataVencimento));
+                  if (pagtos.length === 0) return null;
+                  return (
+                    <div style={{ marginTop: '6px', maxHeight: '80px', overflowY: 'auto' }}>
+                      {pagtos.map(l => (
+                        <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: '#666', padding: '1px 0' }}>
+                          <span style={{ flex: 1 }}>{l.dataVencimento?.split('-').reverse().join('/')}</span>
+                          <span style={{ fontWeight: 'bold', color: '#dc2626' }}>-{formatarMoeda(l.valor)}</span>
+                          <span style={{ fontSize: '9px', color: '#888' }}>{contasBancarias?.find(c => c.id === l.contaId)?.nome || ''}</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           );

@@ -23,6 +23,7 @@ export default function Pessoas({ cores }) {
           cores={cores}
           formatarMoeda={(v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
           contasBancarias={[]}
+          lancamentosGlobais={[]}
         />
       )}
     </div>
