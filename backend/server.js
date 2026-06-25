@@ -626,18 +626,22 @@ async function verificarAlertasSaude() {
         }
       }
 
-      // Email apenas para o superadmin — evita enviar para emails de familia no perfil
+      // Email para superadmin + perfil vinculado
+      const destEmail = [SUPERADMIN_EMAIL];
+      if (perfil.email && perfil.email !== SUPERADMIN_EMAIL && !destEmail.includes(perfil.email)) {
+        destEmail.push(perfil.email);
+      }
       try {
         await transporter.sendMail({
           from: `"ERP Familia Rocha" <${process.env.SMTP_USER}>`,
-          to: SUPERADMIN_EMAIL,
+          to: destEmail,
           subject: assunto,
           text: corpoPlain,
           headers: { 'X-Priority': '1', 'X-MSMail-Priority': 'High', 'Auto-Submitted': 'auto-generated' },
         });
-        resultado.emailsEnviados++;
+        resultado.emailsEnviados += destEmail.length;
       } catch (errEmail) {
-        resultado.emailsFalhas++;
+        resultado.emailsFalhas += destEmail.length;
         console.error(`[EMAIL SAUDE ERROR] ${errEmail.message}`);
       }
     }
