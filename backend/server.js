@@ -60,8 +60,14 @@ const docAiClient = serviceAccount
   ? new DocumentProcessorServiceClient({ keyFilename: credenciaisPath })
   : new DocumentProcessorServiceClient();
 
+const firebaseProjectId = process.env.GOOGLE_CLOUD_PROJECT_ID || 'familia-rocha-7ea1a';
+
 if (getApps().length === 0) {
-  initializeApp(serviceAccount ? { credential: cert(serviceAccount) } : {});
+  const adminConfig = { projectId: firebaseProjectId };
+  if (serviceAccount) {
+    adminConfig.credential = cert(serviceAccount);
+  }
+  initializeApp(adminConfig);
 }
 const firestoreDb = getFirestore();
 const authAdmin = getAuth();
