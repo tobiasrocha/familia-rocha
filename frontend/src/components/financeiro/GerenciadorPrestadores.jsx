@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { collection, addDoc, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useFirestore } from '../../hooks/useFirestore';
-import { Plus, Trash2, Pencil, Wrench, Calendar, Banknote, Landmark, QrCode, Package, Utensils, AlertTriangle, Bell, Check, X } from 'lucide-react';
+import { Plus, Trash2, Pencil, Wrench, Calendar, Landmark, QrCode, Package, Utensils, AlertTriangle, Bell, Check, X } from 'lucide-react';
 
 const tiposServico = ['Encanador', 'Eletricista', 'Pintor', 'Pedreiro', 'Diarista', 'Jardineiro', 'Marceneiro', 'Técnico', 'Motorista', 'Outros'];
 
-export default function GerenciadorPrestadores({ cores, formatarMoeda, perfis, contasBancarias }) {
+export default function GerenciadorPrestadores({ cores, formatarMoeda, contasBancarias }) {
   const { dados: prestadores, recarregar } = useFirestore('prestadores');
   const [exibirForm, setExibirForm] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
@@ -57,7 +57,7 @@ export default function GerenciadorPrestadores({ cores, formatarMoeda, perfis, c
 
   const handleExcluir = async (id) => {
     if (!window.confirm("Excluir este prestador?")) return;
-    try { await deleteDoc(doc(db, 'prestadores', id)); recarregar(); } catch { }
+    try { await deleteDoc(doc(db, 'prestadores', id)); recarregar(); } catch { /* erro */ }
   };
 
   const handleEditar = (p) => {

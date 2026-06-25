@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 
-export function useFinancas({ lancamentosGlobais, contasBancarias, patrimonio, cartoes, investimentos, mesFiltro, anoContabil, mesContabil, perfilContabil }) {
+export function useFinancas({ lancamentosGlobais, contasBancarias, patrimonio, cartoes, investimentos, cofre, mesFiltro, anoContabil, mesContabil, perfilContabil }) {
 
   const calcularSaldoConta = (contaId, saldoIni) => {
     const historico = lancamentosGlobais.filter(i => i.contaId === contaId && i.status === 'Pago');
@@ -26,7 +26,12 @@ export function useFinancas({ lancamentosGlobais, contasBancarias, patrimonio, c
     [cartoes, lancamentosGlobais]
   );
 
-  const saldoGlobalConsolidado = saldoBancario + saldoInvestimentos - debitoCartoes;
+  const saldoCofre = useMemo(() =>
+    (cofre || []).reduce((acc, c) => acc + Number(c.saldo || 0), 0),
+    [cofre]
+  );
+
+  const saldoGlobalConsolidado = saldoBancario + saldoInvestimentos + saldoCofre - debitoCartoes;
 
   const dadosMesFiltro = useMemo(() =>
     lancamentosGlobais.filter(i => i.dataVencimento && i.dataVencimento.startsWith(mesFiltro)),
