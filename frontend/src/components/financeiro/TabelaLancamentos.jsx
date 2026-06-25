@@ -42,8 +42,33 @@ export default function TabelaLancamentos({ dadosMesFiltro, contasBancarias, car
   const inicio = (pagina - 1) * ITENS_POR_PAGINA;
   const paginados = filtrados.slice(inicio, inicio + ITENS_POR_PAGINA);
 
+  const contasAPagar = ordenados.filter(i => i.tipo === 'Despesa' && i.status === 'Pendente').sort((a,b) => new Date(a.dataVencimento) - new Date(b.dataVencimento));
+
   return (
     <div>
+      {/* Contas a Pagar em destaque */}
+      {contasAPagar.length > 0 && (
+        <div style={{ backgroundColor: '#fef2f2', padding: '12px 16px', borderRadius: '10px', border: '1px solid #fecaca', marginBottom: '15px' }}>
+          <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#991b1b', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            ⚠️ Contas a Pagar ({contasAPagar.length})
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            {contasAPagar.slice(0, 8).map(c => {
+              const vencido = c.dataVencimento < hoje;
+              return (
+                <div key={c.id} style={{ padding: '6px 10px', backgroundColor: vencido ? '#fee2e2' : '#fff', borderRadius: '6px', border: `1px solid ${vencido ? '#fca5a5' : '#e5e7eb'}`, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontWeight: 'bold', color: vencido ? '#dc2626' : '#333' }}>{c.descricao}</span>
+                  <span style={{ color: vencido ? '#dc2626' : '#d97706', fontWeight: 'bold' }}>{formatarMoeda(c.valor)}</span>
+                  <span style={{ fontSize: '10px', color: '#888' }}>{c.dataVencimento?.split('-').reverse().join('/')}</span>
+                  {vencido && <span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '8px', backgroundColor: '#dc2626', color: '#fff' }}>VENCIDO</span>}
+                </div>
+              );
+            })}
+            {contasAPagar.length > 8 && <span style={{ fontSize: '11px', color: '#888' }}>+{contasAPagar.length - 8} mais</span>}
+          </div>
+        </div>
+      )}
+
       {/* Filtros */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '15px', flexWrap: 'wrap', alignItems: 'center' }}>
         <div style={{ position: 'relative', flex: '1 1 250px' }}>

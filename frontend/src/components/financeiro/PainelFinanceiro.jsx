@@ -5,7 +5,7 @@ import { useFirestore } from '../../hooks/useFirestore';
 import { useFinancas } from '../../hooks/useFinancas';
 import { useUploadOcr } from '../../hooks/useUploadOcr';
 import { apiFetch } from '../../config';
-import { Wallet, Calendar, FileText, Bell, CreditCard, TrendingUp, TrendingDown, Wrench } from 'lucide-react';
+import { Wallet, Calendar, FileText, Bell, CreditCard, TrendingUp, TrendingDown } from 'lucide-react';
 
 import DashboardFinanceiro from './DashboardFinanceiro';
 import GerenciadorContas from './GerenciadorContas';
@@ -18,7 +18,6 @@ import GerenciadorInvestimentos from './GerenciadorInvestimentos';
 import GerenciadorEmprestimos from './GerenciadorEmprestimos';
 import GerenciadorSalarios from './GerenciadorSalarios';
 import GerenciadorCarteira from './GerenciadorCarteira';
-import GerenciadorPrestadores from './GerenciadorPrestadores';
 import GerenciadorCofre from './GerenciadorCofre';
 import { Vault } from 'lucide-react';
 
@@ -215,18 +214,19 @@ export default function PainelFinanceiro({ cores }) {
         )}
       </div>
 
-      {/* Linha 2: Tabs + Botão Alertas */}
+      {/* Linha 2: Botões destacados + Tabs */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px', flexWrap: 'wrap', gap: '10px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          <button type="button" onClick={handleDispararAlertas} disabled={executandoAlertas} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px', backgroundColor: '#dc3545', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
-            <Bell size={18} /> {executandoAlertas ? 'Enviando...' : 'Testar Alertas'}
+          <button type="button" onClick={() => setAbaAtiva('dashboard')} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 22px', backgroundColor: abaAtiva === 'dashboard' ? cores?.dourado : cores?.branco, color: abaAtiva === 'dashboard' ? '#fff' : cores?.texto, border: `2px solid ${cores?.dourado}`, borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', fontSize: '15px' }}>
+            <Wallet size={20} /> Métricas
+          </button>
+          <button type="button" onClick={handleDispararAlertas} disabled={executandoAlertas} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', backgroundColor: '#dc3545', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', fontSize: '15px' }}>
+            <Bell size={20} /> {executandoAlertas ? 'Enviando...' : 'Testar Alertas'}
           </button>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', backgroundColor: cores?.branco, padding: '5px', borderRadius: '10px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', overflowX: 'auto', maxWidth: '100%', flexShrink: 1 }}>
-            <button type="button" onClick={() => setAbaAtiva('dashboard')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'dashboard' ? cores?.dourado : 'transparent', color: abaAtiva === 'dashboard' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Métricas</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', backgroundColor: cores?.branco, padding: '5px', borderRadius: '10px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', overflowX: 'auto', maxWidth: '100%', flexShrink: 1, marginLeft: '10px' }}>
             <button type="button" onClick={() => setAbaAtiva('contas')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'contas' ? cores?.dourado : 'transparent', color: abaAtiva === 'contas' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Bancos</button>
             <button type="button" onClick={() => setAbaAtiva('carteira')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'carteira' ? cores?.dourado : 'transparent', color: abaAtiva === 'carteira' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}><Wallet size={14}/> Carteira</button>
-            <button type="button" onClick={() => setAbaAtiva('prestadores')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'prestadores' ? cores?.dourado : 'transparent', color: abaAtiva === 'prestadores' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}><Wrench size={14}/> Prestadores</button>
             <button type="button" onClick={() => setAbaAtiva('cofre')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'cofre' ? cores?.dourado : 'transparent', color: abaAtiva === 'cofre' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}><Vault size={14}/> Cofre</button>
             <button type="button" onClick={() => setAbaAtiva('lancamentos')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'lancamentos' ? cores?.dourado : 'transparent', color: abaAtiva === 'lancamentos' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Lançamentos</button>
             <button type="button" onClick={() => setAbaAtiva('cartoes')} style={{ padding: '8px 15px', border: 'none', background: abaAtiva === 'cartoes' ? cores?.dourado : 'transparent', color: abaAtiva === 'cartoes' ? '#fff' : '#6c757d', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}><CreditCard size={14}/> Cartões</button>
@@ -389,14 +389,6 @@ export default function PainelFinanceiro({ cores }) {
           contasBancarias={contasBancarias}
           cartoes={cartoes}
           investimentos={investimentos}
-        />
-      )}
-
-      {abaAtiva === 'prestadores' && (
-        <GerenciadorPrestadores
-          cores={cores}
-          formatarMoeda={formatarMoeda}
-          contasBancarias={contasBancarias}
         />
       )}
 
