@@ -15,11 +15,12 @@ const TelaViagens = lazy(() => import('./components/viagens/TelaViagens'));
 const TelaEspiritual = lazy(() => import('./components/espiritual/TelaEspiritual'));
 const TelaLogin = lazy(() => import('./components/auth/TelaLogin'));
 const AdminUsuarios = lazy(() => import('./components/admin/AdminUsuarios'));
+const Pessoas = lazy(() => import('./components/Pessoas'));
 const Inicio = lazy(() => import('./components/Inicio'));
 
 import { 
   LayoutDashboard, Wallet, ClipboardList, 
-  HeartPulse, BookOpen, Package, Compass, LogOut, Shield 
+  HeartPulse, BookOpen, Package, Compass, LogOut, Users 
 } from 'lucide-react';
 
 const coresApp = { primaria: '#2c3e50', secundaria: '#f8f9fa', dourado: '#C5A059', texto: '#333333', branco: '#ffffff', borda: '#e9ecef' };
@@ -62,8 +63,8 @@ function BarraNavegacao({ userEmail, onLogout, permissoes, isSuperadmin }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '14px', color: '#6c757d' }}>Olá, <strong style={{ color: coresApp.primaria }}>{userEmail}</strong></span>
           {isSuperadmin && (
-            <Link to="/admin" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', backgroundColor: 'transparent', border: `1px solid ${coresApp.primaria}`, color: coresApp.primaria, borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', textDecoration: 'none' }}>
-              <Shield size={14} /> Admin
+            <Link to="/pessoas" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', backgroundColor: 'transparent', border: `1px solid ${coresApp.primaria}`, color: coresApp.primaria, borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', textDecoration: 'none' }}>
+              <Users size={14} /> Pessoas
             </Link>
           )}
           <button onClick={onLogout} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', backgroundColor: 'transparent', border: `1px solid ${coresApp.dourado}`, color: coresApp.dourado, borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>
@@ -154,6 +155,7 @@ export default function App() {
               {temPermissao('patrimonio') && <Route path="/patrimonio" element={<TelaPatrimonio cores={coresApp} />} />}
               {temPermissao('viagens') && <Route path="/viagens" element={<TelaViagens cores={coresApp} />} />}
               {temPermissao('espiritual') && <Route path="/espiritual" element={<TelaEspiritual cores={coresApp} />} />}
+              {isSuperadmin && <Route path="/pessoas" element={<Pessoas cores={coresApp} />} />}
               {isSuperadmin && <Route path="/admin" element={<AdminUsuarios cores={coresApp} />} />}
             </Routes>
             </Suspense>

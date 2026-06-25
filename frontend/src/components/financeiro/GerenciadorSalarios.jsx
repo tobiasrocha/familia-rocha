@@ -11,7 +11,7 @@ const tiposSalario = [
   { key: 'Premiacao', label: 'Premiação', icon: <Trophy size={18} />, cor: '#d97706', bg: '#fef3c7' },
 ];
 
-export default function GerenciadorSalarios({ cores, formatarMoeda, perfis, obterNomePerfil, contasBancarias, onRegistrarRecebimento }) {
+export default function GerenciadorSalarios({ cores, formatarMoeda, perfis, obterNomePerfil, contasBancarias, onRegistrarRecebimento, lancamentosGlobais }) {
   const { dados: salarios, recarregar } = useFirestore('salarios');
   const [exibirForm, setExibirForm] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
@@ -225,6 +225,25 @@ export default function GerenciadorSalarios({ cores, formatarMoeda, perfis, obte
                   <ArrowUpCircle size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} /> Registrar Recebimento
                 </button>
               )}
+
+              {/* Lançamentos deste salário */}
+              {(() => {
+                const lancs = (lancamentosGlobais || []).filter(l => l.categoria === 'Pagamentos Recebidos' && l.tipo === 'Receita' && l.descricao?.includes(s.descricao));
+                if (lancs.length === 0) return null;
+                return (
+                  <div style={{ borderTop: '1px solid #eee', marginTop: '10px', paddingTop: '8px', maxHeight: '120px', overflowY: 'auto' }}>
+                    <span style={{ fontSize: '10px', color: '#999', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>Recebimentos ({lancs.length}):</span>
+                    {lancs.sort((a,b) => new Date(b.dataVencimiento) - new Date(a.dataVencimiento)).map(l => (
+                      <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: '#666', padding: '1px 0' }}>
+                        <span style={{ flex: 1 }}>{l.dataVencimiento?.split('-').reverse().join('/')}</span>
+                        {l.perfilId && <span style={{ color: '#C5A059' }}>{obterNomePerfil(l.perfilId)}</span>}
+                        <span style={{ fontWeight: 'bold', color: '#16a34a', minWidth: '50px', textAlign: 'right' }}>+{formatarMoeda(l.valor)}</span>
+                        <span style={{ fontSize: '9px', color: '#888' }}>{l.formaPagamento}</span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           );
         })}
