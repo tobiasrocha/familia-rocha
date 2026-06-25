@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, browserLocalPersistence, setPersistence } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, browserLocalPersistence, setPersistence, inMemoryPersistence } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -14,8 +14,13 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
-// Garante persistência mesmo no WebView do Capacitor
-setPersistence(auth, browserLocalPersistence).catch(() => {});
+// No Capacitor, garante persistência local
+const isCapacitor = typeof window !== 'undefined' && window?.Capacitor?.isNativePlatform?.();
+if (isCapacitor) {
+  setPersistence(auth, browserLocalPersistence).catch(() =>
+    setPersistence(auth, inMemoryPersistence).catch(() => {})
+  );
+}
 
 export const db = getFirestore(app);
 export const googleProvider = new GoogleAuthProvider();
