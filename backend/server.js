@@ -56,9 +56,14 @@ app.use(express.json());
 const upload = multer({ storage: multer.memoryStorage() });
 
 // Inicializacao dos clientes Google (com fallback para ADC no Cloud Run)
-const docAiClient = serviceAccount
-  ? new DocumentProcessorServiceClient({ keyFilename: credenciaisPath })
-  : new DocumentProcessorServiceClient();
+let docAiClient = null;
+try {
+  docAiClient = serviceAccount
+    ? new DocumentProcessorServiceClient({ keyFilename: credenciaisPath })
+    : new DocumentProcessorServiceClient();
+} catch (err) {
+  console.warn('[INIT] Document AI indisponivel:', err.message);
+}
 
 const firebaseProjectId = process.env.GOOGLE_CLOUD_PROJECT_ID || 'familia-rocha-7ea1a';
 
@@ -86,16 +91,25 @@ const GOOGLE_OAUTH_CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT_ID || null;
 const GOOGLE_OAUTH_CLIENT_SECRET = process.env.GOOGLE_OAUTH_CLIENT_SECRET || null;
 const GOOGLE_OAUTH_REFRESH_TOKEN = process.env.GOOGLE_OAUTH_REFRESH_TOKEN || null;
 
-const serviceAccountAuth = serviceAccount
-  ? new google.auth.GoogleAuth({ keyFile: credenciaisPath, scopes: ['https://www.googleapis.com/auth/drive'] })
-  : new google.auth.GoogleAuth({ scopes: ['https://www.googleapis.com/auth/drive'] });
-const serviceAccountDrive = google.drive({ version: 'v3', auth: serviceAccountAuth });
+let serviceAccountDrive = null;
+try {
+  const saAuth = serviceAccount
+    ? new google.auth.GoogleAuth({ keyFile: credenciaisPath, scopes: ['https://www.googleapis.com/auth/drive'] })
+    : new google.auth.GoogleAuth({ scopes: ['https://www.googleapis.com/auth/drive'] });
+  serviceAccountDrive = google.drive({ version: 'v3', auth: saAuth });
+} catch (err) {
+  console.warn('[INIT] Google Drive (service account) indisponivel:', err.message);
+}
 
 let oauthDrive = null;
 if (GOOGLE_OAUTH_CLIENT_ID && GOOGLE_OAUTH_CLIENT_SECRET && GOOGLE_OAUTH_REFRESH_TOKEN) {
-  const oauth2Client = new google.auth.OAuth2(GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET);
-  oauth2Client.setCredentials({ refresh_token: GOOGLE_OAUTH_REFRESH_TOKEN });
-  oauthDrive = google.drive({ version: 'v3', auth: oauth2Client });
+  try {
+    const oauth2Client = new google.auth.OAuth2(GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET);
+    oauth2Client.setCredentials({ refresh_token: GOOGLE_OAUTH_REFRESH_TOKEN });
+    oauthDrive = google.drive({ version: 'v3', auth: oauth2Client });
+  } catch (err) {
+    console.warn('[INIT] Google Drive (OAuth) indisponivel:', err.message);
+  }
 }
 
 const PASTA_RAIZ_ID = '1MoXgZV8Xvnp1x7vMjzuJZkWBZ9S1Gz5_';
