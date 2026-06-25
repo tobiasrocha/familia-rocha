@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
-import { Pencil, Trash2, User, Landmark, Link, Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Pencil, Trash2, User, Landmark, Link, Search, X, ChevronLeft, ChevronRight, Copy } from 'lucide-react';
 
 export default function TabelaLancamentos({ dadosMesFiltro, contasBancarias, cartoes, cores, hoje, formatarMoeda, obterNomePerfil, onEditar, onExcluir }) {
   const [vinculandoId, setVinculandoId] = useState(null);
@@ -108,6 +108,14 @@ export default function TabelaLancamentos({ dadosMesFiltro, contasBancarias, car
                   <td style={{ padding: '15px' }}>{item.dataVencimento?.split('-').reverse().join('/')}</td>
                   <td style={{ padding: '15px', fontWeight: 'bold' }}>
                     {item.descricao} <br /><span style={{ fontSize: '11px', color: '#888' }}>{item.categoria}</span>
+                    {item.codigoBarras && (
+                      <div style={{ marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ fontSize: '10px', color: '#999' }}>PIX: {item.codigoBarras.substring(0, 40)}...</span>
+                        <button onClick={() => { navigator.clipboard.writeText(item.codigoBarras); }} title="Copiar PIX" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C5A059', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                          <Copy size={11} /> Copiar
+                        </button>
+                      </div>
+                    )}
                     {item.linkArquivo && <a href={item.linkArquivo} target="_blank" rel="noopener noreferrer" style={{ display: 'block', fontSize: '11px', color: '#0056b3', marginTop: '4px' }}>📄 Anexo Drive</a>}
                   </td>
                   <td style={{ padding: '15px' }}>
