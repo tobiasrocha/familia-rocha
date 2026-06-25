@@ -18,6 +18,7 @@ export default function GerenciadorCofre({ cores, formatarMoeda, contasBancarias
   const [movTipo, setMovTipo] = useState('deposito');
   const [movData, setMovData] = useState(new Date().toISOString().slice(0, 10));
   const [movContaId, setMovContaId] = useState('');
+  const [movDestino, setMovDestino] = useState('banco');
 
   // Editar saldo inline
   const [editandoSaldoId, setEditandoSaldoId] = useState(null);
@@ -83,7 +84,20 @@ export default function GerenciadorCofre({ cores, formatarMoeda, contasBancarias
         criadoEm: new Date().toISOString(),
       });
 
-      setMovId(null); setMovValor(''); setMovData(new Date().toISOString().slice(0,10)); setMovContaId('');
+      // Se retirada para carteira, cria entrada lá também
+      if (movTipo === 'retirada' && movDestino === 'carteira') {
+        await addDoc(collection(db, 'carteira'), {
+          descricao: `Retirada Cofre: ${cofre.nome}`,
+          valor: valorNum,
+          categoria: 'Reserva Familiar',
+          forma: 'Cofre',
+          data: movData,
+          vinculoId: cofre.id,
+          criadoEm: new Date().toISOString(),
+        });
+      }
+
+      setMovId(null); setMovValor(''); setMovData(new Date().toISOString().slice(0,10)); setMovContaId(''); setMovDestino('banco');
       recarregar();
     } catch { alert("Erro ao movimentar."); }
   };
@@ -191,13 +205,19 @@ export default function GerenciadorCofre({ cores, formatarMoeda, contasBancarias
                       <option value="">Conta (opcional)</option>
                       {(contasBancarias || []).map(ct => <option key={ct.id} value={ct.id}>{ct.nome}</option>)}
                     </select>
+                    {movTipo === 'retirada' && (
+                      <select value={movDestino} onChange={e => setMovDestino(e.target.value)} style={{ padding: '8px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '12px' }}>
+                        <option value="banco">Destino: Banco</option>
+                        <option value="carteira">Destino: Carteira</option>
+                      </select>
+                    )}
                     <div style={{ display: 'flex', gap: '6px' }}>
                       <button type="button" onClick={() => handleMovimentar(c)} style={{ flex: 1, padding: '8px', backgroundColor: '#d97706', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>Confirmar</button>
                       <button type="button" onClick={() => setMovId(null)} style={{ padding: '8px 15px', border: '1px solid #ccc', borderRadius: '6px', background: '#fff', cursor: 'pointer' }}>Cancelar</button>
                     </div>
                   </div>
                 ) : (
-                  <button type="button" onClick={() => { setMovId(c.id); setMovValor(''); setMovTipo('deposito'); setMovData(new Date().toISOString().slice(0,10)); setMovContaId(''); }} style={{ width: '100%', padding: '8px', backgroundColor: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>
+                  <button type="button" onClick={() => { setMovId(c.id); setMovValor(''); setMovTipo('deposito'); setMovData(new Date().toISOString().slice(0,10)); setMovContaId(''); setMovDestino('banco'); }} style={{ width: '100%', padding: '8px', backgroundColor: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>
                     + Depósito / Retirada
                   </button>
                 )}
