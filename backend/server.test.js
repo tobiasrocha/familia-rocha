@@ -1,7 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { spawn } from 'node:child_process'
-import fs from 'node:fs'
-import path from 'node:path'
 
 const BASE = 'http://localhost:3001'
 
@@ -15,8 +13,9 @@ beforeAll(async () => {
     stdio: 'pipe',
   })
 
-  let stderr = ''
-  server.stderr.on('data', (d) => { stderr += d.toString() })
+  server.stderr.on('data', (d) => {
+    process.stderr.write(d)
+  })
 
   await new Promise((resolve) => {
     const timeout = setTimeout(() => {
