@@ -55,14 +55,20 @@ app.use(express.json());
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Inicializacao dos clientes Google (com fallback para ADC no Cloud Run)
+// Inicializacao dos clientes Google (lazy — criados apenas quando necessario)
 let docAiClient = null;
-try {
-  docAiClient = serviceAccount
-    ? new DocumentProcessorServiceClient({ keyFilename: credenciaisPath })
-    : new DocumentProcessorServiceClient();
-} catch (err) {
-  console.warn('[INIT] Document AI indisponivel:', err.message);
+
+function getDocAiClient() {
+  if (docAiClient) return docAiClient;
+  try {
+    docAiClient = serviceAccount
+      ? new DocumentProcessorServiceClient({ keyFilename: credenciaisPath })
+      : new DocumentProcessorServiceClient();
+    return docAiClient;
+  } catch (err) {
+    console.warn('[INIT] Document AI indisponivel:', err.message);
+    return null;
+  }
 }
 
 const firebaseProjectId = process.env.GOOGLE_CLOUD_PROJECT_ID || 'familia-rocha-7ea1a';
@@ -70,20 +76,23 @@ const firebaseProjectId = process.env.GOOGLE_CLOUD_PROJECT_ID || 'familia-rocha-
 let firestoreDb = null;
 let authAdmin = null;
 
-try {
-  if (getApps().length === 0) {
+const temCredenciaisGoogle = Boolean(serviceAccount || process.env.GOOGLE_APPLICATION_CREDENTIALS);
+
+if (temCredenciaisGoogle && getApps().length === 0) {
+  try {
     const adminConfig = { projectId: firebaseProjectId };
     if (serviceAccount) {
       adminConfig.credential = cert(serviceAccount);
     }
     initializeApp(adminConfig);
+    firestoreDb = getFirestore();
+    authAdmin = getAuth();
+    console.log('[INIT] Firebase Admin inicializado');
+  } catch (err) {
+    console.warn('[INIT] Firebase Admin indisponivel:', err.message);
   }
-  firestoreDb = getFirestore();
-  authAdmin = getAuth();
-  console.log('[INIT] Firebase Admin inicializado');
-} catch (err) {
-  console.warn('[INIT] Firebase Admin indisponivel:', err.message);
-  console.warn('[INIT] Servidor iniciando sem banco de dados — modo degradado');
+} else if (!temCredenciaisGoogle) {
+  console.warn('[INIT] Firebase Admin nao inicializado — sem credenciais Google');
 }
 
 // Inicialização segura do Google Drive API via service account
@@ -92,13 +101,15 @@ const GOOGLE_OAUTH_CLIENT_SECRET = process.env.GOOGLE_OAUTH_CLIENT_SECRET || nul
 const GOOGLE_OAUTH_REFRESH_TOKEN = process.env.GOOGLE_OAUTH_REFRESH_TOKEN || null;
 
 let serviceAccountDrive = null;
-try {
-  const saAuth = serviceAccount
-    ? new google.auth.GoogleAuth({ keyFile: credenciaisPath, scopes: ['https://www.googleapis.com/auth/drive'] })
-    : new google.auth.GoogleAuth({ scopes: ['https://www.googleapis.com/auth/drive'] });
-  serviceAccountDrive = google.drive({ version: 'v3', auth: saAuth });
-} catch (err) {
-  console.warn('[INIT] Google Drive (service account) indisponivel:', err.message);
+if (temCredenciaisGoogle) {
+  try {
+    const saAuth = serviceAccount
+      ? new google.auth.GoogleAuth({ keyFile: credenciaisPath, scopes: ['https://www.googleapis.com/auth/drive'] })
+      : new google.auth.GoogleAuth({ scopes: ['https://www.googleapis.com/auth/drive'] });
+    serviceAccountDrive = google.drive({ version: 'v3', auth: saAuth });
+  } catch (err) {
+    console.warn('[INIT] Google Drive (service account) indisponivel:', err.message);
+  }
 }
 
 let oauthDrive = null;
@@ -371,6 +382,7 @@ if (process.env.CRON_ENABLED !== 'false') {
 // ROTA: DISPARO MANUAL (Acionado pelo Botao do Frontend)
 // ---------------------------------------------------------
 app.post('/api/disparar-alertas', async (req, res) => {
+  if (!firestoreDb) return res.status(503).json({ erro: 'Banco de dados indisponivel.' });
   try {
     const resultado = await verificarEVenciarAlertas();
     res.json({
@@ -556,6 +568,7 @@ if (process.env.CRON_ENABLED !== 'false') {
 
 // Rota manual de alertas de saude
 app.post('/api/disparar-alertas-saude', async (req, res) => {
+  if (!firestoreDb) return res.status(503).json({ erro: 'Banco de dados indisponivel.' });
   try {
     const resultado = await verificarAlertasSaude();
     res.json({
@@ -764,7 +777,9 @@ app.post('/api/extrair-boleto', upload.single('documento'), async (req, res) => 
         const request = { name, rawDocument: { content: encodedImage, mimeType: req.file.mimetype } };
 
         console.log(`[OCR] Enviando arquivo ${req.file.originalname} para o Google Document AI...`);
-        const [result] = await docAiClient.processDocument(request);
+        const client = getDocAiClient();
+        if (!client) throw new Error('Document AI nao disponivel');
+        const [result] = await client.processDocument(request);
         const { document } = result;
         textoCompleto = document.text || '';
 
