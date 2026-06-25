@@ -31,7 +31,10 @@ export default function PainelFinanceiro({ cores }) {
   const { dados: carteira } = useFirestore('carteira');
   const { dados: cofre } = useFirestore('cofre');
 
-  const [abaAtiva, setAbaAtiva] = useState('dashboard');
+  const [abaAtiva, setAbaAtiva] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('aba') === 'carteira' ? 'carteira' : 'dashboard';
+  });
   const [exibirForm, setExibirForm] = useState(false);
   const [salvando, setSalvando] = useState(false);
 
