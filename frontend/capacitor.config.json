@@ -1,6 +1,6 @@
 {
-  "appId": "com.familiarocha.app",
-  "appName": "Familia Rocha",
+  "appId": "com.familiarocha.carteiras",
+  "appName": "Carteiras da Familia Rocha",
   "webDir": "dist",
   "server": {
     "androidScheme": "https",

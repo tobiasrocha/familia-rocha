@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { collection, addDoc, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useFirestore } from '../../hooks/useFirestore';
-import { Plus, Trash2, Pencil, CreditCard, Banknote, Landmark, TrendingUp, QrCode, Coffee, ShoppingCart, Car, Heart, Home, Smartphone, Wrench, Tag } from 'lucide-react';
+import { Plus, Trash2, Pencil, CreditCard, Banknote, Landmark, TrendingUp, QrCode, Coffee, ShoppingCart, Car, Heart, Home, Smartphone, Wrench, Tag, ScanLine } from 'lucide-react';
+import { useUploadOcr } from '../../hooks/useUploadOcr';
 
 const categoriasRapidas = [
   { key: 'Alimentacao', label: 'Alimentação', icon: <Coffee size={14} /> },
@@ -25,6 +26,7 @@ const formasPagamento = [
 
 export default function GerenciadorCarteira({ cores, formatarMoeda, contasBancarias, cartoes, investimentos }) {
   const { dados: gastos, recarregar } = useFirestore('carteira');
+  const { extraindo: extraindoOcr, extrairDados } = useUploadOcr();
   const [editandoId, setEditandoId] = useState(null);
   const [descricao, setDescricao] = useState('');
   const [valor, setValor] = useState('');
@@ -32,6 +34,16 @@ export default function GerenciadorCarteira({ cores, formatarMoeda, contasBancar
   const [forma, setForma] = useState('Dinheiro');
   const [data, setData] = useState(new Date().toISOString().slice(0, 10));
   const [vinculoId, setVinculoId] = useState('');
+
+  const handleScanOcr = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const dados = await extrairDados(file);
+    if (dados) {
+      if (dados.descricao) setDescricao(dados.descricao);
+      if (dados.valor) setValor(dados.valor);
+    }
+  };
 
   const resetForm = () => {
     setDescricao(''); setValor(''); setCategoria('Alimentacao'); setForma('Dinheiro');
@@ -118,6 +130,12 @@ export default function GerenciadorCarteira({ cores, formatarMoeda, contasBancar
       </div>
 
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px', flexWrap: 'wrap', backgroundColor: cores?.branco, padding: '15px', borderRadius: '12px', border: '1px solid #e5e7eb' }}>
+        <div style={{ flex: '0 0 auto' }}>
+          <input type="file" accept="image/*,application/pdf" onChange={handleScanOcr} style={{ display: 'none' }} id="ocrCarteira" />
+          <label htmlFor="ocrCarteira" style={{ cursor: 'pointer', padding: '10px 12px', backgroundColor: extraindoOcr ? '#94a3b8' : '#0056b3', color: '#fff', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
+            <ScanLine size={16} /> {extraindoOcr ? 'Lendo...' : 'Scan'}
+          </label>
+        </div>
         <div style={{ flex: '2 1 180px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <label style={{ fontSize: '12px', fontWeight: 'bold' }}>Descrição</label>
           <input type="text" value={descricao} onChange={e => setDescricao(e.target.value)} placeholder="O que gastou?" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
@@ -133,12 +151,12 @@ export default function GerenciadorCarteira({ cores, formatarMoeda, contasBancar
             </button>
           ))}
         </div>
-        {!['Dinheiro', 'Pix'].includes(forma) && (
+        {!['Dinheiro'].includes(forma) && (
           <div style={{ flex: '1 1 160px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <label style={{ fontSize: '12px', fontWeight: 'bold' }}>{forma === 'Debito' ? 'Conta' : forma === 'Credito' ? 'Cartão' : 'Investimento'}</label>
+            <label style={{ fontSize: '12px', fontWeight: 'bold' }}>{forma === 'Debito' || forma === 'Pix' ? 'Conta' : forma === 'Credito' ? 'Cartão' : 'Investimento'}</label>
             <select value={vinculoId} onChange={e => setVinculoId(e.target.value)} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}>
               <option value="">Não vincular</option>
-              {forma === 'Debito' && (contasBancarias || []).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+              {(forma === 'Debito' || forma === 'Pix') && (contasBancarias || []).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
               {forma === 'Credito' && (cartoes || []).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
               {forma === 'Investimento' && (investimentos || []).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
             </select>
