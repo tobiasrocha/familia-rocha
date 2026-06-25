@@ -11,7 +11,7 @@ const tiposSalario = [
   { key: 'Premiacao', label: 'Premiação', icon: <Trophy size={18} />, cor: '#d97706', bg: '#fef3c7' },
 ];
 
-export default function GerenciadorSalarios({ cores, formatarMoeda, perfis, obterNomePerfil, contasBancarias, onRegistrarRecebimento, lancamentosGlobais }) {
+export default function GerenciadorSalarios({ cores, formatarMoeda, perfis, obterNomePerfil, contasBancarias, onRegistrarRecebimento, lancamentosGlobais, onExcluirLancamento }) {
   const { dados: salarios, recarregar } = useFirestore('salarios');
   const [exibirForm, setExibirForm] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
@@ -233,12 +233,13 @@ export default function GerenciadorSalarios({ cores, formatarMoeda, perfis, obte
                 return (
                   <div style={{ borderTop: '1px solid #eee', marginTop: '10px', paddingTop: '8px', maxHeight: '120px', overflowY: 'auto' }}>
                     <span style={{ fontSize: '10px', color: '#999', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>Recebimentos ({lancs.length}):</span>
-                    {lancs.sort((a,b) => new Date(b.dataVencimiento) - new Date(a.dataVencimiento)).map(l => (
+                    {lancs.sort((a,b) => new Date(b.dataVencimento) - new Date(a.dataVencimento)).map(l => (
                       <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: '#666', padding: '1px 0' }}>
-                        <span style={{ flex: 1 }}>{l.dataVencimiento?.split('-').reverse().join('/')}</span>
+                        <span style={{ flex: 1 }}>{l.dataVencimento?.split('-').reverse().join('/')}</span>
                         {l.perfilId && <span style={{ color: '#C5A059' }}>{obterNomePerfil(l.perfilId)}</span>}
                         <span style={{ fontWeight: 'bold', color: '#16a34a', minWidth: '50px', textAlign: 'right' }}>+{formatarMoeda(l.valor)}</span>
                         <span style={{ fontSize: '9px', color: '#888' }}>{l.formaPagamento}</span>
+                        <button type="button" onClick={() => onExcluirLancamento && onExcluirLancamento(l.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc3545', padding: '0 2px' }}><Trash2 size={10}/></button>
                       </div>
                     ))}
                   </div>

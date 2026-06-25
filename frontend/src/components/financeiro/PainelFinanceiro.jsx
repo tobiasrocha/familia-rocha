@@ -393,6 +393,7 @@ export default function PainelFinanceiro({ cores }) {
           contasBancarias={contasBancarias}
           onRegistrarRecebimento={recarregar}
           lancamentosGlobais={todosLancamentos}
+          onExcluirLancamento={handleExcluir}
         />
       )}
 
@@ -403,6 +404,7 @@ export default function PainelFinanceiro({ cores }) {
           contasBancarias={contasBancarias}
           cartoes={cartoes}
           investimentos={investimentos}
+          cofre={cofre}
         />
       )}
 
@@ -411,6 +413,9 @@ export default function PainelFinanceiro({ cores }) {
           cores={cores}
           formatarMoeda={formatarMoeda}
           contasBancarias={contasBancarias}
+          lancamentosGlobais={todosLancamentos}
+          onEditarLancamento={handleEditar}
+          onExcluirLancamento={handleExcluir}
         />
       )}
 

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { collection, addDoc, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useFirestore } from '../../hooks/useFirestore';
-import { Plus, Trash2, Pencil, CreditCard, Banknote, Landmark, TrendingUp, QrCode, Coffee, ShoppingCart, Car, Heart, Home, Smartphone, Wrench, Tag, ScanLine } from 'lucide-react';
+import { Plus, Trash2, Pencil, CreditCard, Banknote, Landmark, TrendingUp, QrCode, Vault, Coffee, ShoppingCart, Car, Heart, Home, Smartphone, Wrench, Tag, ScanLine } from 'lucide-react';
 import { useUploadOcr } from '../../hooks/useUploadOcr';
 
 const categoriasRapidas = [
@@ -22,9 +22,10 @@ const formasPagamento = [
   { key: 'Debito', label: 'Débito', icon: <Landmark size={14} />, cor: '#2563eb', bg: '#eff6ff' },
   { key: 'Credito', label: 'Crédito', icon: <CreditCard size={14} />, cor: '#dc2626', bg: '#fef2f2' },
   { key: 'Investimento', label: 'Invest.', icon: <TrendingUp size={14} />, cor: '#7c3aed', bg: '#ede9fe' },
+  { key: 'Cofre', label: 'Cofre', icon: <Vault size={14} />, cor: '#d97706', bg: '#fef3c7' },
 ];
 
-export default function GerenciadorCarteira({ cores, formatarMoeda, contasBancarias, cartoes, investimentos }) {
+export default function GerenciadorCarteira({ cores, formatarMoeda, contasBancarias, cartoes, investimentos, cofre }) {
   const { dados: gastos, recarregar } = useFirestore('carteira');
   const { extraindo: extraindoOcr, extrairDados } = useUploadOcr();
   const [editandoId, setEditandoId] = useState(null);
@@ -63,6 +64,16 @@ export default function GerenciadorCarteira({ cores, formatarMoeda, contasBancar
     } else {
       await addDoc(collection(db, 'carteira'), { ...payload, criadoEm: new Date().toISOString() });
     }
+    // Se for Cofre vinculado, debita do saldo
+    if (forma === 'Cofre' && vinculoId && valorNum > 0) {
+      const item = cofre?.find(i => i.id === vinculoId);
+      if (item) {
+        await updateDoc(doc(db, 'cofre', vinculoId), {
+          saldo: Math.max(0, (item.saldo || 0) - valorNum),
+          atualizadoEm: new Date().toISOString(),
+        });
+      }
+    }
     // Se for Investimento vinculado, debita do saldo
     if (forma === 'Investimento' && vinculoId && valorNum > 0) {
       const inv = investimentos?.find(i => i.id === vinculoId);
@@ -99,12 +110,14 @@ export default function GerenciadorCarteira({ cores, formatarMoeda, contasBancar
   const totalDebito = gastosHoje.filter(g => g.forma === 'Debito').reduce((a, g) => a + (g.valor || 0), 0);
   const totalCredito = gastosHoje.filter(g => g.forma === 'Credito').reduce((a, g) => a + (g.valor || 0), 0);
   const totalInvest = gastosHoje.filter(g => g.forma === 'Investimento').reduce((a, g) => a + (g.valor || 0), 0);
+  const totalCofre = gastosHoje.filter(g => g.forma === 'Cofre').reduce((a, g) => a + (g.valor || 0), 0);
 
   const nomeVinculo = (g) => {
     if (!g.vinculoId) return null;
-    if (g.forma === 'Debito') return contasBancarias?.find(c => c.id === g.vinculoId)?.nome;
+    if (g.forma === 'Debito' || g.forma === 'Pix') return contasBancarias?.find(c => c.id === g.vinculoId)?.nome;
     if (g.forma === 'Credito') return cartoes?.find(c => c.id === g.vinculoId)?.nome;
     if (g.forma === 'Investimento') return investimentos?.find(c => c.id === g.vinculoId)?.nome;
+    if (g.forma === 'Cofre') return cofre?.find(c => c.id === g.vinculoId)?.nome;
     return null;
   };
 
@@ -112,7 +125,7 @@ export default function GerenciadorCarteira({ cores, formatarMoeda, contasBancar
     <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
       <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
         {formasPagamento.map(f => {
-          const total = f.key === 'Dinheiro' ? totalDinheiro : f.key === 'Pix' ? totalPix : f.key === 'Debito' ? totalDebito : f.key === 'Credito' ? totalCredito : totalInvest;
+          const total = f.key === 'Dinheiro' ? totalDinheiro : f.key === 'Pix' ? totalPix : f.key === 'Debito' ? totalDebito : f.key === 'Credito' ? totalCredito : f.key === 'Investimento' ? totalInvest : totalCofre;
           return (
             <div key={f.key} style={{ flex: '1 1 130px', backgroundColor: f.bg, padding: '12px', borderRadius: '10px', border: `1px solid ${f.cor}30` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
@@ -153,12 +166,13 @@ export default function GerenciadorCarteira({ cores, formatarMoeda, contasBancar
         </div>
         {!['Dinheiro'].includes(forma) && (
           <div style={{ flex: '1 1 160px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <label style={{ fontSize: '12px', fontWeight: 'bold' }}>{forma === 'Debito' || forma === 'Pix' ? 'Conta' : forma === 'Credito' ? 'Cartão' : 'Investimento'}</label>
+            <label style={{ fontSize: '12px', fontWeight: 'bold' }}>{forma === 'Debito' || forma === 'Pix' ? 'Conta' : forma === 'Credito' ? 'Cartão' : forma === 'Investimento' ? 'Investimento' : 'Cofre'}</label>
             <select value={vinculoId} onChange={e => setVinculoId(e.target.value)} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}>
               <option value="">Não vincular</option>
               {(forma === 'Debito' || forma === 'Pix') && (contasBancarias || []).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
               {forma === 'Credito' && (cartoes || []).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
               {forma === 'Investimento' && (investimentos || []).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+              {forma === 'Cofre' && (cofre || []).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
             </select>
           </div>
         )}

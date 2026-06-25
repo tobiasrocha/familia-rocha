@@ -4,7 +4,7 @@ import { db } from '../../firebaseConfig';
 import { useFirestore } from '../../hooks/useFirestore';
 import { Plus, Trash2, Pencil, Vault, Check, X, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 
-export default function GerenciadorCofre({ cores, formatarMoeda, contasBancarias }) {
+export default function GerenciadorCofre({ cores, formatarMoeda, contasBancarias, lancamentosGlobais, onEditarLancamento, onExcluirLancamento }) {
   const { dados: cofres, recarregar } = useFirestore('cofre');
   const [exibirForm, setExibirForm] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
@@ -202,6 +202,26 @@ export default function GerenciadorCofre({ cores, formatarMoeda, contasBancarias
                   </button>
                 )}
               </div>
+
+              {/* Histórico de movimentações */}
+              {(() => {
+                const movs = (lancamentosGlobais || []).filter(l => l.categoria === 'Reserva Familiar' && ((l.descricao?.includes(c.nome)) || (l.descricao?.includes('Cofre')))).sort((a,b) => new Date(b.dataVencimento) - new Date(a.dataVencimento)).slice(0, 8);
+                if (movs.length === 0) return null;
+                return (
+                  <div style={{ borderTop: '1px solid #eee', marginTop: '8px', paddingTop: '8px', maxHeight: '130px', overflowY: 'auto' }}>
+                    <span style={{ fontSize: '10px', color: '#999', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>Movimentações ({movs.length}):</span>
+                    {movs.map(m => (
+                      <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: '#666', padding: '1px 0', borderBottom: '1px solid #f5f5f5' }}>
+                        <span style={{ flex: 1, fontWeight: 'bold' }}>{m.descricao}</span>
+                        <span style={{ fontWeight: 'bold', color: m.tipo === 'Receita' ? '#16a34a' : '#dc2626', minWidth: '50px', textAlign: 'right' }}>{m.tipo === 'Receita' ? '+' : '-'}{formatarMoeda(m.valor)}</span>
+                        <span style={{ fontSize: '9px', color: '#999' }}>{m.dataVencimento?.split('-').reverse().join('/')}</span>
+                        <button type="button" onClick={() => onEditarLancamento && onEditarLancamento(m)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0056b3' }}><Pencil size={11}/></button>
+                        <button type="button" onClick={() => onExcluirLancamento && onExcluirLancamento(m.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc3545' }}><Trash2 size={11}/></button>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
 
               {c.observacoes && (
                 <div style={{ borderTop: '1px solid #eee', marginTop: '10px', paddingTop: '8px', fontSize: '12px', color: '#999' }}>{c.observacoes}</div>
