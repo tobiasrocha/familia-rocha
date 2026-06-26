@@ -776,6 +776,8 @@ app.post('/api/conciliar-extrato', autenticar, verificarPermissao('financeiro'),
       if (upper.includes('EXTRATO') || upper.includes('AGENCIA') || upper.includes('CONTA') || upper.includes('DATA') || upper.includes('HISTORICO') || upper.includes('DOCUMENTO') || upper.includes('PERIODO') || upper.includes('EMITIDO')) continue;
       if (upper.startsWith('NR') || upper.startsWith('NO') || upper.startsWith('N0') || /^\d{3,}\s+\d/.test(limpa)) continue;
       if (upper.includes('SALDO') || upper.includes('SDO') || upper.includes('BALANCE') || upper.includes('TOTAL')) continue;
+      // Ignora linhas que sao apenas numero de documento e saldo (colunas)
+      if (/^\d{5,}\s+[\d.,]+$/.test(limpa) || /^[\d.,]+\s*$/.test(limpa)) continue;
 
       // Tenta extrair data
       const matchData = limpa.match(regexData);
@@ -790,19 +792,20 @@ app.post('/api/conciliar-extrato', autenticar, verificarPermissao('financeiro'),
       const valores = [...limpa.matchAll(regexValor)];
       if (valores.length === 0) continue;
 
-      // Pega o ultimo valor da linha (geralmente o valor da transacao)
-      const ultimoValor = valores[valores.length - 1][0];
-      let valorStr = ultimoValor.replace(/[R\$\s]/g, '').replace(/\./g, '').replace(',', '.').replace(/-/g, '');
-      const isNegativo = ultimoValor.includes('-') || limpa.toLowerCase().includes('débito') || limpa.toLowerCase().includes('debito') || limpa.toLowerCase().includes('saque') || limpa.toLowerCase().includes('compra');
+      // Pega o PRIMEIRO valor (transacao), ignora saldo (ultimo)
+      const valorTransacao = valores[0][0];
+      let valorStr = valorTransacao.replace(/[R\$\s]/g, '').replace(/\./g, '').replace(',', '.').replace(/-/g, '');
+      const isNegativo = valorTransacao.includes('-') || limpa.toLowerCase().includes('débito') || limpa.toLowerCase().includes('debito') || limpa.toLowerCase().includes('saque') || limpa.toLowerCase().includes('compra') || limpa.toLowerCase().includes('pagamento');
       let valor = parseFloat(valorStr);
       if (isNaN(valor)) continue;
       if (isNegativo) valor = -Math.abs(valor);
 
-      // Descricao: remove data e valor da linha
+      // Descricao: remove data, valores e numeros de documento da linha
       let descricao = limpa
         .replace(matchData[0], '')
-        .replace(ultimoValor, '')
+        .replace(valorTransacao, '')
         .replace(/[\/\.\-]\d{1,2}[\/\.\-]\d{2,4}/g, '')
+        .replace(/\b\d{3,10}[\-\/]?\d{0,5}\b/g, '') // remove numeros de documento
         .replace(/\s+/g, ' ')
         .trim();
 
