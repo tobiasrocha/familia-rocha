@@ -2,9 +2,12 @@ import { useState } from 'react';
 import { Users, Wrench } from 'lucide-react';
 import AdminUsuarios from './admin/AdminUsuarios';
 import GerenciadorPrestadores from './financeiro/GerenciadorPrestadores';
+import { useFirestore } from '../hooks/useFirestore';
 
 export default function Pessoas({ cores }) {
   const [aba, setAba] = useState('usuarios');
+  const { dados: contasBancarias } = useFirestore('contas_bancarias');
+  const { dados: lancamentosGlobais } = useFirestore('financas');
 
   return (
     <div style={{ padding: '30px', maxWidth: '1200px', margin: '0 auto' }}>
@@ -22,8 +25,8 @@ export default function Pessoas({ cores }) {
         <GerenciadorPrestadores
           cores={cores}
           formatarMoeda={(v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-          contasBancarias={[]}
-          lancamentosGlobais={[]}
+          contasBancarias={contasBancarias}
+          lancamentosGlobais={lancamentosGlobais}
         />
       )}
     </div>
