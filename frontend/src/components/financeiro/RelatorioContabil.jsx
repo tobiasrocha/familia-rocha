@@ -6,7 +6,8 @@ export default function RelatorioContabil({
   mesContabil, setMesContabil,
   perfilContabil, setPerfilContabil,
   recContabil, despContabil, resultadoExercicio,
-  saldoBancario, saldoInvestimentos, debitoCartoes, valorBensDireitos, totalAtivos, totalPassivos, patrimonioLiquido
+  saldoBancario, saldoInvestimentos, saldoCofre, debitoCartoes,
+  valorBensDireitos, totalAtivos, totalPassivos, totalEmprestimos, patrimonioLiquido
 }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -30,11 +31,14 @@ export default function RelatorioContabil({
           <h4 style={{ margin: '10px 0 10px 0', color: '#6f42c1', fontSize: '14px' }}>ATIVOS (Bens e Dinheiro)</h4>
           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}><span style={{fontSize:'14px'}}>Caixa e Bancos</span><strong>{formatarMoeda(saldoBancario || 0)}</strong></div>
           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}><span style={{fontSize:'14px'}}>Investimentos</span><strong>{formatarMoeda(saldoInvestimentos || 0)}</strong></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}><span style={{fontSize:'14px'}}>Cofre (Reserva Familiar)</span><strong>{formatarMoeda(saldoCofre || 0)}</strong></div>
           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}><span style={{fontSize:'14px'}}>Imobilizado (Imóveis, Veículos)</span><strong>{formatarMoeda(valorBensDireitos)}</strong></div>
           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', color: '#dc3545' }}><span style={{fontSize:'14px'}}>(-) Cartões de Crédito (Pendentes)</span><strong>-{formatarMoeda(debitoCartoes || 0)}</strong></div>
           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderTop: '2px solid #eee', fontWeight: 'bold' }}><span style={{fontSize:'14px'}}>Total de Ativos</span><strong style={{color:'#155724'}}>{formatarMoeda(totalAtivos)}</strong></div>
           <h4 style={{ margin: '20px 0 10px 0', color: '#dc3545', fontSize: '14px' }}>PASSIVOS (Obrigações Futuras)</h4>
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}><span style={{fontSize:'14px'}}>Contas Pendentes (Lançadas)</span><strong>{formatarMoeda(totalPassivos)}</strong></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}><span style={{fontSize:'14px'}}>Contas Pendentes (Lançadas)</span><strong>{formatarMoeda(totalPassivos - totalEmprestimos)}</strong></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}><span style={{fontSize:'14px'}}>Empréstimos (Saldo Devedor)</span><strong>{formatarMoeda(totalEmprestimos || 0)}</strong></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderTop: '2px solid #eee', fontWeight: 'bold' }}><span style={{fontSize:'14px'}}>Total de Passivos</span><strong style={{color:'#dc3545'}}>{formatarMoeda(totalPassivos)}</strong></div>
           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '20px', marginTop: '20px', backgroundColor: '#e2d9f3', borderRadius: '8px', fontWeight: 'bold' }}>
             <span>PATRIMÔNIO LÍQUIDO</span>
             <strong style={{ fontSize: '22px', color: '#5b2d86' }}>{formatarMoeda(patrimonioLiquido)}</strong>
