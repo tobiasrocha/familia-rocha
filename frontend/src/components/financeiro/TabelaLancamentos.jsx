@@ -45,6 +45,12 @@ export default function TabelaLancamentos({ dadosMesFiltro, contasBancarias, car
     } catch { /* vinculação falhou */ }
   };
 
+  const handleMudarStatus = async (itemId, novoStatus) => {
+    try {
+      await updateDoc(doc(db, 'financas', itemId), { status: novoStatus, atualizadoEm: new Date().toISOString() });
+    } catch { /* erro */ }
+  };
+
   const rotuloFormaPagamento = (fp) => {
     const mapa = { 'PIX': 'PIX', 'Débito': 'Débito', 'Crédito': 'Crédito', 'Dinheiro': 'Dinheiro' };
     return mapa[fp] || '';
@@ -92,7 +98,7 @@ export default function TabelaLancamentos({ dadosMesFiltro, contasBancarias, car
                 <div key={c.id} onClick={() => toggleConta(c.id)} style={{ padding: '6px 10px', backgroundColor: sel ? '#fecaca' : vencido ? '#fee2e2' : '#fff', borderRadius: '6px', border: `2px solid ${sel ? '#dc2626' : vencido ? '#fca5a5' : '#e5e7eb'}`, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', userSelect: 'none', transition: 'all .15s' }}>
                   <span style={{ fontWeight: 'bold', color: vencido ? '#dc2626' : '#333' }}>{c.descricao}</span>
                   <span style={{ color: vencido ? '#dc2626' : '#d97706', fontWeight: 'bold' }}>{formatarMoeda(c.valor)}</span>
-                  <span style={{ fontSize: '10px', color: '#888' }}>{c.dataVencimento?.split('-').reverse().join('/')}</span>
+                  <span style={{ fontSize: '10px', color: '#888' }}>{c.dataVencimento?.split('-').slice(1).reverse().join('/')}</span>
                   {vencido && <span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '8px', backgroundColor: '#dc2626', color: '#fff' }}>VENCIDO</span>}
                 </div>
               );
@@ -138,7 +144,7 @@ export default function TabelaLancamentos({ dadosMesFiltro, contasBancarias, car
               const fp = rotuloFormaPagamento(item.formaPagamento);
               return (
                 <tr key={item.id} style={{ borderBottom: '1px solid #e9ecef', backgroundColor: isVencido ? '#ffebee' : 'transparent' }}>
-                  <td style={{ padding: '15px' }}>{item.dataVencimento?.split('-').reverse().join('/')}</td>
+                  <td style={{ padding: '15px' }}>{item.dataVencimento?.split('-').slice(1).reverse().join('/')}</td>
                   <td style={{ padding: '15px', fontWeight: 'bold' }}>
                     {item.descricao} <br /><span style={{ fontSize: '11px', color: '#888' }}>{item.categoria}</span>
                     {item.codigoBarras && (() => {
@@ -188,7 +194,10 @@ export default function TabelaLancamentos({ dadosMesFiltro, contasBancarias, car
                     {fp && <span style={{ padding: '4px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold', backgroundColor: `${corFormaPagamento(item.formaPagamento)}20`, color: corFormaPagamento(item.formaPagamento) }}>{fp}</span>}
                   </td>
                   <td style={{ padding: '15px', textAlign: 'center' }}>
-                    <span style={{ padding: '6px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', backgroundColor: item.status === 'Pago' ? '#d4edda' : (isVencido ? '#f8d7da' : '#fff3cd'), color: item.status === 'Pago' ? '#155724' : (isVencido ? '#721c24' : '#856404') }}>{isVencido ? 'ATRASADA' : item.status}</span>
+                    <select value={item.status} onChange={e => handleMudarStatus(item.id, e.target.value)} style={{ padding: '6px 8px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', border: 'none', cursor: 'pointer', backgroundColor: item.status === 'Pago' ? '#d4edda' : (isVencido ? '#f8d7da' : '#fff3cd'), color: item.status === 'Pago' ? '#155724' : (isVencido ? '#721c24' : '#856404'), outline: 'none' }}>
+                      <option value="Pendente">Pendente</option>
+                      <option value="Pago">Pago</option>
+                    </select>
                   </td>
                   <td style={{ padding: '15px', textAlign: 'center' }}>
                     {item._carteira ? (
