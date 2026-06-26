@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { collection, addDoc, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useFirestore } from '../../hooks/useFirestore';
@@ -42,15 +42,19 @@ export default function PainelFinanceiro({ cores }) {
   const [calcExpressao, setCalcExpressao] = useState('');
   const [calcMemoria, setCalcMemoria] = useState(null);
   const [calcOp, setCalcOp] = useState(null);
+  const [calcNovoNumero, setCalcNovoNumero] = useState(false);
   const [calcHistorico, setCalcHistorico] = useState([]);
-  const calcDigito = (d) => { setCalcVisor(v => v === '0' || calcOp !== null ? String(d) : v + d); };
+  const calcDigito = (d) => {
+    setCalcVisor(v => (v === '0' || calcNovoNumero) ? String(d) : v + d);
+    setCalcNovoNumero(false);
+  };
   const calcOperacao = (op) => {
     if (calcMemoria !== null) calcResultado();
     const val = parseFloat(calcVisor) || 0;
     setCalcMemoria(val);
     setCalcOp(op);
     setCalcExpressao(e => e + ' ' + val + ' ' + op);
-    setCalcVisor('0');
+    setCalcNovoNumero(true);
   };
   const calcResultado = () => {
     const a = calcMemoria || 0; const b = parseFloat(calcVisor) || 0;
@@ -61,11 +65,28 @@ export default function PainelFinanceiro({ cores }) {
     setCalcExpressao('');
     setCalcMemoria(null);
     setCalcOp(null);
+    setCalcNovoNumero(true);
     setCalcHistorico(h => [expr, ...h].slice(0, 10));
   };
   const calcLimpar = () => {
-    setCalcVisor('0'); setCalcExpressao(''); setCalcMemoria(null); setCalcOp(null); setCalcHistorico([]);
+    setCalcVisor('0'); setCalcExpressao(''); setCalcMemoria(null); setCalcOp(null); setCalcNovoNumero(false); setCalcHistorico([]);
   };
+
+  // Teclado da calculadora
+  useEffect(() => {
+    if (!calcAberto) return;
+    const handler = (e) => {
+      if (e.key >= '0' && e.key <= '9' || e.key === '.') calcDigito(e.key);
+      else if (e.key === '+') calcOperacao('+');
+      else if (e.key === '-') calcOperacao('-');
+      else if (e.key === '*') calcOperacao('×');
+      else if (e.key === '/') { e.preventDefault(); calcOperacao('÷'); }
+      else if (e.key === 'Enter' || e.key === '=') calcResultado();
+      else if (e.key === 'Escape' || e.key === 'c' || e.key === 'C') calcLimpar();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [calcAberto, calcNovoNumero, calcVisor, calcMemoria, calcOp, calcExpressao]);
   const [exibirForm, setExibirForm] = useState(false);
   const [salvando, setSalvando] = useState(false);
 
