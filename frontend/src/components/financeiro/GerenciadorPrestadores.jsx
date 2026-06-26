@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { collection, addDoc, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useFirestore } from '../../hooks/useFirestore';
-import { Plus, Trash2, Pencil, Wrench, Calendar, Landmark, QrCode, Package, Utensils, AlertTriangle, Bell, Check, X, Copy, ArrowUpCircle } from 'lucide-react';
+import { Plus, Trash2, Pencil, Wrench, Calendar, Landmark, QrCode, Package, Utensils, AlertTriangle, Bell, Copy, ArrowUpCircle } from 'lucide-react';
 import SelectDigitavel from '../SelectDigitavel';
 
 const tiposServico = ['Encanador', 'Eletricista', 'Pintor', 'Pedreiro', 'Diarista', 'Jardineiro', 'Marceneiro', 'Técnico', 'Motorista', 'Outros'];
@@ -28,9 +28,6 @@ export default function GerenciadorPrestadores({ cores, formatarMoeda, contasBan
   const [providencias, setProvidencias] = useState('');
 
   // Histórico de serviços prestados
-  const [showHistorico, setShowHistorico] = useState(null);
-  const [novaDataServico, setNovaDataServico] = useState('');
-  const [novoValorServico, setNovoValorServico] = useState('');
 
   // Disparar alerta
   const [disparando, setDisparando] = useState(null);
@@ -76,22 +73,6 @@ export default function GerenciadorPrestadores({ cores, formatarMoeda, contasBan
     setValorServico(p.valorServico?.toString() || ''); setMateriais(p.materiais || '');
     setAlimentos(p.alimentos || ''); setProvidencias(p.providencias || '');
     setEditandoId(p.id); setExibirForm(true);
-  };
-
-  const handleAdicionarServico = async (p) => {
-    if (!novaDataServico) return;
-    const servicos = p.servicos || [];
-    servicos.push({ data: novaDataServico, valor: parseFloat(novoValorServico) || 0 });
-    await updateDoc(doc(db, 'prestadores', p.id), { servicos, atualizadoEm: new Date().toISOString() });
-    setShowHistorico(null); setNovaDataServico(''); setNovoValorServico('');
-    recarregar();
-  };
-
-  const handleRemoverServico = async (p, idx) => {
-    const servicos = [...(p.servicos || [])];
-    servicos.splice(idx, 1);
-    await updateDoc(doc(db, 'prestadores', p.id), { servicos, atualizadoEm: new Date().toISOString() });
-    recarregar();
   };
 
   const handleDispararAlerta = async (p) => {
@@ -216,8 +197,7 @@ export default function GerenciadorPrestadores({ cores, formatarMoeda, contasBan
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '20px' }}>
         {(prestadores || []).sort((a, b) => (a.dataAgendamento || '').localeCompare(b.dataAgendamento || '')).map(p => {
           const isProximo = p.dataAgendamento && p.dataAgendamento >= hoje;
-          const servicos = p.servicos || [];
-          return (
+                  return (
             <div key={p.id} style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #eee', borderTop: `4px solid ${isProximo ? '#d97706' : '#6b7280'}`, boxShadow: '0 4px 15px rgba(0,0,0,0.03)', position: 'relative' }}>
               <div style={{ display: 'flex', gap: '4px', position: 'absolute', top: '15px', right: '15px' }}>
                 <button type="button" onClick={() => handleDispararAlerta(p)} disabled={disparando === p.id} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc3545', padding: '2px' }}>
@@ -264,31 +244,7 @@ export default function GerenciadorPrestadores({ cores, formatarMoeda, contasBan
                 {p.telefone && <span>📞 {p.telefone}</span>}
               </div>
 
-              {/* Histórico de serviços */}
-              <div style={{ borderTop: '1px solid #eee', paddingTop: '8px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                  <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#888' }}>Serviços prestados ({servicos.length})</span>
-                  <button type="button" onClick={() => setShowHistorico(showHistorico === p.id ? null : p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C5A059', fontSize: '12px', fontWeight: 'bold' }}>
-                    {showHistorico === p.id ? 'Fechar' : '+ Adicionar'}
-                  </button>
-                </div>
-                {showHistorico === p.id && (
-                  <div style={{ display: 'flex', gap: '8px', marginBottom: '6px', alignItems: 'center' }}>
-                    <input type="date" value={novaDataServico} onChange={e => setNovaDataServico(e.target.value)} style={{ padding: '6px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '12px', flex: 1 }} />
-                    <input type="number" step="0.01" value={novoValorServico} onChange={e => setNovoValorServico(e.target.value)} placeholder="R$" style={{ padding: '6px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '12px', width: '80px' }} />
-                    <button type="button" onClick={() => handleAdicionarServico(p)} style={{ background: '#28a745', border: 'none', borderRadius: '4px', padding: '4px 6px', cursor: 'pointer' }}><Check size={14} color="#fff" /></button>
-                  </div>
-                )}
-                {servicos.slice(0, 5).map((s, i) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#666', padding: '2px 0' }}>
-                    <span>{s.data?.split('-').reverse().join('/')}</span>
-                    <span style={{ fontWeight: 'bold' }}>{formatarMoeda(s.valor || 0)}</span>
-                    <button type="button" onClick={() => handleRemoverServico(p, i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc3545', padding: '0 4px' }}><X size={12} /></button>
-                  </div>
-                ))}
-              </div>
-
-              {/* Pagamento */}
+            
               <div style={{ borderTop: '1px solid #eee', paddingTop: '8px', marginTop: '6px' }}>
                 {pagId === p.id ? (
                   <div style={{ padding: '6px', backgroundColor: '#f0fdf4', borderRadius: '6px', border: '1px solid #bbf7d0' }}>
