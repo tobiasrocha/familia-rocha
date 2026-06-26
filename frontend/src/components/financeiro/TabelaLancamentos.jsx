@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
-import { Pencil, Trash2, User, Landmark, Link, Search, X, ChevronLeft, ChevronRight, Copy } from 'lucide-react';
+import { Pencil, Trash2, User, Landmark, Link, Search, X, ChevronLeft, ChevronRight, Copy, Calculator } from 'lucide-react';
 
 function classificarCodigo(cod) {
   if (!cod) return null;
@@ -34,6 +34,11 @@ export default function TabelaLancamentos({ dadosMesFiltro, contasBancarias, car
   const [filtroTipo, setFiltroTipo] = useState('Todos');
   const [filtroStatus, setFiltroStatus] = useState('Todos');
   const [pagina, setPagina] = useState(1);
+  const [selecionadas, setSelecionadas] = useState(new Set());
+  const [calcAberto, setCalcAberto] = useState(false);
+  const [calcVisor, setCalcVisor] = useState('0');
+  const [calcMemoria, setCalcMemoria] = useState(null);
+  const [calcOp, setCalcOp] = useState(null);
   const ITENS_POR_PAGINA = 10;
 
   const handleVincularBanco = async (itemId, contaId) => {
@@ -69,19 +74,37 @@ export default function TabelaLancamentos({ dadosMesFiltro, contasBancarias, car
 
   const contasAPagar = ordenados.filter(i => i.tipo === 'Despesa' && i.status === 'Pendente').sort((a,b) => new Date(a.dataVencimento) - new Date(b.dataVencimento));
 
+  const toggleConta = (id) => {
+    const novo = new Set(selecionadas); novo.has(id) ? novo.delete(id) : novo.add(id); setSelecionadas(novo);
+  };
+  const somaSelecionadas = contasAPagar.filter(c => selecionadas.has(c.id)).reduce((a, c) => a + (c.valor || 0), 0);
+
+  // Calculadora
+  const calcDigito = (d) => { setCalcVisor(v => v === '0' ? String(d) : v + d); };
+  const calcOperacao = (op) => { setCalcMemoria(parseFloat(calcVisor)); setCalcOp(op); setCalcVisor('0'); };
+  const calcResultado = () => {
+    const a = calcMemoria || 0; const b = parseFloat(calcVisor) || 0;
+    let r = 0;
+    if (calcOp === '+') r = a + b; else if (calcOp === '-') r = a - b; else if (calcOp === '×') r = a * b; else if (calcOp === '÷') r = b !== 0 ? a / b : 0;
+    setCalcVisor(String(Math.round(r * 100) / 100)); setCalcMemoria(null); setCalcOp(null);
+  };
+  const calcLimpar = () => { setCalcVisor('0'); setCalcMemoria(null); setCalcOp(null); };
+
   return (
     <div>
       {/* Contas a Pagar em destaque */}
       {contasAPagar.length > 0 && (
         <div style={{ backgroundColor: '#fef2f2', padding: '12px 16px', borderRadius: '10px', border: '1px solid #fecaca', marginBottom: '15px' }}>
-          <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#991b1b', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            ⚠️ Contas a Pagar ({contasAPagar.length})
+          <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#991b1b', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'space-between' }}>
+            <span>⚠️ Contas a Pagar ({contasAPagar.length})</span>
+            {selecionadas.size > 0 && <span style={{ color: '#dc2626', fontSize: '14px' }}>Soma: {formatarMoeda(somaSelecionadas)}</span>}
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
             {contasAPagar.slice(0, 8).map(c => {
               const vencido = c.dataVencimento < hoje;
+              const sel = selecionadas.has(c.id);
               return (
-                <div key={c.id} style={{ padding: '6px 10px', backgroundColor: vencido ? '#fee2e2' : '#fff', borderRadius: '6px', border: `1px solid ${vencido ? '#fca5a5' : '#e5e7eb'}`, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div key={c.id} onClick={() => toggleConta(c.id)} style={{ padding: '6px 10px', backgroundColor: sel ? '#fecaca' : vencido ? '#fee2e2' : '#fff', borderRadius: '6px', border: `2px solid ${sel ? '#dc2626' : vencido ? '#fca5a5' : '#e5e7eb'}`, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', userSelect: 'none', transition: 'all .15s' }}>
                   <span style={{ fontWeight: 'bold', color: vencido ? '#dc2626' : '#333' }}>{c.descricao}</span>
                   <span style={{ color: vencido ? '#dc2626' : '#d97706', fontWeight: 'bold' }}>{formatarMoeda(c.valor)}</span>
                   <span style={{ fontSize: '10px', color: '#888' }}>{c.dataVencimento?.split('-').reverse().join('/')}</span>
@@ -107,6 +130,9 @@ export default function TabelaLancamentos({ dadosMesFiltro, contasBancarias, car
         <select value={filtroStatus} onChange={e => { setFiltroStatus(e.target.value); setPagina(1); }} style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #ddd', fontWeight: 'bold' }}>
           <option value="Todos">Status: Todos</option><option value="Pendente">Pendente</option><option value="Pago">Pago</option>
         </select>
+        <button type="button" onClick={() => setCalcAberto(true)} title="Calculadora" style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #ddd', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 'bold' }}>
+          <Calculator size={16} />
+        </button>
         <span style={{ fontSize: '12px', color: '#999', marginLeft: 'auto' }}>{filtrados.length} registro(s)</span>
       </div>
 
@@ -208,6 +234,25 @@ export default function TabelaLancamentos({ dadosMesFiltro, contasBancarias, car
           <button onClick={() => setPagina(p => Math.max(1, p - 1))} disabled={pagina === 1} style={{ padding: '6px 12px', border: '1px solid #ddd', borderRadius: '6px', background: '#fff', cursor: pagina === 1 ? 'not-allowed' : 'pointer', opacity: pagina === 1 ? 0.5 : 1 }}><ChevronLeft size={16} /></button>
           <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#555' }}>{pagina} / {totalPaginas}</span>
           <button onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))} disabled={pagina === totalPaginas} style={{ padding: '6px 12px', border: '1px solid #ddd', borderRadius: '6px', background: '#fff', cursor: pagina === totalPaginas ? 'not-allowed' : 'pointer', opacity: pagina === totalPaginas ? 0.5 : 1 }}><ChevronRight size={16} /></button>
+        </div>
+      )}
+
+      {/* Calculadora Popup */}
+      {calcAberto && (
+        <div style={{ position: 'fixed', top:0,left:0,right:0,bottom:0, backgroundColor:'rgba(0,0,0,0.5)', display:'flex', justifyContent:'center', alignItems:'center', zIndex:3000 }} onClick={() => setCalcAberto(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ backgroundColor:'#fff', padding:'20px', borderRadius:'16px', width:'260px', boxShadow:'0 20px 60px rgba(0,0,0,0.3)' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'15px' }}>
+              <h3 style={{ margin:0, fontSize:'16px' }}>Calculadora</h3>
+              <button onClick={() => setCalcAberto(false)} style={{ background:'none', border:'none', cursor:'pointer', color:'#999' }}><X size={18}/></button>
+            </div>
+            <div style={{ backgroundColor:'#f0f0f0', padding:'15px', borderRadius:'8px', textAlign:'right', fontSize:'24px', fontWeight:'bold', marginBottom:'15px', minHeight:'40px', wordBreak:'break-all' }}>{calcVisor}</div>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'8px' }}>
+              {[7,8,9,'÷',4,5,6,'×',1,2,3,'-',0,'.','=','+'].map(b => (
+                <button key={b} onClick={() => { if (typeof b === 'number' || b === '.') calcDigito(b); else if (b === '=') calcResultado(); else calcOperacao(b); }} style={{ padding:'12px', borderRadius:'8px', border:'1px solid #ddd', background: b === '=' ? '#d97706' : typeof b === 'string' ? '#f5f5f5' : '#fff', color: b === '=' ? '#fff' : '#333', fontSize:'16px', fontWeight:'bold', cursor:'pointer' }}>{b}</button>
+              ))}
+            </div>
+            <button onClick={calcLimpar} style={{ width:'100%', marginTop:'10px', padding:'12px', borderRadius:'8px', border:'1px solid #ddd', background:'#fee2e2', color:'#dc2626', fontSize:'14px', fontWeight:'bold', cursor:'pointer' }}>C</button>
+          </div>
         </div>
       )}
     </div>
