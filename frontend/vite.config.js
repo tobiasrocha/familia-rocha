@@ -53,6 +53,12 @@ export default defineConfig({
   ],
   build: {
     chunkSizeWarningLimit: 800,
+    rollupOptions: {
+      input: {
+        main: 'index.html',
+        carteira: 'carteira.html',
+      },
+    },
   },
   server: {
     proxy: {
