@@ -868,21 +868,41 @@ app.post('/api/conciliar-extrato', autenticar, verificarPermissao('financeiro'),
 // ---------------------------------------------------------
 app.post('/api/baixar-conciliados', autenticar, verificarPermissao('financeiro'), async (req, res) => {
   try {
-    const { ids } = req.body;
-    if (!ids || !Array.isArray(ids) || ids.length === 0) {
-      return res.status(400).json({ erro: 'Lista de IDs ausente.' });
-    }
-
+    const { ids, itens } = req.body;
     let atualizados = 0;
-    for (const id of ids) {
-      await firestoreDb.collection('financas').doc(id).update({ status: 'Pago', atualizadoEm: new Date().toISOString() });
-      atualizados++;
+    let criados = 0;
+
+    // Baixa lancamentos existentes (matched)
+    if (ids && Array.isArray(ids) && ids.length > 0) {
+      for (const id of ids) {
+        await firestoreDb.collection('financas').doc(id).update({ status: 'Pago', atualizadoEm: new Date().toISOString() });
+        atualizados++;
+      }
     }
 
-    console.log(`[BAIXA] ${atualizados} transacoes marcadas como Pagas`);
-    res.json({ msg: `${atualizados} contas baixadas com sucesso.` });
+    // Cria novos lancamentos a partir dos itens classificados
+    if (itens && Array.isArray(itens) && itens.length > 0) {
+      for (const item of itens) {
+        if (!item.descricao || !item.valor) continue;
+        await firestoreDb.collection('financas').add({
+          descricao: item.descricao,
+          valor: Math.abs(parseFloat(item.valor) || 0),
+          tipo: item.tipo || item.natureza || 'Despesa',
+          categoria: item.categoria || 'Outros',
+          dataVencimento: item.data || new Date().toISOString().slice(0, 10),
+          status: 'Pago',
+          contaId: item.contaId || null,
+          formaPagamento: item.formaPagamento || 'Débito',
+          criadoEm: new Date().toISOString(),
+        });
+        criados++;
+      }
+    }
+
+    console.log(`[BAIXA] ${atualizados} baixadas, ${criados} novas lancadas`);
+    res.json({ msg: `${atualizados} contas baixadas, ${criados} novos lancamentos criados.` });
   } catch (error) {
-    res.status(500).json({ erro: 'Falha ao dar baixa.', detalhes: error.message });
+    res.status(500).json({ erro: 'Falha ao processar.', detalhes: error.message });
   }
 });
 
