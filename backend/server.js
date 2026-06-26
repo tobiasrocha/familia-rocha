@@ -759,22 +759,54 @@ app.post('/api/conciliar-extrato', autenticar, verificarPermissao('financeiro'),
 
     console.log(`[CONCILIACAO] Texto extraido: ${textoExtrato.length} caracteres`);
 
-    // 2) Extrai transacoes do texto (regex para formato brasileiro de extrato)
+    // 2) Extrai transacoes do texto (multi-regex para varios formatos de extrato)
     const transacoesExtrato = [];
     const linhas = textoExtrato.split('\n');
+    const anoAtual = new Date().getFullYear();
+
+    // Padroes de data: dd/mm, dd/mm/aaaa, dd.mm, dd-mm
+    const regexData = /(\d{1,2}[\/\.\-]\d{1,2}(?:[\/\.\-]\d{2,4})?)/;
+
     for (const linha of linhas) {
-      const regexTransacao = /(\d{2}\/\d{2})\s+(.+?)\s+(-?R?\$\s*[\d.,]+)/i;
-      const match = linha.match(regexTransacao);
-      if (match) {
-        const dataStr = match[1];
-        const descricao = match[2].trim();
-        const valorStr = match[3].replace(/[^\d,-]/g, '').replace(',', '.');
-        const valor = parseFloat(valorStr);
-        if (!isNaN(valor) && descricao.length > 3) {
-          const [dia, mes] = dataStr.split('/');
-          const ano = new Date().getFullYear();
-          transacoesExtrato.push({ data: `${ano}-${mes}-${dia}`, descricao, valor: Math.abs(valor), tipo: valor < 0 ? 'DEBITO' : 'CREDITO' });
-        }
+      const limpa = linha.trim();
+      if (limpa.length < 10) continue;
+
+      // Tenta extrair data
+      const matchData = limpa.match(regexData);
+      if (!matchData) continue;
+
+      const dataStr = matchData[1];
+      let [dia, mes] = dataStr.split(/[\/\.\-]/);
+      dia = dia.padStart(2, '0'); mes = mes.padStart(2, '0');
+
+      // Busca valor monetario na linha (R$ xxx,xx ou -xxx,xx ou xxx.xx)
+      const regexValor = /(-?\s*R?\$\s*[\d]{1,3}(?:\.?\d{3})*(?:,\d{2})?)|(-?\s*[\d]{1,3}(?:\.\d{3})*(?:,\d{2}))/gi;
+      const valores = [...limpa.matchAll(regexValor)];
+      if (valores.length === 0) continue;
+
+      // Pega o ultimo valor da linha (geralmente o valor da transacao)
+      const ultimoValor = valores[valores.length - 1][0];
+      let valorStr = ultimoValor.replace(/[R\$\s]/g, '').replace(/\./g, '').replace(',', '.').replace(/-/g, '');
+      const isNegativo = ultimoValor.includes('-') || limpa.toLowerCase().includes('débito') || limpa.toLowerCase().includes('debito') || limpa.toLowerCase().includes('saque') || limpa.toLowerCase().includes('compra');
+      let valor = parseFloat(valorStr);
+      if (isNaN(valor)) continue;
+      if (isNegativo) valor = -Math.abs(valor);
+
+      // Descricao: remove data e valor da linha
+      let descricao = limpa
+        .replace(matchData[0], '')
+        .replace(ultimoValor, '')
+        .replace(/[\/\.\-]\d{1,2}[\/\.\-]\d{2,4}/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      if (descricao.length > 2) {
+        transacoesExtrato.push({
+          data: `${anoAtual}-${mes}-${dia}`,
+          descricao: descricao.substring(0, 60),
+          valor: Math.abs(valor),
+          tipo: valor < 0 ? 'DEBITO' : 'CREDITO',
+        });
       }
     }
 
@@ -815,7 +847,7 @@ app.post('/api/conciliar-extrato', autenticar, verificarPermissao('financeiro'),
     }
 
     console.log(`[CONCILIACAO] ${matches.length} transacoes correspondentes encontradas`);
-    res.json({ transacoesExtrato, matches, totalPendentes: pendentes.length });
+    res.json({ itensExtrato: transacoesExtrato, matches, totalPendentes: pendentes.length });
   } catch (error) {
     console.error('[CONCILIACAO ERROR]', error);
     res.status(500).json({ erro: 'Falha ao processar extrato.', detalhes: error.message });
