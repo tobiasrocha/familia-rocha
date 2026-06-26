@@ -1,4 +1,5 @@
 import { UploadCloud, User, ArrowRightLeft } from 'lucide-react';
+import SelectDigitavel from '../SelectDigitavel';
 
 export default function FormularioLancamento({
   cores, perfis, contasBancarias, cartoes, obterNomePerfil,
@@ -49,7 +50,9 @@ export default function FormularioLancamento({
       </div>
       <div style={{ flex: '1 1 150px' }}><label>Vencimento</label><input type="date" value={dataVencimento} onChange={e=>setDataVencimento(e.target.value)} required style={{ width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }} /></div>
       <div style={{ flex: '1 1 150px' }}><label>Tipo</label><select value={tipo} onChange={e=>{setTipo(e.target.value); setCategoria(e.target.value==='Despesa'?'Moradia':'Salario');}} style={{ width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }}><option value="Despesa">Despesa</option><option value="Receita">Receita</option></select></div>
-      <div style={{ flex: '1 1 150px' }}><label>Categoria</label><select value={categoria} onChange={e=>setCategoria(e.target.value)} style={{ width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }}>{(tipo==='Despesa'?categoriesDespesa:categoriasReceita).map(c=><option key={c} value={c}>{c}</option>)}</select></div>
+      <div style={{ flex: '1 1 150px' }}><label>Categoria</label>
+        <SelectDigitavel value={categoria} onChange={setCategoria} opcoes={(tipo==='Despesa'?categoriesDespesa:categoriasReceita)} style={{ width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }} />
+      </div>
       <div style={{ flex: '2 1 200px' }}><label>Descrição</label><input type="text" value={descricao} onChange={e=>setDescricao(e.target.value)} required style={{ width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }} /></div>
       <div style={{ flex: '1 1 150px' }}><label>Valor Total (R$)</label><input type="number" step="0.01" value={valor} onChange={e=>setValor(e.target.value)} required style={{ width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }} /></div>
 

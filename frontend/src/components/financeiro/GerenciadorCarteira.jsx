@@ -4,6 +4,7 @@ import { db } from '../../firebaseConfig';
 import { useFirestore } from '../../hooks/useFirestore';
 import { Plus, Trash2, Pencil, CreditCard, Banknote, Landmark, TrendingUp, QrCode, Vault, Coffee, ShoppingCart, Car, Heart, Home, Smartphone, Wrench, Tag, ScanLine } from 'lucide-react';
 import { useUploadOcr } from '../../hooks/useUploadOcr';
+import SelectDigitavel from '../SelectDigitavel';
 
 const categoriasRapidas = [
   { key: 'Alimentacao', label: 'Alimentação', icon: <Coffee size={14} /> },
@@ -208,6 +209,15 @@ export default function GerenciadorCarteira({ cores, formatarMoeda, contasBancar
             {c.icon} {c.label}
           </button>
         ))}
+        <div style={{ flex: '1 1 130px', minWidth: '120px' }}>
+          <SelectDigitavel
+            value={categoria}
+            onChange={setCategoria}
+            opcoes={categoriasRapidas.map(c => c.label)}
+            placeholder="Ou digite..."
+            style={{ padding: '6px 10px', borderRadius: '16px', border: '1px solid #ddd', fontSize: '12px', width: '100%' }}
+          />
+        </div>
       </div>
 
       <div style={{ backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
