@@ -59,7 +59,9 @@ export default function ConciliadorExtrato({ cores, onBaixas, dadosMesFiltro, co
         })));
         setTelaClassificar(true);
       } else {
-        setSucesso('Nenhum item encontrado no extrato.');
+        // Sempre abre popup, mesmo sem itens — permite adicionar manualmente
+        setItensClassificar([{ descricao: '', valor: 0, data: new Date().toISOString().slice(0,10), natureza: 'Despesa', contaId: '', _matched: false, _matchId: null, _selecionado: false }]);
+        setTelaClassificar(true);
       }
     } catch (err) { setErro(err.message || 'Falha ao processar'); }
     finally { clearInterval(intervalo); setEnviando(false); }
@@ -195,6 +197,7 @@ export default function ConciliadorExtrato({ cores, onBaixas, dadosMesFiltro, co
                 </div>
               );
             })}
+            <button onClick={() => setItensClassificar(i => [...i, { descricao: '', valor: 0, data: new Date().toISOString().slice(0,10), natureza: 'Despesa', contaId: '', _matched: false, _matchId: null, _selecionado: false }])} style={{ marginTop:'8px', padding:'6px 12px', border:'1px dashed #C5A059', borderRadius:'6px', background:'#fff', cursor:'pointer', fontSize:'12px', color:'#C5A059', fontWeight:'bold' }}>+ Adicionar Linha</button>
             <div style={{ display:'flex', gap:'10px', justifyContent:'flex-end', marginTop:'15px', borderTop:'1px solid #eee', paddingTop:'15px' }}>
               <button onClick={() => { setTelaClassificar(false); setItensClassificar([]); }} style={{ padding:'10px 20px', border:'1px solid #ccc', borderRadius:'6px', background:'#fff', cursor:'pointer' }}>Cancelar</button>
               <button onClick={handleClassificarLancar} disabled={baixando || !itensClassificar.some(i => i._selecionado)} style={{ padding:'10px 20px', backgroundColor:'#28a745', color:'#fff', border:'none', borderRadius:'8px', fontWeight:'bold', cursor:'pointer', opacity: baixando ? 0.5 : 1 }}>
