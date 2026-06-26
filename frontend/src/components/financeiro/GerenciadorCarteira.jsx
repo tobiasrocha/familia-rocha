@@ -179,9 +179,9 @@ export default function GerenciadorCarteira({ cores, formatarMoeda, contasBancar
           <label style={{ fontSize: '12px', fontWeight: 'bold' }}>R$</label>
           <input type="number" step="0.01" value={valor} onChange={e => setValor(e.target.value)} placeholder="0,00" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
         </div>
-        <div style={{ display: 'flex', gap: '5px' }}>
+        <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
           {formasPagamento.map(f => (
-            <button key={f.key} type="button" onClick={() => { setForma(f.key); setVinculoId(''); }} style={{ padding: '10px 14px', borderRadius: '8px', border: forma === f.key ? `2px solid ${f.cor}` : '1px solid #ddd', backgroundColor: forma === f.key ? f.bg : '#fff', cursor: 'pointer', fontWeight: forma === f.key ? 'bold' : 'normal', color: f.cor, display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
+            <button key={f.key} type="button" onClick={() => { setForma(f.key); setVinculoId(''); }} style={{ padding: '10px 12px', borderRadius: '8px', border: forma === f.key ? `2px solid ${f.cor}` : '1px solid #ddd', backgroundColor: forma === f.key ? f.bg : '#fff', cursor: 'pointer', fontWeight: forma === f.key ? 'bold' : 'normal', color: f.cor, display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', whiteSpace: 'nowrap' }}>
               {f.icon} {f.label}
             </button>
           ))}

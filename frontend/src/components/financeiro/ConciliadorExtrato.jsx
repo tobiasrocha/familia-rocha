@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { UploadCloud, CheckCircle, AlertCircle, FileSearch, X, Loader } from 'lucide-react';
 import { apiFetch } from '../../config';
 
-export default function ConciliadorExtrato({ cores, onBaixas, dadosMesFiltro }) {
+export default function ConciliadorExtrato({ cores, onBaixas, dadosMesFiltro, contasBancarias }) {
   const [enviando, setEnviando] = useState(false);
   const [progresso, setProgresso] = useState(0);
   const [sucesso, setSucesso] = useState('');
@@ -39,6 +39,7 @@ export default function ConciliadorExtrato({ cores, onBaixas, dadosMesFiltro }) 
             valor: item.valor || 0,
             data: item.data || '',
             natureza: item.tipo || 'Despesa',
+            contaId: '',
             _matched: !!match,
             _matchId: match?.idFirestore || null,
             _selecionado: !!match,
@@ -59,7 +60,7 @@ export default function ConciliadorExtrato({ cores, onBaixas, dadosMesFiltro }) 
     setBaixando(true);
     try {
       const matchIds = selecionadas.filter(i => i._matchId).map(i => i._matchId);
-      const novos = selecionadas.filter(i => !i._matchId).map(i => ({ descricao: i.descricao, valor: i.valor, data: i.data, tipo: i.natureza }));
+      const novos = selecionadas.filter(i => !i._matchId).map(i => ({ descricao: i.descricao, valor: i.valor, data: i.data, tipo: i.natureza, contaId: i.contaId }));
       const body = {};
       if (matchIds.length > 0) body.ids = matchIds;
       if (novos.length > 0) body.itens = novos;
@@ -172,6 +173,10 @@ export default function ConciliadorExtrato({ cores, onBaixas, dadosMesFiltro }) 
                   <input type="text" value={item.descricao} onChange={e => atualizarItem(idx, 'descricao', e.target.value)} style={{ flex: 2, padding:'6px', borderRadius:'4px', border:'1px solid #ddd', fontSize:'12px', minWidth:'120px' }} />
                   <select value={item.natureza} onChange={e => atualizarItem(idx, 'natureza', e.target.value)} style={{ padding:'6px', borderRadius:'4px', border:'1px solid #ddd', fontSize:'12px', width:'100px' }}>
                     <option value="Despesa">Débito</option><option value="Receita">Crédito</option>
+                  </select>
+                  <select value={item.contaId} onChange={e => atualizarItem(idx, 'contaId', e.target.value)} style={{ padding:'6px', borderRadius:'4px', border:'1px solid #ddd', fontSize:'11px', width:'110px' }}>
+                    <option value="">Conta destino</option>
+                    {(contasBancarias || []).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
                   </select>
                   <input type="date" value={item.data} onChange={e => atualizarItem(idx, 'data', e.target.value)} style={{ padding:'6px', borderRadius:'4px', border:'1px solid #ddd', fontSize:'12px', width:'130px' }} />
                   <input type="number" step="0.01" value={item.valor} onChange={e => atualizarItem(idx, 'valor', e.target.value)} style={{ padding:'6px', borderRadius:'4px', border:'1px solid #ddd', fontSize:'12px', width:'90px' }} />

@@ -110,7 +110,7 @@ export default function TabelaLancamentos({ dadosMesFiltro, contasBancarias, car
 
       {/* Filtros */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '15px', flexWrap: 'wrap', alignItems: 'center' }}>
-        <div style={{ position: 'relative', flex: '1 1 250px' }}>
+        <div style={{ position: 'relative', flex: '1 1 180px', maxWidth: '250px' }}>
           <Search size={16} style={{ position: 'absolute', left: 10, top: 10, color: '#999' }} />
           <input type="text" value={busca} onChange={e => { setBusca(e.target.value); setPagina(1); }} placeholder="Buscar por descrição..." style={{ padding: '8px 8px 8px 32px', borderRadius: '8px', border: '1px solid #ddd', width: '100%' }} />
           {busca && <button onClick={() => setBusca('')} style={{ position: 'absolute', right: 8, top: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#999' }}><X size={14} /></button>}
