@@ -46,9 +46,20 @@ export default function ConciliadorExtrato({ cores, onBaixas, dadosMesFiltro, co
           });
         });
       }
-      if (todos.length > 0) {
-        setItensClassificar(todos);
+      if (todos.length > 0 || dados.matches?.length > 0) {
+        setItensClassificar(todos.length > 0 ? todos : (dados.matches || []).map(m => ({
+          descricao: m.descricao || '',
+          valor: m.valor || 0,
+          data: m.dataVencimento || '',
+          natureza: 'Despesa',
+          contaId: '',
+          _matched: true,
+          _matchId: m.idFirestore || null,
+          _selecionado: true,
+        })));
         setTelaClassificar(true);
+      } else {
+        setSucesso('Nenhum item encontrado no extrato.');
       }
     } catch (err) { setErro(err.message || 'Falha ao processar'); }
     finally { clearInterval(intervalo); setEnviando(false); }

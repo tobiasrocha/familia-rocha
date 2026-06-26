@@ -109,19 +109,21 @@ export default function TabelaLancamentos({ dadosMesFiltro, contasBancarias, car
       )}
 
       {/* Filtros */}
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '15px', flexWrap: 'wrap', alignItems: 'center' }}>
-        <div style={{ position: 'relative', flex: '1 1 180px', maxWidth: '250px' }}>
+      <div style={{ marginBottom: '15px' }}>
+        <div style={{ position: 'relative', marginBottom: '8px' }}>
           <Search size={16} style={{ position: 'absolute', left: 10, top: 10, color: '#999' }} />
-          <input type="text" value={busca} onChange={e => { setBusca(e.target.value); setPagina(1); }} placeholder="Buscar por descrição..." style={{ padding: '8px 8px 8px 32px', borderRadius: '8px', border: '1px solid #ddd', width: '100%' }} />
+          <input type="text" value={busca} onChange={e => { setBusca(e.target.value); setPagina(1); }} placeholder="Buscar por descrição..." style={{ padding: '8px 8px 8px 32px', borderRadius: '8px', border: '1px solid #ddd', width: '100%', maxWidth: '400px' }} />
           {busca && <button onClick={() => setBusca('')} style={{ position: 'absolute', right: 8, top: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#999' }}><X size={14} /></button>}
         </div>
-        <select value={filtroTipo} onChange={e => { setFiltroTipo(e.target.value); setPagina(1); }} style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #ddd', fontWeight: 'bold' }}>
-          <option value="Todos">Tipo: Todos</option><option value="Despesa">Despesa</option><option value="Receita">Receita</option>
-        </select>
-        <select value={filtroStatus} onChange={e => { setFiltroStatus(e.target.value); setPagina(1); }} style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #ddd', fontWeight: 'bold' }}>
-          <option value="Todos">Status: Todos</option><option value="Pendente">Pendente</option><option value="Pago">Pago</option>
-        </select>
-        <span style={{ fontSize: '12px', color: '#999', marginLeft: 'auto' }}>{filtrados.length} registro(s)</span>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <select value={filtroTipo} onChange={e => { setFiltroTipo(e.target.value); setPagina(1); }} style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #ddd', fontWeight: 'bold' }}>
+            <option value="Todos">Tipo: Todos</option><option value="Despesa">Despesa</option><option value="Receita">Receita</option>
+          </select>
+          <select value={filtroStatus} onChange={e => { setFiltroStatus(e.target.value); setPagina(1); }} style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #ddd', fontWeight: 'bold' }}>
+            <option value="Todos">Status: Todos</option><option value="Pendente">Pendente</option><option value="Pago">Pago</option>
+          </select>
+          <span style={{ fontSize: '12px', color: '#999' }}>{filtrados.length} registro(s)</span>
+        </div>
       </div>
 
       <div style={{ backgroundColor: cores?.branco, borderRadius: '12px', overflowX: 'auto' }}>
