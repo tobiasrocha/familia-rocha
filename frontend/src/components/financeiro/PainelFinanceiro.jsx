@@ -5,7 +5,7 @@ import { useFirestore } from '../../hooks/useFirestore';
 import { useFinancas } from '../../hooks/useFinancas';
 import { useUploadOcr } from '../../hooks/useUploadOcr';
 import { apiFetch } from '../../config';
-import { Wallet, Calendar, FileText, Bell, CreditCard, TrendingUp, TrendingDown } from 'lucide-react';
+import { Wallet, Calendar, FileText, Bell, CreditCard, TrendingUp, TrendingDown, Calculator } from 'lucide-react';
 
 import DashboardFinanceiro from './DashboardFinanceiro';
 import GerenciadorContas from './GerenciadorContas';
@@ -37,6 +37,19 @@ export default function PainelFinanceiro({ cores }) {
     const params = new URLSearchParams(window.location.search);
     return params.get('aba') === 'carteira' ? 'carteira' : 'dashboard';
   });
+  const [calcAberto, setCalcAberto] = useState(false);
+  const [calcVisor, setCalcVisor] = useState('0');
+  const [calcMemoria, setCalcMemoria] = useState(null);
+  const [calcOp, setCalcOp] = useState(null);
+  const calcDigito = (d) => { setCalcVisor(v => v === '0' ? String(d) : v + d); };
+  const calcOperacao = (op) => { setCalcMemoria(parseFloat(calcVisor)); setCalcOp(op); setCalcVisor('0'); };
+  const calcResultado = () => {
+    const a = calcMemoria || 0; const b = parseFloat(calcVisor) || 0;
+    let r = 0;
+    if (calcOp === '+') r = a + b; else if (calcOp === '-') r = a - b; else if (calcOp === '×') r = a * b; else if (calcOp === '÷') r = b !== 0 ? a / b : 0;
+    setCalcVisor(String(Math.round(r * 100) / 100)); setCalcMemoria(null); setCalcOp(null);
+  };
+  const calcLimpar = () => { setCalcVisor('0'); setCalcMemoria(null); setCalcOp(null); };
   const [exibirForm, setExibirForm] = useState(false);
   const [salvando, setSalvando] = useState(false);
 
@@ -227,6 +240,9 @@ export default function PainelFinanceiro({ cores }) {
           </button>
           <button type="button" onClick={() => setAbaAtiva('lancamentos')} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 22px', backgroundColor: abaAtiva === 'lancamentos' ? cores?.dourado : cores?.branco, color: abaAtiva === 'lancamentos' ? '#fff' : cores?.texto, border: `2px solid ${cores?.dourado}`, borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', fontSize: '15px' }}>
             <FileText size={20} /> Lançamentos
+          </button>
+          <button type="button" onClick={() => setCalcAberto(true)} title="Calculadora" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 15px', backgroundColor: '#f59e0b', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', fontSize: '15px' }}>
+            <Calculator size={20} />
           </button>
         </div>
         <button type="button" onClick={handleDispararAlertas} disabled={executandoAlertas} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', backgroundColor: '#dc3545', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', fontSize: '15px' }}>
@@ -434,6 +450,25 @@ export default function PainelFinanceiro({ cores }) {
           contasBancarias={contasBancarias}
           onRegistrarReceita={recarregar}
         />
+      )}
+
+      {/* Calculadora Popup */}
+      {calcAberto && (
+        <div style={{ position: 'fixed', top:0,left:0,right:0,bottom:0, backgroundColor:'rgba(0,0,0,0.5)', display:'flex', justifyContent:'center', alignItems:'center', zIndex:3000 }} onClick={() => setCalcAberto(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ backgroundColor:'#fff', padding:'20px', borderRadius:'16px', width:'260px', boxShadow:'0 20px 60px rgba(0,0,0,0.3)' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'15px' }}>
+              <h3 style={{ margin:0, fontSize:'16px' }}>Calculadora</h3>
+              <button onClick={() => setCalcAberto(false)} style={{ background:'none', border:'none', cursor:'pointer', color:'#999' }}><FileText size={18} style={{transform:'rotate(45deg)'}}/></button>
+            </div>
+            <div style={{ backgroundColor:'#f0f0f0', padding:'15px', borderRadius:'8px', textAlign:'right', fontSize:'24px', fontWeight:'bold', marginBottom:'15px', minHeight:'40px', wordBreak:'break-all' }}>{calcVisor}</div>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'8px' }}>
+              {[7,8,9,'÷',4,5,6,'×',1,2,3,'-',0,'.','=','+'].map(b => (
+                <button key={b} onClick={() => { if (typeof b === 'number' || b === '.') calcDigito(b); else if (b === '=') calcResultado(); else calcOperacao(b); }} style={{ padding:'12px', borderRadius:'8px', border:'1px solid #ddd', background: b === '=' ? '#d97706' : typeof b === 'string' ? '#f5f5f5' : '#fff', color: b === '=' ? '#fff' : '#333', fontSize:'16px', fontWeight:'bold', cursor:'pointer' }}>{b}</button>
+              ))}
+            </div>
+            <button onClick={calcLimpar} style={{ width:'100%', marginTop:'10px', padding:'12px', borderRadius:'8px', border:'1px solid #ddd', background:'#fee2e2', color:'#dc2626', fontSize:'14px', fontWeight:'bold', cursor:'pointer' }}>C</button>
+          </div>
+        </div>
       )}
     </div>
   );
