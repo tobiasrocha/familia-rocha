@@ -40,6 +40,7 @@ export default function GerenciadorPrestadores({ cores, formatarMoeda, contasBan
   const [pagValor, setPagValor] = useState('');
   const [pagData, setPagData] = useState(new Date().toISOString().slice(0,10));
   const [pagContaId, setPagContaId] = useState('');
+  const [pagForma, setPagForma] = useState('PIX');
   const [copiado, setCopiado] = useState(null);
 
   const resetForm = () => {
@@ -119,11 +120,11 @@ export default function GerenciadorPrestadores({ cores, formatarMoeda, contasBan
         dataVencimento: pagData,
         status: 'Pago',
         contaId: pagContaId || p.contaId || null,
-        formaPagamento: 'PIX',
+        formaPagamento: pagForma,
         prestadorId: p.id,
         criadoEm: new Date().toISOString(),
       });
-      setPagId(null); setPagValor(''); setPagContaId('');
+      setPagId(null); setPagValor(''); setPagContaId(''); setPagForma('PIX');
       if (onRegistrarDespesa) onRegistrarDespesa();
     } catch { alert('Erro ao registrar.'); }
   };
@@ -293,6 +294,9 @@ export default function GerenciadorPrestadores({ cores, formatarMoeda, contasBan
                   <div style={{ padding: '6px', backgroundColor: '#f0fdf4', borderRadius: '6px', border: '1px solid #bbf7d0' }}>
                     <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '4px' }}>
                       <input type="number" step="0.01" value={pagValor} onChange={e => setPagValor(e.target.value)} placeholder={formatarMoeda(p.valorServico || 0)} style={{ padding: '6px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '12px', flex: 1 }} />
+                      <select value={pagForma} onChange={e => setPagForma(e.target.value)} style={{ padding: '6px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '11px' }}>
+                        <option value="PIX">PIX</option><option value="Dinheiro">Dinheiro</option><option value="Débito">Débito</option>
+                      </select>
                       <select value={pagContaId} onChange={e => setPagContaId(e.target.value)} style={{ padding: '6px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '12px' }}>
                         <option value="">Conta</option>
                         {(contasBancarias || []).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
