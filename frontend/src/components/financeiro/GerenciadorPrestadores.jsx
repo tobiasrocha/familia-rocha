@@ -267,17 +267,20 @@ export default function GerenciadorPrestadores({ cores, formatarMoeda, contasBan
                     <ArrowUpCircle size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} /> Registrar Pagamento
                   </button>
                 )}
-                {/* Histórico de pagamentos */}
+
+                {/* Histórico de pagamentos (CRUD) */}
                 {(() => {
                   const pagtos = (lancamentosGlobais || []).filter(l => l.prestadorId === p.id && l.categoria === 'Prestadores de Serviço').sort((a,b) => new Date(b.dataVencimento) - new Date(a.dataVencimento));
                   if (pagtos.length === 0) return null;
                   return (
-                    <div style={{ marginTop: '6px', maxHeight: '80px', overflowY: 'auto' }}>
+                    <div style={{ marginTop: '6px', maxHeight: '100px', overflowY: 'auto' }}>
+                      <span style={{ fontSize: '10px', color: '#999', fontWeight: 'bold', display: 'block', marginBottom: '3px' }}>Pagamentos ({pagtos.length}):</span>
                       {pagtos.map(l => (
-                        <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: '#666', padding: '1px 0' }}>
+                        <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', color: '#666', padding: '1px 0', borderBottom: '1px solid #f5f5f5' }}>
                           <span style={{ flex: 1 }}>{l.dataVencimento?.split('-').reverse().join('/')}</span>
-                          <span style={{ fontWeight: 'bold', color: '#dc2626' }}>-{formatarMoeda(l.valor)}</span>
-                          <span style={{ fontSize: '9px', color: '#888' }}>{contasBancarias?.find(c => c.id === l.contaId)?.nome || ''}</span>
+                          <span style={{ fontWeight: 'bold', color: '#dc2626', minWidth: '45px', textAlign: 'right' }}>-{formatarMoeda(l.valor)}</span>
+                          <span style={{ fontSize: '9px', color: '#888' }}>{l.formaPagamento}</span>
+                          <span style={{ fontSize: '9px', color: '#C5A059' }}>{contasBancarias?.find(c => c.id === l.contaId)?.nome || ''}</span>
                         </div>
                       ))}
                     </div>
