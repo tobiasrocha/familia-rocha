@@ -73,7 +73,7 @@ export default function ConciliadorExtrato({ cores, onBaixas, dadosMesFiltro, co
     setBaixando(true);
     try {
       const matchIds = selecionadas.filter(i => i._matchId).map(i => i._matchId);
-      const novos = selecionadas.filter(i => !i._matchId).map(i => ({ descricao: i.descricao, valor: i.valor, data: i.data, tipo: i.natureza, contaId: i.contaId }));
+      const novos = selecionadas.filter(i => !i._matchId).map(i => ({ descricao: i.descricao, valor: i.valor, data: i.data, tipo: i.natureza, contaId: i.contaId, categoria: 'Outros' }));
       const body = {};
       if (matchIds.length > 0) body.ids = matchIds;
       if (novos.length > 0) body.itens = novos;
