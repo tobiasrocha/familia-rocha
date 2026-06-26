@@ -39,17 +39,33 @@ export default function PainelFinanceiro({ cores }) {
   });
   const [calcAberto, setCalcAberto] = useState(false);
   const [calcVisor, setCalcVisor] = useState('0');
+  const [calcExpressao, setCalcExpressao] = useState('');
   const [calcMemoria, setCalcMemoria] = useState(null);
   const [calcOp, setCalcOp] = useState(null);
-  const calcDigito = (d) => { setCalcVisor(v => v === '0' ? String(d) : v + d); };
-  const calcOperacao = (op) => { setCalcMemoria(parseFloat(calcVisor)); setCalcOp(op); setCalcVisor('0'); };
+  const [calcHistorico, setCalcHistorico] = useState([]);
+  const calcDigito = (d) => { setCalcVisor(v => v === '0' || calcOp !== null ? String(d) : v + d); };
+  const calcOperacao = (op) => {
+    if (calcMemoria !== null) calcResultado();
+    const val = parseFloat(calcVisor) || 0;
+    setCalcMemoria(val);
+    setCalcOp(op);
+    setCalcExpressao(e => e + ' ' + val + ' ' + op);
+    setCalcVisor('0');
+  };
   const calcResultado = () => {
     const a = calcMemoria || 0; const b = parseFloat(calcVisor) || 0;
-    let r = 0;
-    if (calcOp === '+') r = a + b; else if (calcOp === '-') r = a - b; else if (calcOp === '×') r = a * b; else if (calcOp === '÷') r = b !== 0 ? a / b : 0;
-    setCalcVisor(String(Math.round(r * 100) / 100)); setCalcMemoria(null); setCalcOp(null);
+    const r = calcOp === '+' ? a + b : calcOp === '-' ? a - b : calcOp === '×' ? a * b : calcOp === '÷' ? (b !== 0 ? a / b : 0) : b;
+    const rr = Math.round(r * 100) / 100;
+    const expr = calcExpressao + ' ' + b + ' = ' + rr;
+    setCalcVisor(String(rr));
+    setCalcExpressao('');
+    setCalcMemoria(null);
+    setCalcOp(null);
+    setCalcHistorico(h => [expr, ...h].slice(0, 10));
   };
-  const calcLimpar = () => { setCalcVisor('0'); setCalcMemoria(null); setCalcOp(null); };
+  const calcLimpar = () => {
+    setCalcVisor('0'); setCalcExpressao(''); setCalcMemoria(null); setCalcOp(null); setCalcHistorico([]);
+  };
   const [exibirForm, setExibirForm] = useState(false);
   const [salvando, setSalvando] = useState(false);
 
@@ -455,18 +471,29 @@ export default function PainelFinanceiro({ cores }) {
       {/* Calculadora Popup */}
       {calcAberto && (
         <div style={{ position: 'fixed', top:0,left:0,right:0,bottom:0, backgroundColor:'rgba(0,0,0,0.5)', display:'flex', justifyContent:'center', alignItems:'center', zIndex:3000 }} onClick={() => setCalcAberto(false)}>
-          <div onClick={e => e.stopPropagation()} style={{ backgroundColor:'#fff', padding:'20px', borderRadius:'16px', width:'260px', boxShadow:'0 20px 60px rgba(0,0,0,0.3)' }}>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'15px' }}>
+          <div onClick={e => e.stopPropagation()} style={{ backgroundColor:'#fff', padding:'20px', borderRadius:'16px', width:'280px', boxShadow:'0 20px 60px rgba(0,0,0,0.3)' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'10px' }}>
               <h3 style={{ margin:0, fontSize:'16px' }}>Calculadora</h3>
-              <button onClick={() => setCalcAberto(false)} style={{ background:'none', border:'none', cursor:'pointer', color:'#999' }}><FileText size={18} style={{transform:'rotate(45deg)'}}/></button>
+              <button onClick={() => setCalcAberto(false)} style={{ background:'none', border:'none', cursor:'pointer', color:'#999', fontSize:'18px' }}>✕</button>
             </div>
-            <div style={{ backgroundColor:'#f0f0f0', padding:'15px', borderRadius:'8px', textAlign:'right', fontSize:'24px', fontWeight:'bold', marginBottom:'15px', minHeight:'40px', wordBreak:'break-all' }}>{calcVisor}</div>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'8px' }}>
+            <div style={{ backgroundColor:'#f8fafc', padding:'10px', borderRadius:'8px', marginBottom:'8px', minHeight:'24px' }}>
+              <div style={{ fontSize:'12px', color:'#999', textAlign:'right', minHeight:'16px' }}>{calcExpressao || '\u00A0'}</div>
+              <div style={{ fontSize:'26px', fontWeight:'bold', textAlign:'right', wordBreak:'break-all' }}>{calcVisor}</div>
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'6px', marginBottom:'8px' }}>
               {[7,8,9,'÷',4,5,6,'×',1,2,3,'-',0,'.','=','+'].map(b => (
                 <button key={b} onClick={() => { if (typeof b === 'number' || b === '.') calcDigito(b); else if (b === '=') calcResultado(); else calcOperacao(b); }} style={{ padding:'12px', borderRadius:'8px', border:'1px solid #ddd', background: b === '=' ? '#d97706' : typeof b === 'string' ? '#f5f5f5' : '#fff', color: b === '=' ? '#fff' : '#333', fontSize:'16px', fontWeight:'bold', cursor:'pointer' }}>{b}</button>
               ))}
             </div>
-            <button onClick={calcLimpar} style={{ width:'100%', marginTop:'10px', padding:'12px', borderRadius:'8px', border:'1px solid #ddd', background:'#fee2e2', color:'#dc2626', fontSize:'14px', fontWeight:'bold', cursor:'pointer' }}>C</button>
+            <button onClick={calcLimpar} style={{ width:'100%', padding:'10px', borderRadius:'8px', border:'1px solid #ddd', background:'#fee2e2', color:'#dc2626', fontSize:'13px', fontWeight:'bold', cursor:'pointer', marginBottom:'8px' }}>C — Limpar</button>
+            {calcHistorico.length > 0 && (
+              <div style={{ borderTop:'1px solid #eee', paddingTop:'8px', maxHeight:'120px', overflowY:'auto' }}>
+                <span style={{ fontSize:'10px', color:'#999', fontWeight:'bold' }}>Histórico:</span>
+                {calcHistorico.map((h, i) => (
+                  <div key={i} onClick={() => { setCalcVisor(String(h.split('= ')[1])); setCalcExpressao(''); setCalcMemoria(null); setCalcOp(null); }} style={{ fontSize:'11px', color:'#666', padding:'2px 0', cursor:'pointer', borderBottom:'1px solid #f5f5f5' }}>{h}</div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
