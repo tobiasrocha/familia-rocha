@@ -31,6 +31,7 @@ export default function PainelFinanceiro({ cores }) {
   const { dados: investimentos, recarregar: recarregarInvestimentos } = useFirestore('investimentos');
   const { dados: carteira } = useFirestore('carteira');
   const { dados: cofre } = useFirestore('cofre');
+  const { dados: emprestimos } = useFirestore('emprestimos');
 
   const [abaAtiva, setAbaAtiva] = useState(() => {
     const params = new URLSearchParams(window.location.search);
@@ -97,8 +98,8 @@ export default function PainelFinanceiro({ cores }) {
     calcularSaldoConta, saldoGlobalConsolidado, saldoBancario, saldoInvestimentos, debitoCartoes, saldoCofre, dadosMesFiltro,
     totalReceitas, totalDespesasPagas, totalDespesasPendentes,
     recContabil, despContabil, resultadoExercicio,
-    valorBensDireitos, totalAtivos, totalPassivos, patrimonioLiquido,
-  } = useFinancas({ lancamentosGlobais, contasBancarias, patrimonio, cartoes, investimentos, cofre, mesFiltro, anoContabil, mesContabil, perfilContabil });
+    valorBensDireitos, totalAtivos, totalPassivos, totalEmprestimos, patrimonioLiquido,
+  } = useFinancas({ lancamentosGlobais, contasBancarias, patrimonio, cartoes, investimentos, cofre, emprestimos, mesFiltro, anoContabil, mesContabil, perfilContabil });
 
   const formatarMoeda = (val) => Number(val).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   const obterNomePerfil = (id) => perfis.find(p => p.id === id)?.nome?.split(' ')[0] || 'Geral';
@@ -347,6 +348,8 @@ export default function PainelFinanceiro({ cores }) {
           saldoInvestimentos={saldoInvestimentos}
           debitoCartoes={debitoCartoes}
           valorBensDireitos={valorBensDireitos}
+          saldoCofre={saldoCofre}
+          totalEmprestimos={totalEmprestimos}
           totalAtivos={totalAtivos}
           totalPassivos={totalPassivos}
           patrimonioLiquido={patrimonioLiquido}
