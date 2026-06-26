@@ -106,6 +106,40 @@ export default function GerenciadorCarteira({ cores, formatarMoeda, contasBancar
         });
       }
     }
+    // Se for Débito ou PIX vinculado a banco, lança no financeiro
+    if ((forma === 'Debito' || forma === 'Pix') && vinculoId && valorNum > 0) {
+      const banco = contasBancarias?.find(c => c.id === vinculoId);
+      if (banco) {
+        await addDoc(collection(db, 'financas'), {
+          descricao: `Carteira (${forma}): ${descricao}`,
+          valor: valorNum,
+          tipo: 'Despesa',
+          categoria: categoria,
+          dataVencimento: data,
+          status: 'Pago',
+          contaId: vinculoId,
+          formaPagamento: forma === 'Pix' ? 'PIX' : 'Débito',
+          criadoEm: new Date().toISOString(),
+        });
+      }
+    }
+    // Se for Crédito vinculado a cartão, lança no financeiro
+    if (forma === 'Credito' && vinculoId && valorNum > 0) {
+      const cartao = cartoes?.find(c => c.id === vinculoId);
+      if (cartao) {
+        await addDoc(collection(db, 'financas'), {
+          descricao: `Carteira (Crédito): ${descricao}`,
+          valor: valorNum,
+          tipo: 'Despesa',
+          categoria: categoria,
+          dataVencimento: data,
+          status: 'Pago',
+          contaId: vinculoId,
+          formaPagamento: 'Crédito',
+          criadoEm: new Date().toISOString(),
+        });
+      }
+    }
     resetForm(); recarregar();
   };
 
