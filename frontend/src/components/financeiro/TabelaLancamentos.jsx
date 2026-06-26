@@ -110,8 +110,18 @@ export default function TabelaLancamentos({ dadosMesFiltro, contasBancarias, car
                     {item.descricao} <br /><span style={{ fontSize: '11px', color: '#888' }}>{item.categoria}</span>
                     {item.codigoBarras && (
                       <div style={{ marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <span style={{ fontSize: '10px', color: '#999' }}>PIX: {item.codigoBarras.substring(0, 40)}...</span>
-                        <button onClick={() => { navigator.clipboard.writeText(item.codigoBarras); }} title="Copiar PIX" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C5A059', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                        {item.pix && <span style={{ fontSize: '10px', color: '#059669', fontWeight: 'bold' }}>PIX</span>}
+                        <span style={{ fontSize: '10px', color: '#999' }}>{item.pix ? item.pix : `Cod.Barras: ${item.codigoBarras.substring(0, 40)}...`}</span>
+                        <button onClick={() => { navigator.clipboard.writeText(item.pix || item.codigoBarras); }} title="Copiar" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C5A059', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                          <Copy size={11} /> Copiar
+                        </button>
+                      </div>
+                    )}
+                    {!item.codigoBarras && item.pix && (
+                      <div style={{ marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ fontSize: '10px', color: '#059669', fontWeight: 'bold' }}>PIX</span>
+                        <span style={{ fontSize: '10px', color: '#999' }}>{item.pix.substring(0, 40)}...</span>
+                        <button onClick={() => { navigator.clipboard.writeText(item.pix); }} title="Copiar PIX" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C5A059', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '2px' }}>
                           <Copy size={11} /> Copiar
                         </button>
                       </div>
