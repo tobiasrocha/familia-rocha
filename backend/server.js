@@ -771,6 +771,12 @@ app.post('/api/conciliar-extrato', autenticar, verificarPermissao('financeiro'),
       const limpa = linha.trim();
       if (limpa.length < 10) continue;
 
+      // Ignora cabecalho, numero de documento e saldo
+      const upper = limpa.toUpperCase();
+      if (upper.includes('EXTRATO') || upper.includes('AGENCIA') || upper.includes('CONTA') || upper.includes('DATA') || upper.includes('HISTORICO') || upper.includes('DOCUMENTO') || upper.includes('PERIODO') || upper.includes('EMITIDO')) continue;
+      if (upper.startsWith('NR') || upper.startsWith('NO') || upper.startsWith('N0') || /^\d{3,}\s+\d/.test(limpa)) continue;
+      if (upper.includes('SALDO') || upper.includes('SDO') || upper.includes('BALANCE') || upper.includes('TOTAL')) continue;
+
       // Tenta extrair data
       const matchData = limpa.match(regexData);
       if (!matchData) continue;
