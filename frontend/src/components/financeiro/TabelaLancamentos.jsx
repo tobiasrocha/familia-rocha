@@ -3,6 +3,31 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { Pencil, Trash2, User, Landmark, Link, Search, X, ChevronLeft, ChevronRight, Copy } from 'lucide-react';
 
+function classificarCodigo(cod) {
+  if (!cod) return null;
+  const limpo = cod.replace(/[^\d]/g, '');
+  const temLetras = /[a-zA-Z]/.test(cod);
+  const soDigitos = /^\d+$/.test(limpo);
+
+  // Código de barras: 40+ dígitos
+  if (limpo.length >= 40) return { label: 'Cod. Barras', valor: limpo, cor: '#6b7280' };
+  // Convênio: 4 a 12 dígitos
+  if (limpo.length >= 4 && limpo.length <= 12 && soDigitos) return { label: 'Convênio', valor: limpo, cor: '#0891b2' };
+  // CPF: 11 dígitos
+  if (limpo.length === 11 && soDigitos) return { label: 'CPF', valor: limpo, cor: '#7c3aed' };
+  // Telefone: 10 ou 11 dígitos
+  if ((limpo.length === 10 || limpo.length === 11) && soDigitos) return { label: 'Telefone', valor: limpo, cor: '#2563eb' };
+  // Hash aleatória (ex: chave PIX aleatória): muitos caracteres, com letras e números
+  if (cod.length > 12 && temLetras) return { label: 'Chave PIX', valor: cod, cor: '#059669' };
+  // Email
+  if (cod.includes('@')) return { label: 'Chave PIX', valor: cod, cor: '#059669' };
+  // Letras e números = chave PIX
+  if (temLetras && limpo.length > 0) return { label: 'Chave PIX', valor: cod, cor: '#059669' };
+  // Dígitos puros curtos: código de convênio ou PIX CPF/telefone
+  if (soDigitos && limpo.length > 0) return { label: 'Convênio', valor: limpo, cor: '#0891b2' };
+  return null;
+}
+
 export default function TabelaLancamentos({ dadosMesFiltro, contasBancarias, cartoes, cores, hoje, formatarMoeda, obterNomePerfil, onEditar, onExcluir }) {
   const [vinculandoId, setVinculandoId] = useState(null);
   const [busca, setBusca] = useState('');
@@ -108,24 +133,19 @@ export default function TabelaLancamentos({ dadosMesFiltro, contasBancarias, car
                   <td style={{ padding: '15px' }}>{item.dataVencimento?.split('-').reverse().join('/')}</td>
                   <td style={{ padding: '15px', fontWeight: 'bold' }}>
                     {item.descricao} <br /><span style={{ fontSize: '11px', color: '#888' }}>{item.categoria}</span>
-                    {item.codigoBarras && (
-                      <div style={{ marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        {item.pix && <span style={{ fontSize: '10px', color: '#059669', fontWeight: 'bold' }}>PIX</span>}
-                        <span style={{ fontSize: '10px', color: '#999' }}>{item.pix ? item.pix : `Cod.Barras: ${item.codigoBarras.substring(0, 40)}...`}</span>
-                        <button onClick={() => { navigator.clipboard.writeText(item.pix || item.codigoBarras); }} title="Copiar" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C5A059', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '2px' }}>
-                          <Copy size={11} /> Copiar
-                        </button>
-                      </div>
-                    )}
-                    {!item.codigoBarras && item.pix && (
-                      <div style={{ marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <span style={{ fontSize: '10px', color: '#059669', fontWeight: 'bold' }}>PIX</span>
-                        <span style={{ fontSize: '10px', color: '#999' }}>{item.pix.substring(0, 40)}...</span>
-                        <button onClick={() => { navigator.clipboard.writeText(item.pix); }} title="Copiar PIX" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C5A059', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '2px' }}>
-                          <Copy size={11} /> Copiar
-                        </button>
-                      </div>
-                    )}
+                    {item.codigoBarras && (() => {
+                      const classified = classificarCodigo(item.codigoBarras);
+                      if (!classified) return null;
+                      return (
+                        <div style={{ marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span style={{ fontSize: '9px', fontWeight: 'bold', color: classified.cor, backgroundColor: `${classified.cor}15`, padding: '1px 5px', borderRadius: '4px' }}>{classified.label}</span>
+                          <span style={{ fontSize: '10px', color: '#999' }}>{classified.valor.length > 32 ? classified.valor.substring(0, 32) + '...' : classified.valor}</span>
+                          <button onClick={() => { navigator.clipboard.writeText(classified.valor); }} title="Copiar" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C5A059', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                            <Copy size={11} /> Copiar
+                          </button>
+                        </div>
+                      );
+                    })()}
                     {item.linkArquivo && <a href={item.linkArquivo} target="_blank" rel="noopener noreferrer" style={{ display: 'block', fontSize: '11px', color: '#0056b3', marginTop: '4px' }}>📄 Anexo Drive</a>}
                   </td>
                   <td style={{ padding: '15px' }}>
