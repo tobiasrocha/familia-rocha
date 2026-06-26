@@ -3,6 +3,7 @@ import { collection, addDoc, doc, deleteDoc, updateDoc } from 'firebase/firestor
 import { db } from '../../firebaseConfig';
 import { useFirestore } from '../../hooks/useFirestore';
 import { Plus, Trash2, Pencil, Wrench, Calendar, Landmark, QrCode, Package, Utensils, AlertTriangle, Bell, Check, X, Copy, ArrowUpCircle } from 'lucide-react';
+import SelectDigitavel from '../SelectDigitavel';
 
 const tiposServico = ['Encanador', 'Eletricista', 'Pintor', 'Pedreiro', 'Diarista', 'Jardineiro', 'Marceneiro', 'Técnico', 'Motorista', 'Outros'];
 
@@ -146,7 +147,7 @@ export default function GerenciadorPrestadores({ cores, formatarMoeda, contasBan
           </div>
           <div style={{ flex: '1 1 140px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
             <label style={{ fontSize: '13px', fontWeight: 'bold' }}>Tipo</label>
-            <select value={tipoServico} onChange={e => setTipoServico(e.target.value)} style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }}>{tiposServico.map(t => <option key={t} value={t}>{t}</option>)}</select>
+            <SelectDigitavel value={tipoServico} onChange={setTipoServico} opcoes={tiposServico} style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
           </div>
           <div style={{ flex: '1 1 140px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
             <label style={{ fontSize: '13px', fontWeight: 'bold' }}>Telefone</label>
