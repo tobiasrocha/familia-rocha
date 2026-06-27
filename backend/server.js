@@ -368,9 +368,6 @@ async function verificarEVenciarAlertas(isManual = false) {
       // GATILHO: Só dispara se houver pelo menos uma conta/evento em 5 ou 0 dias
       if ([5, 0].includes(diffDias)) deveDisparar = true;
 
-      // CONTEÚDO: Coloca na lista TODAS as contas lançadas no intervalo de 15 dias
-      if (diffDias < -15 || diffDias > 15) continue;
-
       const vencFormatado = conta.dataVencimento.split('-').reverse().join('/');
       const extra = [];
       if (conta.multa > 0) extra.push(`Multa: R$ ${Number(conta.multa).toFixed(2).replace('.', ',')}`);
