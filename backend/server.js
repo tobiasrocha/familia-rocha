@@ -355,7 +355,7 @@ async function verificarEVenciarAlertas(isManual = false) {
       .split(',').map(e => e.trim()).filter(Boolean);
     const whatsappHabilitado = !!(process.env.WHATSAPP_API_URL && process.env.WHATSAPP_API_TOKEN);
 
-    const configSnap = await admin.firestore().collection('configuracoes').doc('alertas').get();
+    const configSnap = await firestoreDb.collection('configuracoes').doc('alertas').get();
     const configAlertas = configSnap.exists ? configSnap.data() : { semanalPendentes: true, diarioVencimento: true, diarioNovasContas: true, quinzenalVencidas: true };
 
     const isSegunda = hoje.getDay() === 1;
@@ -405,8 +405,13 @@ async function verificarEVenciarAlertas(isManual = false) {
         deveDisparar = true;
       }
 
-      if (isManual) {
-        incluir = true; // Se for manual, processa todas pra não ir vazio
+      if (isManual && !incluir && (configAlertas.semanalPendentes || configAlertas.diarioVencimento || configAlertas.diarioNovasContas || configAlertas.quinzenalVencidas)) {
+        // Se for manual e NENHUMA conta entrou nas regras específicas do dia, mas o usuário pediu um teste...
+        // Para que o teste não venha vazio caso hoje não seja segunda-feira ou não tenha vencimento,
+        // relaxamos a exigência de "dia exato" apenas para fins de demonstração (teste) se as regras estiverem ativas.
+        if (configAlertas.semanalPendentes && diffDias >= 0 && diffDias <= 7) incluir = true;
+        else if (configAlertas.diarioVencimento && diffDias >= 0 && diffDias <= 1) incluir = true;
+        else if (configAlertas.quinzenalVencidas && diffDias >= -15 && diffDias < 0) incluir = true;
       }
 
       if (!incluir) continue;
