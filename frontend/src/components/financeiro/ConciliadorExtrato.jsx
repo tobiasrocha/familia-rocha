@@ -132,8 +132,8 @@ export default function ConciliadorExtrato({ cores, onBaixas, dadosMesFiltro, co
 
       <div style={{ backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '8px', border: '1px dashed #ccc', display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
         <UploadCloud size={28} color={cores?.dourado} />
-        <div style={{ flex: 1 }}><span style={{ display: 'block', fontWeight: 'bold', fontSize: '14px' }}>Upload de Extrato Bancário (PDF)</span><span style={{ display: 'block', fontSize: '12px', color: '#666' }}>O sistema lê o extrato e cruza com contas pendentes.</span></div>
-        <input type="file" accept=".pdf,image/*" onChange={handleUpload} disabled={enviando} style={{ display: 'none' }} id="fileExtrato" />
+        <div style={{ flex: 1 }}><span style={{ display: 'block', fontWeight: 'bold', fontSize: '14px' }}>Upload de Extrato Bancário (PDF, OFX, OFC, TXT ou Imagem)</span><span style={{ display: 'block', fontSize: '12px', color: '#666' }}>O sistema processa o extrato e cruza com contas pendentes.</span></div>
+        <input type="file" accept=".pdf,image/*,.txt,.ofc,.ofx" onChange={handleUpload} disabled={enviando} style={{ display: 'none' }} id="fileExtrato" />
         <label htmlFor="fileExtrato" style={{ cursor: enviando ? 'wait' : 'pointer', padding: '8px 15px', backgroundColor: '#0056b3', color: '#fff', borderRadius: '6px', fontSize: '13px', fontWeight: 'bold' }}>
           {enviando ? `Processando... ${progresso}%` : 'Selecionar Extrato'}
         </label>

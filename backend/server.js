@@ -23,6 +23,8 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { createWorker } = require('tesseract.js');
+const Jimp = require('jimp');
+const jsQR = require('jsqr');
 
 // Carrega credenciais: arquivo local ou Application Default Credentials (Cloud Run)
 let serviceAccount = null;
@@ -352,7 +354,6 @@ async function verificarEVenciarAlertas() {
     const emailDestinatarios = (process.env.ALERTA_EMAILS || 'tobiasrocha@gmail.com,renallyraiani@gmail.com')
       .split(',').map(e => e.trim()).filter(Boolean);
     const whatsappHabilitado = !!(process.env.WHATSAPP_API_URL && process.env.WHATSAPP_API_TOKEN);
-    const prazosAlerta = [5, 0];
 
     // Coleta todas as contas no prazo
     const contasAlerta = [];
@@ -361,14 +362,24 @@ async function verificarEVenciarAlertas() {
       if (!conta.dataVencimento) continue;
       const vencimento = new Date(conta.dataVencimento + 'T00:00:00');
       const diffDias = Math.ceil((vencimento.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
-      if (diffDias < -1) continue;
-      if (!prazosAlerta.includes(diffDias)) continue;
+      
+      // O alerta para esta conta só deve entrar na lista se faltarem exatamente 5 dias ou 0 dias (hoje)
+      if (![5, 0].includes(diffDias)) continue;
 
       const vencFormatado = conta.dataVencimento.split('-').reverse().join('/');
       const extra = [];
       if (conta.multa > 0) extra.push(`Multa: R$ ${Number(conta.multa).toFixed(2).replace('.', ',')}`);
       if (conta.juros > 0) extra.push(`Juros: R$ ${Number(conta.juros).toFixed(2).replace('.', ',')}`);
-      if (conta.codigoBarras) extra.push(`Cod. Barras: ${conta.codigoBarras}`);
+      
+      const payloadLink = { d: conta.descricao, v: conta.valor };
+      if (conta.pixCopiaCola) payloadLink.p = conta.pixCopiaCola;
+      if (conta.codigoBarras) payloadLink.b = conta.codigoBarras;
+      
+      const hashData = Buffer.from(JSON.stringify(payloadLink)).toString('base64url');
+      const urlPagamento = `https://familia-rocha-7ea1a.web.app/pagar/${hashData}`;
+
+      // O link SEMPRE será enviado, mesmo se não tiver código (a página avisa se não tiver)
+      extra.push(`Página de Pagamento: ${urlPagamento}`);
 
       contasAlerta.push({
         descricao: conta.descricao,
@@ -534,7 +545,6 @@ async function verificarAlertasSaude() {
 
     const SUPERADMIN_EMAIL = 'tobiasrocha@gmail.com';
     const whatsappHabilitado = !!(process.env.WHATSAPP_API_URL && process.env.WHATSAPP_API_TOKEN);
-    const prazosAlerta = [5, 0];
 
     // Coleta eventos no prazo, agrupados por perfilId
     const eventosPorPerfil = {};
@@ -547,8 +557,9 @@ async function verificarAlertasSaude() {
 
       const dataEvento = new Date(evento.dataEvento + 'T00:00:00');
       const diffDias = Math.ceil((dataEvento.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
-      if (diffDias < -1) continue;
-      if (!prazosAlerta.includes(diffDias)) continue;
+      
+      // O alerta para este evento só entra na lista se faltarem exatamente 5 dias ou 0 dias (hoje)
+      if (![5, 0].includes(diffDias)) continue;
 
       const perfil = perfisMap[evento.perfilId] || {};
       const nomePaciente = perfil.nome || 'Paciente';
@@ -761,11 +772,46 @@ app.post('/api/conciliar-extrato', autenticar, verificarPermissao('financeiro'),
 
     // 2) Extrai transacoes do texto (multi-regex para varios formatos de extrato)
     const transacoesExtrato = [];
-    const linhas = textoExtrato.split('\n');
-    const anoAtual = new Date().getFullYear();
+    const isOfxOrOfc = req.file.originalname.toLowerCase().endsWith('.ofx') || req.file.originalname.toLowerCase().endsWith('.ofc');
 
-    // Padroes de data: dd/mm, dd/mm/aaaa, dd.mm, dd-mm
-    const regexData = /(\d{1,2}[\/\.\-]\d{1,2}(?:[\/\.\-]\d{2,4})?)/;
+    if (isOfxOrOfc) {
+      console.log('[CONCILIACAO] Processando arquivo OFX/OFC');
+      const regexTrn = /<STMTTRN>([\s\S]*?)<\/STMTTRN>/gi;
+      const blocos = [...textoExtrato.matchAll(regexTrn)];
+      
+      for (const bloco of blocos) {
+        const conteudo = bloco[1];
+        const matchValor = conteudo.match(/<TRNAMT>\s*([\-\.\d]+)/i);
+        const matchData = conteudo.match(/<DTPOSTED>\s*(\d{8})/i);
+        const matchMemo = conteudo.match(/<MEMO>\s*(.*)/i);
+        
+        if (matchValor && matchData) {
+          const valorNum = parseFloat(matchValor[1]);
+          const dt = matchData[1];
+          const ano = dt.substring(0, 4);
+          const mes = dt.substring(4, 6);
+          const dia = dt.substring(6, 8);
+          
+          let descricao = '';
+          if (matchMemo && matchMemo[1]) {
+            descricao = matchMemo[1].replace(/<\/?[^>]+(>|$)/g, "").trim();
+          }
+          
+          transacoesExtrato.push({
+            data: `${ano}-${mes}-${dia}`,
+            descricao: descricao.substring(0, 60) || 'Transação',
+            valor: Math.abs(valorNum),
+            tipo: valorNum < 0 ? 'DEBITO' : 'CREDITO',
+          });
+        }
+      }
+    } else {
+      console.log('[CONCILIACAO] Processando arquivo TXT/PDF/Imagem via Regex linha-a-linha');
+      const linhas = textoExtrato.split('\n');
+      const anoAtual = new Date().getFullYear();
+
+      // Padroes de data: dd/mm, dd/mm/aaaa, dd.mm, dd-mm
+      const regexData = /(\d{1,2}[\/\.\-]\d{1,2}(?:[\/\.\-]\d{2,4})?)/;
 
     for (const linha of linhas) {
       const limpa = linha.trim();
@@ -816,6 +862,7 @@ app.post('/api/conciliar-extrato', autenticar, verificarPermissao('financeiro'),
           valor: Math.abs(valor),
           tipo: valor < 0 ? 'DEBITO' : 'CREDITO',
         });
+      }
       }
     }
 
@@ -1081,6 +1128,40 @@ app.post('/api/extrair-boleto', autenticar, verificarPermissao('financeiro'), li
       const regexBoleto = /\d{5}[\s.]?\d{5}[\s.]?\d{5}[\s.]?\d{6}[\s.]?\d{5}[\s.]?\d{6}[\s.]?\d[\s.]?\d{14}/g;
       const barrasEncontrado = textoCompleto.match(regexBoleto);
       if (barrasEncontrado) dadosExtraidos.codigoBarras = barrasEncontrado[0].replace(/[^\d]/g, '');
+
+      const cleanText = textoCompleto.replace(/\s+/g, '');
+      const regexPix = /000201[A-Za-z0-9$@!%*?&.=-]{50,600}?6304[0-9A-Fa-f]{4}/;
+      const pixEncontrado = cleanText.match(regexPix);
+      if (pixEncontrado) {
+        dadosExtraidos.pixCopiaCola = pixEncontrado[0];
+        console.log('[OCR] PIX Copia e Cola encontrado via Texto/Regex!');
+      }
+    }
+    
+    // TENTA LER QR CODE PARA EXTRAIR O PIX
+    try {
+      console.log('[QRCODE] Iniciando busca por QR Code / PIX...');
+      let imgBuffer = null;
+      if (req.file.mimetype === 'application/pdf') {
+        const docQ = await pdfToImg(new Uint8Array(req.file.buffer.buffer, req.file.buffer.byteOffset, req.file.buffer.byteLength), { scale: 2 });
+        imgBuffer = await docQ.getPage(1);
+      } else if (req.file.mimetype.startsWith('image/')) {
+        imgBuffer = req.file.buffer;
+      }
+      
+      if (imgBuffer) {
+        const image = await Jimp.read(imgBuffer);
+        const { data, width, height } = image.bitmap;
+        const code = jsQR(data, width, height, { inversionAttempts: 'dontInvert' });
+        if (code && code.data) {
+          console.log('[QRCODE] Encontrado QR Code:', code.data.substring(0, 50) + '...');
+          if (code.data.startsWith('000201')) {
+            dadosExtraidos.pixCopiaCola = code.data;
+          }
+        }
+      }
+    } catch (qrErr) {
+      console.error('[QRCODE ERROR] Falha ao ler QR Code:', qrErr.message);
     }
 
         console.log(`[OCR DEBUG] Dados extraidos:`, JSON.stringify(dadosExtraidos));
@@ -1558,4 +1639,5 @@ app.post('/api/disparar-alerta-prestador', autenticar, async (req, res) => {
 // Health check para Cloud Run
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
-app.listen(porta, () => console.log(`🚀 API rodando na porta ${porta}`));
+
+app.listen(porta, () => console.log(`🚀 API rodando na porta `));

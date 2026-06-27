@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { collection, addDoc, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
-import { Plus, CreditCard, User, Trash2, AlertCircle, Pencil } from 'lucide-react';
+import { Plus, CreditCard, User, Trash2, AlertCircle, Pencil, CheckCircle } from 'lucide-react';
 
-export default function GerenciadorCartoes({ cores, cartoes, perfis, lancamentosGlobais, formatarMoeda, obterNomePerfil, recarregarCartoes }) {
+export default function GerenciadorCartoes({ cores, cartoes, perfis, contas, lancamentosGlobais, formatarMoeda, obterNomePerfil, recarregarCartoes, recarregarFinancas }) {
   const [exibirForm, setExibirForm] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
   const [nome, setNome] = useState('');
@@ -12,6 +12,9 @@ export default function GerenciadorCartoes({ cores, cartoes, perfis, lancamentos
   const [vencimento, setVencimento] = useState('');
   const [perfilId, setPerfilId] = useState('');
   const [funcao, setFuncao] = useState('Credito');
+
+  const [pagandoFaturaId, setPagandoFaturaId] = useState(null);
+  const [contaPagamento, setContaPagamento] = useState('');
 
   const resetForm = () => {
     setNome(''); setLimite(''); setFechamento(''); setVencimento(''); setPerfilId(''); setFuncao('Credito');
@@ -56,6 +59,45 @@ export default function GerenciadorCartoes({ cores, cartoes, perfis, lancamentos
   const gastosPagosCartao = (cartaoId) => {
     return lancamentosGlobais.filter(i => i.tipo === 'Despesa' && i.formaPagamento === 'Crédito' && i.contaId === cartaoId && i.status === 'Pago')
       .reduce((a, b) => a + Number(b.valor), 0);
+  };
+
+  const getDespesasPendentes = (cartaoId) => {
+    return lancamentosGlobais.filter(i => i.tipo === 'Despesa' && i.formaPagamento === 'Crédito' && i.contaId === cartaoId && i.status === 'Pendente');
+  };
+
+  const handlePagarFatura = async (cartao, pendentes) => {
+    if (!contaPagamento) {
+      alert("Selecione uma conta bancária para o pagamento da fatura.");
+      return;
+    }
+    try {
+      // 1. Criar despesa na conta bancária (isPagamentoFatura: true)
+      await addDoc(collection(db, 'financas'), {
+        descricao: `Pagamento Fatura - ${cartao.nome}`,
+        valor: pendentes,
+        tipo: 'Despesa',
+        categoria: 'Cartão de Crédito',
+        contaId: contaPagamento,
+        formaPagamento: 'Débito',
+        status: 'Pago',
+        isPagamentoFatura: true,
+        criadoEm: new Date().toISOString()
+      });
+
+      // 2. Mudar status das despesas pendentes do cartão para Pago
+      const despesas = getDespesasPendentes(cartao.id);
+      for (const desp of despesas) {
+        await updateDoc(doc(db, 'financas', desp.id), { status: 'Pago', atualizadoEm: new Date().toISOString() });
+      }
+
+      setPagandoFaturaId(null);
+      setContaPagamento('');
+      alert("Fatura paga com sucesso!");
+      if (recarregarFinancas) recarregarFinancas();
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao pagar fatura.");
+    }
   };
 
   return (
@@ -158,6 +200,26 @@ export default function GerenciadorCartoes({ cores, cartoes, perfis, lancamentos
               {pctUso > 80 && (
                 <div style={{ marginTop: '8px', padding: '6px 10px', backgroundColor: '#fff3cd', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#856404' }}>
                   <AlertCircle size={14}/> Limite quase atingido
+                </div>
+              )}
+
+              {pendentes > 0 && pagandoFaturaId !== cartao.id && (
+                <button type="button" onClick={() => setPagandoFaturaId(cartao.id)} style={{ width: '100%', marginTop: '15px', padding: '10px', backgroundColor: cores?.primaria || '#1976d2', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
+                  <CheckCircle size={16}/> Pagar Fatura ({formatarMoeda(pendentes)})
+                </button>
+              )}
+
+              {pagandoFaturaId === cartao.id && (
+                <div style={{ marginTop: '15px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #ddd' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Conta para Débito:</label>
+                  <select value={contaPagamento} onChange={e => setContaPagamento(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', marginBottom: '10px' }}>
+                    <option value="">Selecione a conta...</option>
+                    {(contas || []).map(c => <option key={c.id} value={c.id}>{c.nome} {c.agencia ? `- ${c.agencia}/${c.numeroConta}` : ''}</option>)}
+                  </select>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button type="button" onClick={() => handlePagarFatura(cartao, pendentes)} style={{ flex: 1, padding: '8px', backgroundColor: '#28a745', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}>Confirmar</button>
+                    <button type="button" onClick={() => { setPagandoFaturaId(null); setContaPagamento(''); }} style={{ flex: 1, padding: '8px', backgroundColor: '#6c757d', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}>Cancelar</button>
+                  </div>
                 </div>
               )}
             </div>

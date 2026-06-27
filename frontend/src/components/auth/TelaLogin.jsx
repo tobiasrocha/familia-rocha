@@ -1,16 +1,18 @@
 import { useState } from 'react';
-import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+import { signInWithEmailAndPassword, signInWithPopup, sendPasswordResetEmail } from 'firebase/auth';
 import { auth, googleProvider } from '../../firebaseConfig';
 
 export default function TelaLogin({ cores, logo }) {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState('');
+  const [mensagem, setMensagem] = useState('');
   const [carregandoGoogle, setCarregandoGoogle] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setErro('');
+    setMensagem('');
     try {
       await signInWithEmailAndPassword(auth, email, senha);
     } catch (error) {
@@ -22,6 +24,7 @@ export default function TelaLogin({ cores, logo }) {
 
   const handleGoogleLogin = async () => {
     setErro('');
+    setMensagem('');
     setCarregandoGoogle(true);
     try {
       await signInWithPopup(auth, googleProvider);
@@ -40,6 +43,22 @@ export default function TelaLogin({ cores, logo }) {
     }
   };
 
+  const handleEsqueciSenha = async () => {
+    if (!email) {
+      setErro('Por favor, digite seu e-mail no campo acima para recuperar a senha.');
+      setMensagem('');
+      return;
+    }
+    try {
+      setErro('');
+      setMensagem('');
+      await sendPasswordResetEmail(auth, email);
+      setMensagem('E-mail de recuperação de senha enviado! Verifique sua caixa de entrada.');
+    } catch (error) {
+      setErro(`Falha ao redefinir a senha: ${error.message}`);
+    }
+  };
+
   return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: cores.fundo, fontFamily: 'sans-serif' }}>
       <div style={{ 
@@ -55,11 +74,23 @@ export default function TelaLogin({ cores, logo }) {
             type="email" placeholder="E-mail" value={email} onChange={(e) => setEmail(e.target.value)} required 
             style={{ padding: '14px', borderRadius: '8px', border: '1px solid #E5E5E5', outlineColor: cores.dourado }}
           />
-          <input 
-            type="password" placeholder="Senha" value={senha} onChange={(e) => setSenha(e.target.value)} required 
-            style={{ padding: '14px', borderRadius: '8px', border: '1px solid #E5E5E5', outlineColor: cores.dourado }}
-          />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button 
+                type="button" 
+                onClick={handleEsqueciSenha}
+                style={{ background: 'none', border: 'none', color: cores.dourado, fontSize: '12px', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+              >
+                Esqueci minha senha
+              </button>
+            </div>
+            <input 
+              type="password" placeholder="Senha" value={senha} onChange={(e) => setSenha(e.target.value)} required 
+              style={{ padding: '14px', borderRadius: '8px', border: '1px solid #E5E5E5', outlineColor: cores.dourado }}
+            />
+          </div>
           {erro && <span style={{ color: '#d32f2f', fontSize: '14px' }}>{erro}</span>}
+          {mensagem && <span style={{ color: '#2e7d32', fontSize: '14px', backgroundColor: '#e8f5e9', padding: '10px', borderRadius: '6px' }}>{mensagem}</span>}
           
           <button type="submit" style={{ 
             padding: '14px', cursor: 'pointer', backgroundColor: cores.dourado, color: cores.branco, 

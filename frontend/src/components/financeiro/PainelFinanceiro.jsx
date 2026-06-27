@@ -118,8 +118,8 @@ export default function PainelFinanceiro({ cores }) {
   const categoriesDespesa = ['Alimentação', 'Cartão de Crédito', 'Educação', 'Igreja/Célula', 'Impostos', 'Lazer', 'Moradia', 'Prestadores de Serviço', 'Saúde', 'Transporte', 'Outros'];
   const categoriasReceita = ['Salário', 'Serviços', 'Investimentos', 'Presente', 'Outros'];
 
-  // Merge carteira nos lançamentos para exibição
-  const carteiraComoLancamento = (carteira || []).map(c => ({
+  // Merge carteira nos lançamentos para exibição (apenas os que não foram para o fluxo financeiro)
+  const carteiraComoLancamento = (carteira || []).filter(c => !c.vinculoId).map(c => ({
     id: `cart-${c.id}`,
     descricao: c.descricao,
     valor: c.valor || 0,
@@ -128,7 +128,7 @@ export default function PainelFinanceiro({ cores }) {
     dataVencimento: c.data,
     status: 'Pago',
     formaPagamento: c.forma,
-    contaId: c.forma === 'Debito' ? c.vinculoId : (c.forma === 'Credito' ? c.vinculoId : null),
+    contaId: null,
     perfilId: null,
     _carteira: true,
   }));
@@ -149,7 +149,7 @@ export default function PainelFinanceiro({ cores }) {
     totalReceitas, totalDespesasPagas, totalDespesasPendentes,
     recContabil, despContabil, resultadoExercicio,
     valorBensDireitos, totalAtivos, totalPassivos, totalEmprestimos, patrimonioLiquido,
-  } = useFinancas({ lancamentosGlobais, contasBancarias, patrimonio, cartoes, investimentos, cofre, emprestimos, mesFiltro, anoContabil, mesContabil, perfilContabil });
+  } = useFinancas({ lancamentosGlobais: todosLancamentos, contasBancarias, patrimonio, cartoes, investimentos, cofre, emprestimos, mesFiltro, anoContabil, mesContabil, perfilContabil });
 
   const formatarMoeda = (val) => Number(val).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   const obterNomePerfil = (id) => perfis.find(p => p.id === id)?.nome?.split(' ')[0] || 'Geral';
@@ -335,7 +335,7 @@ export default function PainelFinanceiro({ cores }) {
 
       {abaAtiva === 'lancamentos' && (
         <>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}><button type="button" onClick={() => { if (exibirForm) resetarFormulario(); else { setExibirForm(true); if (perfis.length > 0 && !perfilTransacaoId) setPerfilTransacaoId(perfis[0].id); } }} style={{ padding: '10px 20px', backgroundColor: exibirForm ? '#6c757d' : cores?.dourado, color: cores?.branco, border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>{exibirForm ? 'Cancelar Edição' : '+ Nova Transação'}</button></div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}><button type="button" onClick={() => { if (exibirForm) resetarFormulario(); else { setExibirForm(true); if (perfis.length > 0 && !perfilTransacaoId) setPerfilTransacaoId(perfis[0].id); } }} style={{ padding: '10px 20px', backgroundColor: exibirForm ? '#6c757d' : cores?.dourado, color: cores?.branco, border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>{exibirForm ? 'Cancelar Edição' : '+ Novo Lançamento'}</button></div>
           {exibirForm && (
             <FormularioLancamento
               cores={cores}
@@ -417,10 +417,12 @@ export default function PainelFinanceiro({ cores }) {
           cores={cores}
           cartoes={cartoes}
           perfis={perfis}
+          contas={contasBancarias}
           lancamentosGlobais={lancamentosGlobais}
           formatarMoeda={formatarMoeda}
           obterNomePerfil={obterNomePerfil}
           recarregarCartoes={recarregarCartoes}
+          recarregarFinancas={recarregar}
         />
       )}
 
@@ -428,8 +430,10 @@ export default function PainelFinanceiro({ cores }) {
         <GerenciadorInvestimentos
           cores={cores}
           investimentos={investimentos}
+          contas={contasBancarias}
           formatarMoeda={formatarMoeda}
           recarregarInvestimentos={recarregarInvestimentos}
+          recarregarFinancas={recarregar}
         />
       )}
 

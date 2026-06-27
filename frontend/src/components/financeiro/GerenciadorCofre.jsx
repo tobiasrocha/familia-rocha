@@ -81,6 +81,7 @@ export default function GerenciadorCofre({ cores, formatarMoeda, contasBancarias
         status: 'Pago',
         contaId: movContaId || null,
         formaPagamento: 'Débito',
+        isTransferenciaCofre: true,
         criadoEm: new Date().toISOString(),
       });
 

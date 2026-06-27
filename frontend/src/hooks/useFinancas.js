@@ -21,7 +21,10 @@ export function useFinancas({ lancamentosGlobais, contasBancarias, patrimonio, c
       const pendentes = lancamentosGlobais
         .filter(i => i.tipo === 'Despesa' && i.formaPagamento === 'Crédito' && i.status === 'Pendente' && i.contaId === c.id)
         .reduce((a, b) => a + Number(b.valor), 0);
-      return acc + pendentes;
+      const creditos = lancamentosGlobais
+        .filter(i => i.tipo === 'Receita' && i.formaPagamento === 'Crédito' && i.status === 'Pendente' && i.contaId === c.id)
+        .reduce((a, b) => a + Number(b.valor), 0);
+      return acc + (pendentes - creditos);
     }, 0),
     [cartoes, lancamentosGlobais]
   );
@@ -39,17 +42,17 @@ export function useFinancas({ lancamentosGlobais, contasBancarias, patrimonio, c
   );
 
   const totalReceitas = useMemo(() =>
-    dadosMesFiltro.filter(i => i.tipo === 'Receita' && i.status === 'Pago').reduce((a, b) => a + Number(b.valor), 0),
+    dadosMesFiltro.filter(i => i.tipo === 'Receita' && i.status === 'Pago' && !i.isResgateInvestimento && !i.isTransferenciaCofre).reduce((a, b) => a + Number(b.valor), 0),
     [dadosMesFiltro]
   );
 
   const totalDespesasPagas = useMemo(() =>
-    dadosMesFiltro.filter(i => i.tipo === 'Despesa' && i.status === 'Pago').reduce((a, b) => a + Number(b.valor), 0),
+    dadosMesFiltro.filter(i => i.tipo === 'Despesa' && i.status === 'Pago' && !i.isPagamentoFatura && !i.isAporteInvestimento && !i.isTransferenciaCofre).reduce((a, b) => a + Number(b.valor), 0),
     [dadosMesFiltro]
   );
 
   const totalDespesasPendentes = useMemo(() =>
-    dadosMesFiltro.filter(i => i.tipo === 'Despesa' && i.status === 'Pendente').reduce((a, b) => a + Number(b.valor), 0),
+    dadosMesFiltro.filter(i => i.tipo === 'Despesa' && i.status === 'Pendente' && !i.isPagamentoFatura && !i.isAporteInvestimento && !i.isTransferenciaCofre).reduce((a, b) => a + Number(b.valor), 0),
     [dadosMesFiltro]
   );
 

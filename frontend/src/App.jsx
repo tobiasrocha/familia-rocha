@@ -17,6 +17,7 @@ const TelaLogin = lazy(() => import('./components/auth/TelaLogin'));
 const AdminUsuarios = lazy(() => import('./components/admin/AdminUsuarios'));
 const Pessoas = lazy(() => import('./components/Pessoas'));
 const Inicio = lazy(() => import('./components/Inicio'));
+const PagarConta = lazy(() => import('./pages/PagarConta'));
 
 import { 
   LayoutDashboard, Wallet, ClipboardList, 
@@ -30,6 +31,7 @@ const Carregando = () => <div style={{ display: 'flex', justifyContent: 'center'
 const todosMenuItems = [
   { to: '/', label: 'Dashboard', icon: <LayoutDashboard size={16} />, sempreVisivel: true },
   { to: '/financeiro', label: 'Financeiro', icon: <Wallet size={16} />, modulo: 'financeiro' },
+  { to: '/pessoas', label: 'Pessoas', icon: <Users size={16} />, superadminOnly: true },
   { to: '/tarefas', label: 'Tarefas', icon: <ClipboardList size={16} />, modulo: 'tarefas' },
   { to: '/saude', label: 'Saúde', icon: <HeartPulse size={16} />, modulo: 'saude' },
   { to: '/estudos', label: 'Estudos', icon: <BookOpen size={16} />, modulo: 'estudos' },
@@ -38,10 +40,15 @@ const todosMenuItems = [
   { to: '/espiritual', label: 'Espiritual', icon: <BookOpen size={16} />, modulo: 'espiritual' },
 ];
 
-function BarraNavegacao({ userEmail, onLogout, permissoes, isSuperadmin }) {
+function BarraNavegacao({ user, onLogout, permissoes, isSuperadmin }) {
   const location = useLocation();
 
-  const menuVisiveis = todosMenuItems.filter(item => item.sempreVisivel || (item.modulo && permissoes[item.modulo]));
+  const menuVisiveis = todosMenuItems.filter(item => {
+    if (item.sempreVisivel) return true;
+    if (item.superadminOnly && isSuperadmin) return true;
+    if (item.modulo && permissoes[item.modulo]) return true;
+    return false;
+  });
 
   const obterEstiloBotao = (path) => {
     const ativo = location.pathname === path;
@@ -61,12 +68,7 @@ function BarraNavegacao({ userEmail, onLogout, permissoes, isSuperadmin }) {
           <img src={logoFamiliarocha} alt="Familia Rocha" style={{ height: '60px', objectFit: 'contain' }} />
         </Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '14px', color: '#6c757d' }}>Olá, <strong style={{ color: coresApp.primaria }}>{userEmail}</strong></span>
-          {isSuperadmin && (
-            <Link to="/pessoas" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', backgroundColor: 'transparent', border: `1px solid ${coresApp.primaria}`, color: coresApp.primaria, borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', textDecoration: 'none' }}>
-              <Users size={14} /> Pessoas
-            </Link>
-          )}
+          <span style={{ fontSize: '14px', color: '#6c757d' }}>Olá, <strong style={{ color: coresApp.primaria }}>{user?.displayName || user?.email}</strong></span>
           <button onClick={onLogout} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', backgroundColor: 'transparent', border: `1px solid ${coresApp.dourado}`, color: coresApp.dourado, borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>
             <LogOut size={14} /> Sair
           </button>
@@ -137,32 +139,37 @@ export default function App() {
 
   return (
     <Router>
-      {!user ? (
-        <TelaLogin cores={coresApp} logo={logoFamiliarocha} />
-      ) : (
-        <div style={{ backgroundColor: coresApp.secundaria, minHeight: '100vh', fontFamily: 'system-ui, sans-serif' }}>
-          <BarraNavegacao userEmail={user.email} onLogout={handleLogout} permissoes={permissoes} isSuperadmin={isSuperadmin} />
-          <main style={{ paddingBottom: '40px' }}>
-            <Suspense fallback={<Carregando />}>
-            <Routes>
-              <Route path="/" element={<Dashboard cores={coresApp} />} />
-              <Route path="/inicio" element={<Inicio cores={coresApp} />} />
-              <Route path="/login" element={<TelaLogin cores={coresApp} logo={logoFamiliarocha} />} />
-              <Route path="/dashboard" element={<Dashboard cores={coresApp} />} />
-              {temPermissao('financeiro') && <Route path="/financeiro" element={<PainelFinanceiro cores={coresApp} />} />}
-              {temPermissao('tarefas') && <Route path="/tarefas" element={<TelaTarefas cores={coresApp} />} />}
-              {temPermissao('saude') && <Route path="/saude" element={<TelaSaude cores={coresApp} />} />}
-              {temPermissao('estudos') && <Route path="/estudos" element={<TelaEstudos cores={coresApp} />} />}
-              {temPermissao('patrimonio') && <Route path="/patrimonio" element={<TelaPatrimonio cores={coresApp} />} />}
-              {temPermissao('viagens') && <Route path="/viagens" element={<TelaViagens cores={coresApp} />} />}
-              {temPermissao('espiritual') && <Route path="/espiritual" element={<TelaEspiritual cores={coresApp} />} />}
-              {isSuperadmin && <Route path="/pessoas" element={<Pessoas cores={coresApp} />} />}
-              {isSuperadmin && <Route path="/admin" element={<AdminUsuarios cores={coresApp} />} />}
-            </Routes>
-            </Suspense>
-          </main>
-        </div>
-      )}
+      <Suspense fallback={<Carregando />}>
+        <Routes>
+          <Route path="/pagar/:id" element={<PagarConta cores={coresApp} logo={logoFamiliarocha} />} />
+          <Route path="*" element={
+            !user ? (
+              <TelaLogin cores={coresApp} logo={logoFamiliarocha} />
+            ) : (
+              <div style={{ backgroundColor: coresApp.secundaria, minHeight: '100vh', fontFamily: 'system-ui, sans-serif' }}>
+                <BarraNavegacao user={user} onLogout={handleLogout} permissoes={permissoes} isSuperadmin={isSuperadmin} />
+                <main style={{ paddingBottom: '40px' }}>
+                  <Routes>
+                    <Route path="/" element={<Dashboard cores={coresApp} />} />
+                    <Route path="/inicio" element={<Inicio cores={coresApp} />} />
+                    <Route path="/login" element={<TelaLogin cores={coresApp} logo={logoFamiliarocha} />} />
+                    <Route path="/dashboard" element={<Dashboard cores={coresApp} />} />
+                    {temPermissao('financeiro') && <Route path="/financeiro" element={<PainelFinanceiro cores={coresApp} />} />}
+                    {temPermissao('tarefas') && <Route path="/tarefas" element={<TelaTarefas cores={coresApp} />} />}
+                    {temPermissao('saude') && <Route path="/saude" element={<TelaSaude cores={coresApp} />} />}
+                    {temPermissao('estudos') && <Route path="/estudos" element={<TelaEstudos cores={coresApp} />} />}
+                    {temPermissao('patrimonio') && <Route path="/patrimonio" element={<TelaPatrimonio cores={coresApp} />} />}
+                    {temPermissao('viagens') && <Route path="/viagens" element={<TelaViagens cores={coresApp} />} />}
+                    {temPermissao('espiritual') && <Route path="/espiritual" element={<TelaEspiritual cores={coresApp} />} />}
+                    {isSuperadmin && <Route path="/pessoas" element={<Pessoas cores={coresApp} />} />}
+                    {isSuperadmin && <Route path="/admin" element={<AdminUsuarios cores={coresApp} />} />}
+                  </Routes>
+                </main>
+              </div>
+            )
+          } />
+        </Routes>
+      </Suspense>
     </Router>
   );
 }

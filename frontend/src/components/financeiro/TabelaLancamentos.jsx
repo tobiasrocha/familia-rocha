@@ -112,7 +112,7 @@ export default function TabelaLancamentos({ dadosMesFiltro, contasBancarias, car
       <div style={{ display: 'flex', gap: '8px', marginBottom: '15px', flexWrap: 'wrap', alignItems: 'center' }}>
         <div style={{ position: 'relative', flex: '1 1 200px', minWidth: '160px', maxWidth: '320px' }}>
           <Search size={14} style={{ position: 'absolute', left: 8, top: 9, color: '#999' }} />
-          <input type="text" value={busca} onChange={e => { setBusca(e.target.value); setPagina(1); }} placeholder="Buscar..." style={{ padding: '7px 7px 7px 28px', borderRadius: '8px', border: '1px solid #ddd', width: '100%', fontSize: '13px' }} />
+          <input type="text" value={busca} onChange={e => { setBusca(e.target.value); setPagina(1); }} placeholder="Buscar..." style={{ boxSizing: 'border-box', padding: '7px 7px 7px 28px', borderRadius: '8px', border: '1px solid #ddd', width: '100%', fontSize: '13px' }} />
           {busca && <button onClick={() => setBusca('')} style={{ position: 'absolute', right: 6, top: 7, background: 'none', border: 'none', cursor: 'pointer', color: '#999' }}><X size={12} /></button>}
         </div>
         <select value={filtroTipo} onChange={e => { setFiltroTipo(e.target.value); setPagina(1); }} style={{ padding: '7px 10px', borderRadius: '8px', border: '1px solid #ddd', fontWeight: 'bold', fontSize: '13px' }}>
@@ -160,6 +160,15 @@ export default function TabelaLancamentos({ dadosMesFiltro, contasBancarias, car
                         </div>
                       );
                     })()}
+                    {item.pixCopiaCola && (
+                      <div style={{ marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ fontSize: '9px', fontWeight: 'bold', color: '#059669', backgroundColor: '#05966915', padding: '1px 5px', borderRadius: '4px' }}>PIX</span>
+                        <span style={{ fontSize: '10px', color: '#999' }}>{item.pixCopiaCola.substring(0, 32)}...</span>
+                        <button onClick={() => { navigator.clipboard.writeText(item.pixCopiaCola); }} title="Copiar PIX" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#059669', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                          <Copy size={11} /> Copiar
+                        </button>
+                      </div>
+                    )}
                     {item.linkArquivo && <a href={item.linkArquivo} target="_blank" rel="noopener noreferrer" style={{ display: 'block', fontSize: '11px', color: '#0056b3', marginTop: '4px' }}>📄 Anexo Drive</a>}
                   </td>
                   <td style={{ padding: '15px' }}>

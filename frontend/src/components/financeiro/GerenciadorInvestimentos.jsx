@@ -31,7 +31,7 @@ function MiniGrafico({ dados, cor, altura = 40 }) {
   );
 }
 
-export default function GerenciadorInvestimentos({ cores, investimentos, formatarMoeda, recarregarInvestimentos }) {
+export default function GerenciadorInvestimentos({ cores, investimentos, contas, formatarMoeda, recarregarInvestimentos, recarregarFinancas }) {
   const [exibirForm, setExibirForm] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
   const [nome, setNome] = useState('');
@@ -45,9 +45,11 @@ export default function GerenciadorInvestimentos({ cores, investimentos, formata
   const [quantidade, setQuantidade] = useState('');
   const [moeda, setMoeda] = useState('USD');
   const [cotacaoCompra, setCotacaoCompra] = useState('');
+  const [contaOrigemId, setContaOrigemId] = useState('');
 
   const [editandoSaldoId, setEditandoSaldoId] = useState(null);
   const [novoSaldo, setNovoSaldo] = useState('');
+  const [modalSaldoConfig, setModalSaldoConfig] = useState(null);
 
   const [cotacoes, setCotacoes] = useState({});
   const [historicoDolar, setHistoricoDolar] = useState([]);
@@ -105,7 +107,7 @@ export default function GerenciadorInvestimentos({ cores, investimentos, formata
   const resetForm = () => {
     setNome(''); setTipo('Renda Fixa'); setValor(''); setDataInicio('');
     setRentabilidade(''); setCorretora(''); setObservacoes(''); setTicker(''); setQuantidade('');
-    setMoeda('USD'); setCotacaoCompra('');
+    setMoeda('USD'); setCotacaoCompra(''); setContaOrigemId('');
     setEditandoId(null); setExibirForm(false);
   };
 
@@ -127,7 +129,22 @@ export default function GerenciadorInvestimentos({ cores, investimentos, formata
     if (editandoId) {
       await updateDoc(doc(db, 'investimentos', editandoId), { ...payload, atualizadoEm: new Date().toISOString() });
     } else {
-      await addDoc(collection(db, 'investimentos'), { ...payload, criadoEm: new Date().toISOString() });
+      const docRef = await addDoc(collection(db, 'investimentos'), { ...payload, criadoEm: new Date().toISOString() });
+      if (contaOrigemId && payload.valor > 0) {
+        await addDoc(collection(db, 'financas'), {
+          descricao: `Aporte Inicial - ${nome}`,
+          valor: payload.valor,
+          tipo: 'Despesa',
+          categoria: 'Investimentos',
+          contaId: contaOrigemId,
+          status: 'Pago',
+          formaPagamento: 'Débito',
+          isAporteInvestimento: true,
+          investimentoId: docRef.id,
+          criadoEm: new Date().toISOString()
+        });
+        if (recarregarFinancas) recarregarFinancas();
+      }
     }
     resetForm();
     recarregarInvestimentos();
@@ -147,11 +164,43 @@ export default function GerenciadorInvestimentos({ cores, investimentos, formata
     setEditandoId(inv.id); setExibirForm(true);
   };
 
-  const handleSalvarSaldo = async (inv) => {
+  const handleSalvarSaldo = (inv) => {
     if (!novoSaldo || isNaN(parseFloat(novoSaldo))) return;
+    const ns = parseFloat(novoSaldo);
+    if (ns === inv.valor) {
+      setEditandoSaldoId(null);
+      return;
+    }
+    setModalSaldoConfig({ inv, novoSaldo: ns, dif: ns - inv.valor, contaId: '' });
+  };
+
+  const confirmarAlteracaoSaldo = async (tipoAjuste) => {
+    if (!modalSaldoConfig) return;
+    const { inv, novoSaldo, dif, contaId } = modalSaldoConfig;
+
     try {
-      await updateDoc(doc(db, 'investimentos', inv.id), { valor: parseFloat(novoSaldo), atualizadoEm: new Date().toISOString() });
-      setEditandoSaldoId(null); setNovoSaldo('');
+      await updateDoc(doc(db, 'investimentos', inv.id), { valor: novoSaldo, atualizadoEm: new Date().toISOString() });
+
+      if (tipoAjuste === 'aporte' && contaId) {
+        const isResgate = dif < 0;
+        await addDoc(collection(db, 'financas'), {
+          descricao: isResgate ? `Resgate - ${inv.nome}` : `Aporte - ${inv.nome}`,
+          valor: Math.abs(dif),
+          tipo: isResgate ? 'Receita' : 'Despesa',
+          categoria: 'Investimentos',
+          contaId: contaId,
+          status: 'Pago',
+          formaPagamento: 'Débito',
+          [isResgate ? 'isResgateInvestimento' : 'isAporteInvestimento']: true,
+          investimentoId: inv.id,
+          criadoEm: new Date().toISOString()
+        });
+        if (recarregarFinancas) recarregarFinancas();
+      }
+
+      setEditandoSaldoId(null);
+      setNovoSaldo('');
+      setModalSaldoConfig(null);
       recarregarInvestimentos();
     } catch { alert("Erro ao atualizar saldo."); }
   };
@@ -267,6 +316,19 @@ export default function GerenciadorInvestimentos({ cores, investimentos, formata
               </div>
             </>
           )}
+          <div style={{ flex: '1 1 100px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+            <label style={{ fontSize: '14px', fontWeight: 'bold' }}>Valor Atual (R$)</label>
+            <input type="number" step="0.01" value={valor} onChange={e => setValor(e.target.value)} required style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
+          </div>
+          {!editandoId && (
+            <div style={{ flex: '1 1 150px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              <label style={{ fontSize: '14px', fontWeight: 'bold' }}>Conta de Origem (Opcional)</label>
+              <select value={contaOrigemId} onChange={e => setContaOrigemId(e.target.value)} style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }}>
+                <option value="">Não descontar do saldo bancário</option>
+                {(contas || []).map(c => <option key={c.id} value={c.id}>{c.nome} {c.agencia ? `- ${c.agencia}/${c.numeroConta}` : ''}</option>)}
+              </select>
+            </div>
+          )}
           <div style={{ flex: '1 1 130px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
             <label style={{ fontSize: '14px', fontWeight: 'bold' }}>Data Início</label>
             <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
@@ -367,6 +429,51 @@ export default function GerenciadorInvestimentos({ cores, investimentos, formata
         <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
           <TrendingUp size={48} style={{ opacity: 0.3, marginBottom: '10px' }} />
           <p>Nenhum investimento cadastrado.</p>
+        </div>
+      )}
+
+      {modalSaldoConfig && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+          <div style={{ backgroundColor: '#fff', padding: '25px', borderRadius: '12px', width: '90%', maxWidth: '400px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
+            <h3 style={{ margin: '0 0 15px 0' }}>Confirmar Alteração de Saldo</h3>
+            <p style={{ margin: '0 0 20px 0', fontSize: '14px', color: '#555' }}>
+              O saldo mudou de <strong>{formatarMoeda(modalSaldoConfig.inv.valor)}</strong> para <strong>{formatarMoeda(modalSaldoConfig.novoSaldo)}</strong>.
+              <br/><br/>
+              A diferença de <strong>{formatarMoeda(Math.abs(modalSaldoConfig.dif))}</strong> se deve a:
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <div style={{ padding: '15px', border: '1px solid #ddd', borderRadius: '8px' }}>
+                <h4 style={{ margin: '0 0 10px 0', fontSize: '14px' }}>Rendimento (Lucro/Prejuízo)</h4>
+                <p style={{ margin: '0 0 10px 0', fontSize: '12px', color: '#777' }}>Apenas atualiza o valor do investimento, sem afetar o caixa do banco.</p>
+                <button onClick={() => confirmarAlteracaoSaldo('rendimento')} style={{ width: '100%', padding: '10px', backgroundColor: '#e2e8f0', color: '#334155', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
+                  É Apenas Rendimento
+                </button>
+              </div>
+
+              <div style={{ padding: '15px', border: '1px solid #cbd5e1', borderRadius: '8px', backgroundColor: '#f8fafc' }}>
+                <h4 style={{ margin: '0 0 10px 0', fontSize: '14px' }}>{modalSaldoConfig.dif > 0 ? 'Novo Aporte' : 'Resgate'}</h4>
+                <p style={{ margin: '0 0 10px 0', fontSize: '12px', color: '#777' }}>Afeta o saldo bancário ({modalSaldoConfig.dif > 0 ? 'sai' : 'entra'} na conta).</p>
+                <select 
+                  value={modalSaldoConfig.contaId} 
+                  onChange={e => setModalSaldoConfig({...modalSaldoConfig, contaId: e.target.value})} 
+                  style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', marginBottom: '10px' }}
+                >
+                  <option value="">Selecione a conta bancária...</option>
+                  {(contas || []).map(c => <option key={c.id} value={c.id}>{c.nome} {c.agencia ? `- ${c.agencia}/${c.numeroConta}` : ''}</option>)}
+                </select>
+                <button 
+                  onClick={() => confirmarAlteracaoSaldo('aporte')} 
+                  disabled={!modalSaldoConfig.contaId}
+                  style={{ width: '100%', padding: '10px', backgroundColor: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: modalSaldoConfig.contaId ? 'pointer' : 'not-allowed', opacity: modalSaldoConfig.contaId ? 1 : 0.5 }}
+                >
+                  Confirmar {modalSaldoConfig.dif > 0 ? 'Aporte' : 'Resgate'}
+                </button>
+              </div>
+            </div>
+
+            <button onClick={() => setModalSaldoConfig(null)} style={{ width: '100%', padding: '10px', backgroundColor: 'transparent', color: '#64748b', border: 'none', marginTop: '10px', cursor: 'pointer' }}>Cancelar</button>
+          </div>
         </div>
       )}
     </div>
