@@ -102,7 +102,7 @@ export default function FormularioLancamento({
         </div>
       )}
 
-      <div style={{ width: '100%' }}><label>Status</label><select value={status} onChange={e=>setStatus(e.target.value)} style={{ width:'100%', padding:'10px', borderRadius:'6px', border:`2px solid ${status==='Pago'?'#28a745':'#dc3545'}` }}><option value="Pendente">Pendente</option><option value="Pago">Pago</option></select></div>
+      <div style={{ width: '100%' }}><label>Status</label><select value={status} onChange={e=>setStatus(e.target.value)} style={{ width:'100%', padding:'10px', borderRadius:'6px', border:`2px solid ${status==='Pago'?'#28a745':status==='Bloqueada'?'#fd7e14':'#dc3545'}` }}><option value="Pendente">Pendente</option><option value="Pago">Pago</option><option value="Bloqueada">Bloqueada</option></select></div>
       {linkArquivo && (
         <div style={{ width: '100%', fontSize: '13px', margin:'5px 0' }}>
           <a href={linkArquivo} target="_blank" rel="noopener noreferrer" style={{ color: '#0056b3', fontWeight: 'bold' }}>📄 Visualizar Documento Anexado no Drive</a>

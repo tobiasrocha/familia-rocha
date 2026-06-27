@@ -119,7 +119,7 @@ export default function TabelaLancamentos({ dadosMesFiltro, contasBancarias, car
           <option value="Todos">Tipo: Todos</option><option value="Despesa">Despesa</option><option value="Receita">Receita</option>
         </select>
         <select value={filtroStatus} onChange={e => { setFiltroStatus(e.target.value); setPagina(1); }} style={{ padding: '7px 10px', borderRadius: '8px', border: '1px solid #ddd', fontWeight: 'bold', fontSize: '13px' }}>
-          <option value="Todos">Status: Todos</option><option value="Pendente">Pendente</option><option value="Pago">Pago</option>
+          <option value="Todos">Status: Todos</option><option value="Pendente">Pendente</option><option value="Pago">Pago</option><option value="Bloqueada">Bloqueada</option>
         </select>
         <span style={{ fontSize: '12px', color: '#999', whiteSpace: 'nowrap' }}>{filtrados.length} registro(s)</span>
       </div>
@@ -203,9 +203,10 @@ export default function TabelaLancamentos({ dadosMesFiltro, contasBancarias, car
                     {fp && <span style={{ padding: '4px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold', backgroundColor: `${corFormaPagamento(item.formaPagamento)}20`, color: corFormaPagamento(item.formaPagamento) }}>{fp}</span>}
                   </td>
                   <td style={{ padding: '15px', textAlign: 'center' }}>
-                    <select value={item.status} onChange={e => handleMudarStatus(item.id, e.target.value)} style={{ padding: '6px 8px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', border: 'none', cursor: 'pointer', backgroundColor: item.status === 'Pago' ? '#d4edda' : (isVencido ? '#f8d7da' : '#fff3cd'), color: item.status === 'Pago' ? '#155724' : (isVencido ? '#721c24' : '#856404'), outline: 'none' }}>
+                    <select value={item.status} onChange={e => handleMudarStatus(item.id, e.target.value)} style={{ padding: '6px 8px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', border: 'none', cursor: 'pointer', backgroundColor: item.status === 'Pago' ? '#d4edda' : item.status === 'Bloqueada' ? '#ffe8cc' : (isVencido ? '#f8d7da' : '#fff3cd'), color: item.status === 'Pago' ? '#155724' : item.status === 'Bloqueada' ? '#fd7e14' : (isVencido ? '#721c24' : '#856404'), outline: 'none' }}>
                       <option value="Pendente">Pendente</option>
                       <option value="Pago">Pago</option>
+                      <option value="Bloqueada">Bloqueada</option>
                     </select>
                   </td>
                   <td style={{ padding: '15px', textAlign: 'center' }}>

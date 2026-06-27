@@ -355,18 +355,61 @@ async function verificarEVenciarAlertas(isManual = false) {
       .split(',').map(e => e.trim()).filter(Boolean);
     const whatsappHabilitado = !!(process.env.WHATSAPP_API_URL && process.env.WHATSAPP_API_TOKEN);
 
+    const configSnap = await admin.firestore().collection('configuracoes').doc('alertas').get();
+    const configAlertas = configSnap.exists ? configSnap.data() : { semanalPendentes: true, diarioVencimento: true, diarioNovasContas: true, quinzenalVencidas: true };
+
+    const isSegunda = hoje.getDay() === 1;
+    // Semanas ímpares ou pares para a quinzena (semana do ano)
+    const weekNumber = Math.ceil(Math.floor((hoje.getTime() - new Date(hoje.getFullYear(), 0, 1).getTime()) / (24 * 60 * 60 * 1000)) / 7);
+    const isSegundaQuinzenal = isSegunda && (weekNumber % 2 === 0); 
+
     let deveDisparar = isManual;
 
     // Coleta todas as contas no prazo
-    const contasAlerta = [];
+    const contasAlertaMap = new Map();
+
     for (let doc of snapshot.docs) {
       const conta = doc.data();
-      if (!conta.dataVencimento) continue;
+      if (!conta.dataVencimento || conta.status === 'Pago') continue;
+
       const vencimento = new Date(conta.dataVencimento + 'T00:00:00');
       const diffDias = Math.ceil((vencimento.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
       
-      // GATILHO: Só dispara se houver pelo menos uma conta/evento em 5 ou 0 dias
-      if ([5, 0].includes(diffDias)) deveDisparar = true;
+      let incluir = false;
+
+      // Regra 1: Semanal Pendentes (Segundas, prox 7 dias)
+      if (configAlertas.semanalPendentes && isSegunda && diffDias >= 0 && diffDias <= 7) {
+        incluir = true;
+        deveDisparar = true;
+      }
+      
+      // Regra 2: Diário Vencimento (Dia exato)
+      if (configAlertas.diarioVencimento && diffDias === 0) {
+        incluir = true;
+        deveDisparar = true;
+      }
+
+      // Regra 3: Novas Contas (Criadas últimas 24h, vencendo em 7 dias)
+      if (configAlertas.diarioNovasContas && conta.criadoEm && diffDias >= 0 && diffDias <= 7) {
+        const criadoEmDate = new Date(conta.criadoEm);
+        const horasCriacao = (hoje.getTime() - criadoEmDate.getTime()) / (1000 * 60 * 60);
+        if (horasCriacao <= 24) {
+          incluir = true;
+          deveDisparar = true;
+        }
+      }
+
+      // Regra 4: Quinzenal Vencidas (Segundas alternadas, últimos 15 dias)
+      if (configAlertas.quinzenalVencidas && isSegundaQuinzenal && diffDias >= -15 && diffDias < 0) {
+        incluir = true;
+        deveDisparar = true;
+      }
+
+      if (isManual) {
+        incluir = true; // Se for manual, processa todas pra não ir vazio
+      }
+
+      if (!incluir) continue;
 
       const vencFormatado = conta.dataVencimento.split('-').reverse().join('/');
       const extra = [];
@@ -383,16 +426,21 @@ async function verificarEVenciarAlertas(isManual = false) {
       // O link SEMPRE será enviado, mesmo se não tiver código (a página avisa se não tiver)
       extra.push(`Página de Pagamento: ${urlPagamento}`);
 
-      contasAlerta.push({
-        descricao: conta.descricao,
-        valor: Number(conta.valor),
-        vencimento: conta.dataVencimento,
-        diasRestantes: diffDias >= 0 ? diffDias : diffDias,
-        extra: extra.join(' | '),
-        vencFormatado,
-      });
-      resultado.contasNoPrazo++;
+      // Evita duplicidade no e-mail caso caia em 2 regras
+      if (!contasAlertaMap.has(conta.descricao + conta.dataVencimento)) {
+        contasAlertaMap.set(conta.descricao + conta.dataVencimento, {
+          descricao: conta.descricao,
+          valor: Number(conta.valor),
+          vencimento: conta.dataVencimento,
+          diasRestantes: diffDias,
+          extra: extra.join(' | '),
+          vencFormatado,
+        });
+        resultado.contasNoPrazo++;
+      }
     }
+
+    const contasAlerta = Array.from(contasAlertaMap.values());
 
     // Se nenhuma conta ou evento ativou o gatilho, aborta (só em cron)
     if (!deveDisparar) {

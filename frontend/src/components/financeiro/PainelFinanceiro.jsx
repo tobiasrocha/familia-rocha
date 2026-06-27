@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { collection, addDoc, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, deleteDoc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useFirestore } from '../../hooks/useFirestore';
 import { useFinancas } from '../../hooks/useFinancas';
 import { useUploadOcr } from '../../hooks/useUploadOcr';
 import { apiFetch } from '../../config';
-import { Wallet, Calendar, FileText, Bell, CreditCard, TrendingUp, TrendingDown, Calculator } from 'lucide-react';
+import { Wallet, Calendar, FileText, Bell, CreditCard, TrendingUp, TrendingDown, Calculator, Settings } from 'lucide-react';
 
 import DashboardFinanceiro from './DashboardFinanceiro';
 import GerenciadorContas from './GerenciadorContas';
@@ -91,6 +91,26 @@ export default function PainelFinanceiro({ cores }) {
   const [salvando, setSalvando] = useState(false);
 
   const [executandoAlertas, setExecutandoAlertas] = useState(false);
+  const [exibirModalConfigAlertas, setExibirModalConfigAlertas] = useState(false);
+  const [configAlertas, setConfigAlertas] = useState({ semanalPendentes: true, diarioVencimento: true, diarioNovasContas: true, quinzenalVencidas: true });
+
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        const docSnap = await getDoc(doc(db, 'configuracoes', 'alertas'));
+        if (docSnap.exists()) setConfigAlertas(docSnap.data());
+      } catch (e) { console.error(e); }
+    };
+    loadConfig();
+  }, []);
+
+  const handleSalvarConfigAlertas = async () => {
+    try {
+      await setDoc(doc(db, 'configuracoes', 'alertas'), configAlertas);
+      setExibirModalConfigAlertas(false);
+      alert('Configurações salvas!');
+    } catch (e) { alert('Erro ao salvar'); }
+  };
 
   const [idEditando, setIdEditando] = useState(null);
   const [descricao, setDescricao] = useState(''); const [valor, setValor] = useState('');
@@ -249,6 +269,37 @@ export default function PainelFinanceiro({ cores }) {
 
   return (
     <div style={{ padding: '30px', maxWidth: '1200px', margin: '0 auto' }}>
+      
+      {exibirModalConfigAlertas && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 3000 }}>
+          <div style={{ backgroundColor: '#fff', padding: '30px', borderRadius: '16px', maxWidth: '500px', width: '100%', boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }}>
+            <h3 style={{ margin: '0 0 20px 0', color: '#333' }}>⚙️ Configurações de Alertas</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
+                <input type="checkbox" checked={configAlertas.semanalPendentes} onChange={e => setConfigAlertas(c => ({...c, semanalPendentes: e.target.checked}))} style={{ marginTop: '4px' }} />
+                <div><strong style={{ display: 'block', color: '#2c3e50' }}>Semanal - Pendentes (Segundas)</strong><span style={{ fontSize: '12px', color: '#666' }}>Dispara toda segunda-feira listando as contas que vencem nos próximos 7 dias.</span></div>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
+                <input type="checkbox" checked={configAlertas.diarioVencimento} onChange={e => setConfigAlertas(c => ({...c, diarioVencimento: e.target.checked}))} style={{ marginTop: '4px' }} />
+                <div><strong style={{ display: 'block', color: '#2c3e50' }}>Diário - Vencem Hoje</strong><span style={{ fontSize: '12px', color: '#666' }}>Dispara todos os dias listando apenas as contas que vencem no exato dia atual.</span></div>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
+                <input type="checkbox" checked={configAlertas.diarioNovasContas} onChange={e => setConfigAlertas(c => ({...c, diarioNovasContas: e.target.checked}))} style={{ marginTop: '4px' }} />
+                <div><strong style={{ display: 'block', color: '#2c3e50' }}>Diário - Contas Lançadas Recentemente</strong><span style={{ fontSize: '12px', color: '#666' }}>Dispara se uma nova conta foi lançada nas últimas 24h e vai vencer nos próximos 7 dias.</span></div>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
+                <input type="checkbox" checked={configAlertas.quinzenalVencidas} onChange={e => setConfigAlertas(c => ({...c, quinzenalVencidas: e.target.checked}))} style={{ marginTop: '4px' }} />
+                <div><strong style={{ display: 'block', color: '#2c3e50' }}>Quinzenal - Atrasadas (Segundas-feiras)</strong><span style={{ fontSize: '12px', color: '#666' }}>Dispara de 15 em 15 dias listando todas as contas atrasadas nos últimos 15 dias (com juros se aplicável).</span></div>
+              </label>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '30px' }}>
+              <button onClick={() => setExibirModalConfigAlertas(false)} style={{ padding: '10px 20px', borderRadius: '8px', border: '1px solid #ccc', background: 'none', cursor: 'pointer', fontWeight: 'bold' }}>Cancelar</button>
+              <button onClick={handleSalvarConfigAlertas} style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', background: '#28a745', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }}>Salvar Configurações</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Linha 1: Título + Seletor Mês/Ano alinhados */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
         <h2 style={{ color: cores?.texto, margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}><Wallet size={28} color={cores?.dourado} /> BI & Fluxo de Caixa</h2>
@@ -282,9 +333,14 @@ export default function PainelFinanceiro({ cores }) {
             <Calculator size={20} />
           </button>
         </div>
-        <button type="button" onClick={handleDispararAlertas} disabled={executandoAlertas} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', backgroundColor: '#dc3545', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', fontSize: '15px' }}>
-          <Bell size={20} /> {executandoAlertas ? 'Enviando...' : 'Testar Alertas'}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button type="button" onClick={() => setExibirModalConfigAlertas(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 15px', backgroundColor: '#6c757d', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', fontSize: '15px' }}>
+            <Settings size={20} />
+          </button>
+          <button type="button" onClick={handleDispararAlertas} disabled={executandoAlertas} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', backgroundColor: '#dc3545', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', fontSize: '15px' }}>
+            <Bell size={20} /> {executandoAlertas ? 'Enviando...' : 'Testar Alertas'}
+          </button>
+        </div>
       </div>
 
       {/* Linha 3: Tabs secundárias */}
