@@ -10,7 +10,18 @@ export default function DashboardFinanceiro({ cores, formatarMoeda, saldoGlobalC
   return (
     <>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
-        <div onClick={() => setExibirPopupSaldo(true)} style={{ backgroundColor: '#2c3e50', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', color: '#fff', cursor: 'pointer', transition: 'transform 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.02)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}><span style={{ fontSize: '14px', color: '#adb5bd', fontWeight: 'bold' }}>Saldo Global (Real)</span><h3 style={{ margin: '5px 0 0 0', fontSize: '22px' }}>{formatarMoeda(saldoGlobalConsolidado)}</h3></div>
+        <div onClick={() => setExibirPopupSaldo(true)} style={{ backgroundColor: '#2c3e50', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', color: '#fff', cursor: 'pointer', transition: 'transform 0.2s', display: 'flex', flexDirection: 'column', justifyContent: 'center' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.02)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '14px', color: '#adb5bd', fontWeight: 'bold' }}>Saldo Global (Real)</span>
+            <span style={{ fontSize: '11px', backgroundColor: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '4px' }}>Ver Detalhes</span>
+          </div>
+          <h3 style={{ margin: '8px 0', fontSize: '24px' }}>{formatarMoeda(saldoGlobalConsolidado)}</h3>
+          {Number(debitoCartoes) !== 0 && (
+            <span style={{ fontSize: '12px', color: debitoCartoes > 0 ? '#ff6b6b' : '#4ade80', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <CreditCard size={12} /> {debitoCartoes > 0 ? 'Faturas pendentes:' : 'Crédito no cartão:'} {debitoCartoes > 0 ? '-' : '+'}{formatarMoeda(Math.abs(debitoCartoes))}
+            </span>
+          )}
+        </div>
         <div style={{ backgroundColor: cores?.branco, padding: '20px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', borderLeft: '4px solid #155724' }}><span style={{ fontSize: '14px', color: '#6c757d', fontWeight: 'bold' }}>Receitas ({mesFiltro})</span><h3 style={{ margin: '5px 0 0 0', color: '#155724', fontSize: '20px' }}>{formatarMoeda(totalReceitas)}</h3></div>
         <div style={{ backgroundColor: cores?.branco, padding: '20px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', borderLeft: '4px solid #721c24' }}><span style={{ fontSize: '14px', color: '#6c757d', fontWeight: 'bold' }}>Desp. Pagas ({mesFiltro})</span><h3 style={{ margin: '5px 0 0 0', color: '#721c24', fontSize: '20px' }}>{formatarMoeda(totalDespesasPagas)}</h3></div>
         <div style={{ backgroundColor: cores?.branco, padding: '20px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', borderLeft: '4px solid #dc3545' }}><span style={{ fontSize: '14px', color: '#6c757d', fontWeight: 'bold' }}>A Pagar ({mesFiltro})</span><h3 style={{ margin: '5px 0 0 0', color: '#dc3545', fontSize: '20px' }}>{formatarMoeda(totalDespesasPendentes)}</h3></div>
@@ -40,9 +51,9 @@ export default function DashboardFinanceiro({ cores, formatarMoeda, saldoGlobalC
                 <strong style={{ color: '#d97706', fontSize: '16px' }}>{formatarMoeda(saldoCofre || 0)}</strong>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px', backgroundColor: '#fef2f2', borderRadius: '8px', border: '1px solid #fecaca' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><CreditCard size={18} color="#dc2626" /><span style={{ fontWeight: 'bold', color: '#333' }}>Cartões de Crédito</span></div>
-                <strong style={{ color: '#dc2626', fontSize: '16px' }}>-{formatarMoeda(debitoCartoes || 0)}</strong>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px', backgroundColor: debitoCartoes > 0 ? '#fef2f2' : '#f0fdf4', borderRadius: '8px', border: `1px solid ${debitoCartoes > 0 ? '#fecaca' : '#bbf7d0'}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><CreditCard size={18} color={debitoCartoes > 0 ? "#dc2626" : "#16a34a"} /><span style={{ fontWeight: 'bold', color: '#333' }}>Cartões de Crédito</span></div>
+                <strong style={{ color: debitoCartoes > 0 ? '#dc2626' : '#16a34a', fontSize: '16px' }}>{debitoCartoes > 0 ? '-' : '+'}{formatarMoeda(Math.abs(debitoCartoes || 0))}</strong>
               </div>
 
               <div style={{ borderTop: '2px solid #e5e7eb', paddingTop: '12px', marginTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

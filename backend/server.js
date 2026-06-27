@@ -309,7 +309,7 @@ async function criarArquivoNoDrive(fileMetadata, media, client) {
 // ---------------------------------------------------------
 // FUNCAO CENTRALIZADA DE VARREDURA DE ALERTAS
 // ---------------------------------------------------------
-async function verificarEVenciarAlertas() {
+async function verificarEVenciarAlertas(isManual = false) {
   const resultado = {
     contasEscaneadas: 0,
     contasNoPrazo: 0,
@@ -355,6 +355,8 @@ async function verificarEVenciarAlertas() {
       .split(',').map(e => e.trim()).filter(Boolean);
     const whatsappHabilitado = !!(process.env.WHATSAPP_API_URL && process.env.WHATSAPP_API_TOKEN);
 
+    let deveDisparar = isManual;
+
     // Coleta todas as contas no prazo
     const contasAlerta = [];
     for (let doc of snapshot.docs) {
@@ -363,8 +365,11 @@ async function verificarEVenciarAlertas() {
       const vencimento = new Date(conta.dataVencimento + 'T00:00:00');
       const diffDias = Math.ceil((vencimento.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
       
-      // O alerta para esta conta só deve entrar na lista se faltarem exatamente 5 dias ou 0 dias (hoje)
-      if (![5, 0].includes(diffDias)) continue;
+      // GATILHO: Só dispara se houver pelo menos uma conta/evento em 5 ou 0 dias
+      if ([5, 0].includes(diffDias)) deveDisparar = true;
+
+      // CONTEÚDO: Coloca na lista TODAS as contas lançadas no intervalo de 15 dias
+      if (diffDias < -15 || diffDias > 15) continue;
 
       const vencFormatado = conta.dataVencimento.split('-').reverse().join('/');
       const extra = [];
@@ -385,11 +390,17 @@ async function verificarEVenciarAlertas() {
         descricao: conta.descricao,
         valor: Number(conta.valor),
         vencimento: conta.dataVencimento,
-        diasRestantes: diffDias >= 0 ? diffDias : 0,
+        diasRestantes: diffDias >= 0 ? diffDias : diffDias,
         extra: extra.join(' | '),
         vencFormatado,
       });
       resultado.contasNoPrazo++;
+    }
+
+    // Se nenhuma conta ou evento ativou o gatilho, aborta (só em cron)
+    if (!deveDisparar) {
+      console.log('[ALERTAS] Nenhum evento/conta exata (0 ou 5 dias) para disparar hoje.');
+      return resultado;
     }
 
     if (contasAlerta.length === 0) return resultado;
@@ -397,32 +408,49 @@ async function verificarEVenciarAlertas() {
     // Ordena por dias restantes (mais urgentes primeiro)
     contasAlerta.sort((a, b) => a.diasRestantes - b.diasRestantes);
 
-    // Monta corpo consolidado
+    // Monta corpo consolidado (Mais responsivo e bem espaçado para WP/Email)
     const hojeTitle = contasAlerta.filter(c => c.diasRestantes === 0);
     const proxTitle = contasAlerta.filter(c => c.diasRestantes > 0);
+    const atrasadasTitle = contasAlerta.filter(c => c.diasRestantes < 0);
 
-    const linhas = ['📋 *ERP Familia Rocha — Contas a Vencer*', ''];
+    const linhas = ['📊 *ERP Familia Rocha — Resumo de Contas*', ''];
+    
+    if (atrasadasTitle.length > 0) {
+      linhas.push(`🔴 *ATRASADAS (${atrasadasTitle.length}):*`);
+      for (let c of atrasadasTitle) {
+        linhas.push(`  • ${c.descricao}`);
+        linhas.push(`    Valor: R$ ${Number(c.valor).toFixed(2).replace('.', ',')}`);
+        linhas.push(`    Vencimento: ${c.vencFormatado} (Atrasada há ${Math.abs(c.diasRestantes)} dias)`);
+        if (c.extra) linhas.push(`    ${c.extra}`);
+        linhas.push('');
+      }
+    }
+
     if (hojeTitle.length > 0) {
-      linhas.push(`⚠️ *Vencem HOJE (${hojeTitle.length}):*`);
+      linhas.push(`⚠️ *VENCEM HOJE (${hojeTitle.length}):*`);
       for (let c of hojeTitle) {
-        linhas.push(`  • ${c.descricao} — R$ ${Number(c.valor).toFixed(2).replace('.', ',')} — Venc: ${c.vencFormatado}`);
+        linhas.push(`  • ${c.descricao}`);
+        linhas.push(`    Valor: R$ ${Number(c.valor).toFixed(2).replace('.', ',')} — Venc: ${c.vencFormatado}`);
         if (c.extra) linhas.push(`    ${c.extra}`);
+        linhas.push('');
       }
-      linhas.push('');
     }
+    
     if (proxTitle.length > 0) {
-      linhas.push(`📅 *Próximos ${proxTitle.length} vencimentos:*`);
+      linhas.push(`📅 *PRÓXIMOS ${proxTitle.length} VENCIMENTOS:*`);
       for (let c of proxTitle) {
-        linhas.push(`  • ${c.descricao} — R$ ${Number(c.valor).toFixed(2).replace('.', ',')} — ${c.diasRestantes} dia(s) — ${c.vencFormatado}`);
+        linhas.push(`  • ${c.descricao}`);
+        linhas.push(`    Valor: R$ ${Number(c.valor).toFixed(2).replace('.', ',')} — Faltam: ${c.diasRestantes} dia(s)`);
         if (c.extra) linhas.push(`    ${c.extra}`);
+        linhas.push('');
       }
-      linhas.push('');
     }
-    linhas.push('Acesse: https://familia-rocha-7ea1a.web.app/financeiro');
+    
+    linhas.push('Acesse o painel: https://familia-rocha-7ea1a.web.app/financeiro');
 
     const corpo = linhas.join('\n');
-    const assunto = hojeTitle.length > 0
-      ? `⚠️ ${hojeTitle.length} conta(s) vencem HOJE + ${proxTitle.length} proxima(s)`
+    const assunto = (hojeTitle.length > 0 || atrasadasTitle.length > 0)
+      ? `⚠️ ${hojeTitle.length + atrasadasTitle.length} conta(s) pendentes/hoje + ${proxTitle.length} próxima(s)`
       : `📅 ${contasAlerta.length} conta(s) a vencer nos proximos dias`;
 
     // Envia UM email consolidado
@@ -490,7 +518,7 @@ if (process.env.CRON_ENABLED !== 'false') {
 app.post('/api/disparar-alertas', autenticar, verificarPermissao('financeiro'), async (req, res) => {
   if (!firestoreDb) return res.status(503).json({ erro: 'Banco de dados indisponivel.' });
   try {
-    const resultado = await verificarEVenciarAlertas();
+    const resultado = await verificarEVenciarAlertas(true);
     res.json({
       ok: true,
       contasEscaneadas: resultado.contasEscaneadas,
