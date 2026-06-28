@@ -1811,42 +1811,101 @@ app.post('/api/ia/chat', autenticar, async (req, res) => {
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     const uid = req.usuario.uid;
 
-    // 1. RAG: Buscar contexto do usuário
-    const userDoc = await firestoreDb.collection('usuarios').doc(uid).get();
-    const nomeCompleto = userDoc.exists ? (userDoc.data().nome || 'Usuário') : 'Usuário';
-    const nomeUsuario = nomeCompleto.split(' ')[0];
+    // 1. RAG: Buscar contexto do usuário e nome
+    let nomeUsuario = 'Usuário';
+    try {
+      const userDoc = await firestoreDb.collection('usuarios').doc(uid).get();
+      if (userDoc.exists && userDoc.data().nome) {
+        nomeUsuario = userDoc.data().nome.split(' ')[0];
+      } else {
+        const authUser = await authAdmin.getUser(uid);
+        if (authUser.displayName) {
+          nomeUsuario = authUser.displayName.split(' ')[0];
+        }
+      }
+    } catch (e) {
+      console.error('Erro ao buscar nome do usuario para IA:', e);
+    }
 
     // RAG: Resumo financeiro do mês atual
     const hoje = new Date();
     const ano = hoje.getFullYear();
     const mes = String(hoje.getMonth() + 1).padStart(2, '0');
     const inicioMes = `${ano}-${mes}-01`;
-    const fimMes = `${ano}-${mes}-31`; // simplificado, para cobrir o mes todo textualmente
+    const fimMes = `${ano}-${mes}-31`;
 
     const financasSnap = await firestoreDb.collection('financas')
       .where('dataVencimento', '>=', inicioMes)
       .where('dataVencimento', '<=', fimMes)
       .get();
+      
+    const contasSnap = await firestoreDb.collection('contasBancarias').get();
+    const cartoesSnap = await firestoreDb.collection('cartoes').get();
+    const cofreSnap = await firestoreDb.collection('cofre').get();
+    const invSnap = await firestoreDb.collection('investimentos').get();
+
+    const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(parseFloat(val) || 0);
 
     let totalDespesas = 0;
     let totalReceitas = 0;
-
+    const lancamentos = [];
+    
     financasSnap.forEach(doc => {
       const d = doc.data();
       const val = parseFloat(d.valor) || 0;
       if (d.tipo === 'Despesa') totalDespesas += val;
       if (d.tipo === 'Receita') totalReceitas += val;
+      lancamentos.push(`- [${d.dataVencimento}] ${d.descricao || d.categoria} (${d.tipo}): ${formatCurrency(val)} - Status: ${d.status}`);
     });
-
-    const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+    
+    const contasInfo = [];
+    contasSnap.forEach(doc => {
+      const d = doc.data();
+      contasInfo.push(`- ${d.nome}: ${formatCurrency(d.saldo)}`);
+    });
+    
+    const cartoesInfo = [];
+    cartoesSnap.forEach(doc => {
+      const d = doc.data();
+      cartoesInfo.push(`- ${d.nome}: Limite ${formatCurrency(d.limite)}, Fatura Fechada: ${formatCurrency(d.faturaFechada || 0)}`);
+    });
+    
+    const cofreInfo = [];
+    cofreSnap.forEach(doc => {
+      const d = doc.data();
+      cofreInfo.push(`- ${d.nome}: Meta ${formatCurrency(d.meta)}, Saldo Atual: ${formatCurrency(d.saldoAtual || 0)}`);
+    });
+    
+    const invInfo = [];
+    invSnap.forEach(doc => {
+      const d = doc.data();
+      invInfo.push(`- ${d.nome}: Total Investido ${formatCurrency(d.totalInvestido || 0)}, Saldo Atual: ${formatCurrency(d.saldoAtual || 0)}`);
+    });
 
     const systemPrompt = `Você é a Geri, uma educadora financeira super amigável e direta que trabalha no sistema Família Rocha. 
 O usuário que está falando com você se chama ${nomeUsuario}. 
-Aqui estão os dados financeiros reais da família dele para o mês atual (${mes}/${ano}):
-- Total de Receitas: ${formatCurrency(totalReceitas)}
-- Total de Despesas (pendentes e pagas): ${formatCurrency(totalDespesas)}
+Você tem acesso somente leitura aos dados bancários dele. Aqui estão os dados financeiros reais da família para o mês atual (${mes}/${ano}):
 
-Responda à pergunta do usuário de forma útil, baseada em boas práticas de educação financeira. Não use formatações muito complexas, mantenha o texto limpo, use emojis amigáveis e responda em no máximo 2 a 3 parágrafos.
+1. RESUMO MENSAL:
+- Total de Receitas: ${formatCurrency(totalReceitas)}
+- Total de Despesas: ${formatCurrency(totalDespesas)}
+
+2. CONTAS BANCÁRIAS:
+${contasInfo.length > 0 ? contasInfo.join('\n') : 'Nenhuma conta cadastrada.'}
+
+3. CARTÕES DE CRÉDITO:
+${cartoesInfo.length > 0 ? cartoesInfo.join('\n') : 'Nenhum cartão cadastrado.'}
+
+4. COFRE (RESERVAS):
+${cofreInfo.length > 0 ? cofreInfo.join('\n') : 'Nenhum cofre cadastrado.'}
+
+5. INVESTIMENTOS:
+${invInfo.length > 0 ? invInfo.join('\n') : 'Nenhum investimento cadastrado.'}
+
+6. LANÇAMENTOS (MÊS ATUAL):
+${lancamentos.length > 0 ? lancamentos.join('\n') : 'Nenhum lançamento registrado neste mês.'}
+
+Responda à pergunta do usuário com base NESSES dados. Se ele perguntar sobre um gasto ou saldo, use as informações acima. Não invente dados. Mantenha o tom amigável, educacional e direto, responda em no máximo 2 a 3 parágrafos usando emojis.
 `;
 
     // 2. Chamar o modelo
