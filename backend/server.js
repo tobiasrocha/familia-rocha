@@ -1,3 +1,6 @@
+
+process.on('uncaughtException', (err) => require('fs').appendFileSync('crash.log', new Date().toISOString() + ' ' + (err ? err.stack : 'Unknown error') + '\n'));
+process.on('unhandledRejection', (err) => require('fs').appendFileSync('crash.log', new Date().toISOString() + ' ' + (err ? err.stack : 'Unknown rejection') + '\n'));
 // backend/server.js
 require('dotenv').config();
 const express = require('express');
@@ -12,6 +15,7 @@ const streamifier = require('streamifier');
 const nodemailer = require('nodemailer');
 const cron = require('node-cron');
 const { pdf: pdfToImg } = require('pdf-to-img');
+const { GoogleGenAI } = require('@google/genai');
 const { execFile } = require('child_process');
 const { promisify } = require('util');
 const execFileAsync = promisify(execFile);
@@ -23,8 +27,15 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { createWorker } = require('tesseract.js');
-const Jimp = require('jimp');
+const { Jimp } = require('jimp');
 const jsQR = require('jsqr');
+const bcrypt = require('bcryptjs');
+const {
+  generateRegistrationOptions,
+  verifyRegistrationResponse,
+  generateAuthenticationOptions,
+  verifyAuthenticationResponse
+} = require('@simplewebauthn/server');
 
 // Carrega credenciais: arquivo local ou Application Default Credentials (Cloud Run)
 let serviceAccount = null;
@@ -79,7 +90,7 @@ app.use(cors({
     }
   }
 }));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -114,6 +125,8 @@ const schemaCriarUsuario = z.object({
   tipoSanguineo: z.string().optional().default(''),
   alergias: z.string().optional().default(''),
   telefone: z.string().optional().default(''),
+  receberEmail: z.boolean().optional().default(false),
+  receberWhatsapp: z.boolean().optional().default(false),
 });
 
 const schemaAtualizarUsuario = z.object({
@@ -124,6 +137,8 @@ const schemaAtualizarUsuario = z.object({
   tipoSanguineo: z.string().optional(),
   alergias: z.string().optional(),
   telefone: z.string().optional(),
+  receberEmail: z.boolean().optional(),
+  receberWhatsapp: z.boolean().optional(),
 });
 
 const schemaPermissoes = z.object({
@@ -139,7 +154,7 @@ function verificarPermissao(modulo) {
     if (!firestoreDb) return res.status(503).json({ erro: 'Banco de dados indisponivel.' });
 
     const SUPERADMIN_EMAIL = 'tobiasrocha@gmail.com';
-    if (req.usuario.email === SUPERADMIN_EMAIL) return next();
+    if (req.usuario.email && req.usuario.email.toLowerCase() === SUPERADMIN_EMAIL) return next();
 
     try {
       const userRecord = await authAdmin.getUserByEmail(req.usuario.email);
@@ -159,9 +174,17 @@ function verificarPermissao(modulo) {
 // Permissão admin — apenas superadmin
 async function verificarAdmin(req, res, next) {
   if (!req.usuario) return res.status(401).json({ erro: 'Autenticacao necessaria.' });
-  const SUPERADMIN_EMAIL = 'tobiasrocha@gmail.com';
-  if (req.usuario.email === SUPERADMIN_EMAIL) return next();
-  return res.status(403).json({ erro: 'Acesso restrito ao administrador.' });
+
+  if (req.usuario.email && req.usuario.email.toLowerCase() === 'tobiasrocha@gmail.com') return next();
+
+  try {
+    const doc = await firestoreDb.collection('usuarios').doc(req.usuario.uid).get();
+    if (doc.exists && doc.data().role === 'admin') return next();
+  } catch (err) {
+    console.error('[ADMIN] Erro ao checar role no Firestore:', err);
+  }
+
+  return res.status(403).json({ erro: 'Acesso restrito ao administrador.', emailFornecido: req.usuario.email || 'Nao informado' });
 }
 
 // Inicializacao dos clientes Google (lazy — criados apenas quando necessario)
@@ -333,14 +356,18 @@ async function verificarEVenciarAlertas(isManual = false) {
     resultado.contasEscaneadas = snapshot.size;
     if (snapshot.empty) return resultado;
 
-    const perfisSnapshot = await firestoreDb.collection('perfis').get();
+    const usuariosSnapshot = await firestoreDb.collection('usuarios').get();
     const contatos = [];
-    perfisSnapshot.forEach(doc => {
-      const perfil = doc.data();
-      if (perfil.telefone) {
-        let numero = perfil.telefone.replace(/[^\d]/g, '');
+    const emailDestinatarios = [];
+    usuariosSnapshot.forEach(doc => {
+      const usuario = doc.data();
+      if (usuario.receberWhatsapp && usuario.telefone) {
+        let numero = usuario.telefone.replace(/[^\d]/g, '');
         if (!numero.startsWith('55') && (numero.length === 10 || numero.length === 11)) numero = '55' + numero;
-        if (numero) contatos.push({ nome: perfil.nome, numero });
+        if (numero) contatos.push({ nome: usuario.nome, numero });
+      }
+      if (usuario.receberEmail && usuario.email) {
+        emailDestinatarios.push(usuario.email.trim());
       }
     });
 
@@ -351,8 +378,6 @@ async function verificarEVenciarAlertas(isManual = false) {
       auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
     });
 
-    const emailDestinatarios = (process.env.ALERTA_EMAILS || 'tobiasrocha@gmail.com,renallyraiani@gmail.com')
-      .split(',').map(e => e.trim()).filter(Boolean);
     const whatsappHabilitado = !!(process.env.WHATSAPP_API_URL && process.env.WHATSAPP_API_TOKEN);
 
     const configSnap = await firestoreDb.collection('configuracoes').doc('alertas').get();
@@ -361,20 +386,29 @@ async function verificarEVenciarAlertas(isManual = false) {
     const isSegunda = hoje.getDay() === 1;
     // Semanas ímpares ou pares para a quinzena (semana do ano)
     const weekNumber = Math.ceil(Math.floor((hoje.getTime() - new Date(hoje.getFullYear(), 0, 1).getTime()) / (24 * 60 * 60 * 1000)) / 7);
-    const isSegundaQuinzenal = isSegunda && (weekNumber % 2 === 0); 
+    const isSegundaQuinzenal = isSegunda && (weekNumber % 2 === 0);
 
     let deveDisparar = isManual;
 
     // Coleta todas as contas no prazo
     const contasAlertaMap = new Map();
 
-    for (let doc of snapshot.docs) {
+    // Ordena os documentos por criadoEm DESCENDENTE na memoria
+    // Assim garantimos que, se houver contas duplicadas (mesma descricao e vencimento),
+    // a mais recente (que provavelmente tem os dados corrigidos como PIX) prevalecera.
+    const docsOrdenados = snapshot.docs.sort((a, b) => {
+      const dataA = a.data().criadoEm || '';
+      const dataB = b.data().criadoEm || '';
+      return dataB.localeCompare(dataA);
+    });
+
+    for (let doc of docsOrdenados) {
       const conta = doc.data();
       if (!conta.dataVencimento || conta.status === 'Pago') continue;
 
       const vencimento = new Date(conta.dataVencimento + 'T00:00:00');
       const diffDias = Math.ceil((vencimento.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
-      
+
       let incluir = false;
 
       // Regra 1: Semanal Pendentes (Segundas, prox 7 dias)
@@ -382,7 +416,7 @@ async function verificarEVenciarAlertas(isManual = false) {
         incluir = true;
         deveDisparar = true;
       }
-      
+
       // Regra 2: Diário Vencimento (Dia exato)
       if (configAlertas.diarioVencimento && diffDias === 0) {
         incluir = true;
@@ -420,13 +454,17 @@ async function verificarEVenciarAlertas(isManual = false) {
       const extra = [];
       if (conta.multa > 0) extra.push(`Multa: R$ ${Number(conta.multa).toFixed(2).replace('.', ',')}`);
       if (conta.juros > 0) extra.push(`Juros: R$ ${Number(conta.juros).toFixed(2).replace('.', ',')}`);
-      
-      const payloadLink = { d: conta.descricao, v: conta.valor };
-      if (conta.pixCopiaCola) payloadLink.p = conta.pixCopiaCola;
-      if (conta.codigoBarras) payloadLink.b = conta.codigoBarras;
-      
-      const hashData = Buffer.from(JSON.stringify(payloadLink)).toString('base64url');
-      const urlPagamento = `https://familia-rocha-7ea1a.web.app/pagar/${hashData}`;
+
+      const payloadLink = {
+        descricao: conta.descricao,
+        valor: conta.valor,
+        criadoEm: new Date().toISOString()
+      };
+      if (conta.pixCopiaCola) payloadLink.pixCopiaCola = conta.pixCopiaCola;
+      if (conta.codigoBarras) payloadLink.codigoBarras = conta.codigoBarras;
+
+      const linkDocRef = await firestoreDb.collection('links_pagamento').add(payloadLink);
+      const urlPagamento = `https://familia-rocha-7ea1a.web.app/pagar/${linkDocRef.id}`;
 
       // O link SEMPRE será enviado, mesmo se não tiver código (a página avisa se não tiver)
       extra.push(`Página de Pagamento: ${urlPagamento}`);
@@ -464,7 +502,7 @@ async function verificarEVenciarAlertas(isManual = false) {
     const atrasadasTitle = contasAlerta.filter(c => c.diasRestantes < 0);
 
     const linhas = ['📊 *ERP Familia Rocha — Resumo de Contas*', ''];
-    
+
     if (atrasadasTitle.length > 0) {
       linhas.push(`🔴 *ATRASADAS (${atrasadasTitle.length}):*`);
       for (let c of atrasadasTitle) {
@@ -485,7 +523,7 @@ async function verificarEVenciarAlertas(isManual = false) {
         linhas.push('');
       }
     }
-    
+
     if (proxTitle.length > 0) {
       linhas.push(`📅 *PRÓXIMOS ${proxTitle.length} VENCIMENTOS:*`);
       for (let c of proxTitle) {
@@ -495,7 +533,7 @@ async function verificarEVenciarAlertas(isManual = false) {
         linhas.push('');
       }
     }
-    
+
     linhas.push('Acesse o painel: https://familia-rocha-7ea1a.web.app/financeiro');
 
     const corpo = linhas.join('\n');
@@ -521,6 +559,7 @@ async function verificarEVenciarAlertas(isManual = false) {
     } catch (errEmail) {
       resultado.emailsFalhas = emailDestinatarios.length;
       console.error(`[EMAIL ERROR] ${errEmail.message}`);
+      resultado.detalhes.push(`Email Error: ${errEmail.message}`);
     }
 
     // Envia UM WhatsApp por contato
@@ -534,12 +573,25 @@ async function verificarEVenciarAlertas(isManual = false) {
               'apikey': process.env.WHATSAPP_API_TOKEN,
               'Authorization': `Bearer ${process.env.WHATSAPP_API_TOKEN}`
             },
-            body: JSON.stringify({ number: contato.numero, text: corpo }),
+            body: JSON.stringify({
+              number: contato.numero,
+              text: corpo,
+              textMessage: { text: corpo },
+              options: { delay: 1200, presence: 'composing' }
+            }),
           });
-          if (resWpp.ok) resultado.whatsappsEnviados++;
-          else resultado.whatsappsFalhas++;
-        } catch {
+          if (resWpp.ok) {
+            resultado.whatsappsEnviados++;
+          } else {
+            resultado.whatsappsFalhas++;
+            const errTxt = await resWpp.text();
+            console.error('[WPP ERROR]', errTxt);
+            resultado.detalhes.push(`WP falhou para ${contato.numero}: ${errTxt}`);
+          }
+        } catch (e) {
           resultado.whatsappsFalhas++;
+          console.error('[WPP CATCH ERROR]', e.message);
+          resultado.detalhes.push(`WP Exception para ${contato.numero}: ${e.message}`);
         }
       }
     }
@@ -635,7 +687,7 @@ async function verificarAlertasSaude() {
 
       const dataEvento = new Date(evento.dataEvento + 'T00:00:00');
       const diffDias = Math.ceil((dataEvento.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
-      
+
       // O alerta para este evento só entra na lista se faltarem exatamente 5 dias ou 0 dias (hoje)
       if (![5, 0].includes(diffDias)) continue;
 
@@ -707,11 +759,26 @@ async function verificarAlertasSaude() {
                 'apikey': process.env.WHATSAPP_API_TOKEN,
                 'Authorization': `Bearer ${process.env.WHATSAPP_API_TOKEN}`
               },
-              body: JSON.stringify({ number: numero, text: corpo }),
+              body: JSON.stringify({
+                number: numero,
+                text: corpo,
+                textMessage: { text: corpo },
+                options: { delay: 1200, presence: 'composing' }
+              }),
             });
-            if (resWpp.ok) resultado.whatsappsEnviados++;
-            else resultado.whatsappsFalhas++;
-          } catch { resultado.whatsappsFalhas++; }
+            if (resWpp.ok) {
+              resultado.whatsappsEnviados++;
+            } else {
+              resultado.whatsappsFalhas++;
+              const errTxt = await resWpp.text();
+              console.error('[WPP SAUDE ERROR]', errTxt);
+              resultado.detalhes.push(`WP Saude falhou para ${numero}: ${errTxt}`);
+            }
+          } catch (e) {
+            resultado.whatsappsFalhas++;
+            console.error('[WPP SAUDE CATCH ERROR]', e.message);
+            resultado.detalhes.push(`WP Saude Exception para ${numero}: ${e.message}`);
+          }
         }
       }
 
@@ -732,6 +799,7 @@ async function verificarAlertasSaude() {
       } catch (errEmail) {
         resultado.emailsFalhas += destEmail.length;
         console.error(`[EMAIL SAUDE ERROR] ${errEmail.message}`);
+        resultado.detalhes.push(`Email Saude Error para ${destEmail.join(', ')}: ${errEmail.message}`);
       }
     }
 
@@ -856,25 +924,25 @@ app.post('/api/conciliar-extrato', autenticar, verificarPermissao('financeiro'),
       console.log('[CONCILIACAO] Processando arquivo OFX/OFC');
       const regexTrn = /<STMTTRN>([\s\S]*?)<\/STMTTRN>/gi;
       const blocos = [...textoExtrato.matchAll(regexTrn)];
-      
+
       for (const bloco of blocos) {
         const conteudo = bloco[1];
         const matchValor = conteudo.match(/<TRNAMT>\s*([\-\.\d]+)/i);
         const matchData = conteudo.match(/<DTPOSTED>\s*(\d{8})/i);
         const matchMemo = conteudo.match(/<MEMO>\s*(.*)/i);
-        
+
         if (matchValor && matchData) {
           const valorNum = parseFloat(matchValor[1]);
           const dt = matchData[1];
           const ano = dt.substring(0, 4);
           const mes = dt.substring(4, 6);
           const dia = dt.substring(6, 8);
-          
+
           let descricao = '';
           if (matchMemo && matchMemo[1]) {
             descricao = matchMemo[1].replace(/<\/?[^>]+(>|$)/g, "").trim();
           }
-          
+
           transacoesExtrato.push({
             data: `${ano}-${mes}-${dia}`,
             descricao: descricao.substring(0, 60) || 'Transação',
@@ -891,56 +959,56 @@ app.post('/api/conciliar-extrato', autenticar, verificarPermissao('financeiro'),
       // Padroes de data: dd/mm, dd/mm/aaaa, dd.mm, dd-mm
       const regexData = /(\d{1,2}[\/\.\-]\d{1,2}(?:[\/\.\-]\d{2,4})?)/;
 
-    for (const linha of linhas) {
-      const limpa = linha.trim();
-      if (limpa.length < 10) continue;
+      for (const linha of linhas) {
+        const limpa = linha.trim();
+        if (limpa.length < 10) continue;
 
-      // Ignora cabecalho, numero de documento e saldo
-      const upper = limpa.toUpperCase();
-      if (upper.includes('EXTRATO') || upper.includes('AGENCIA') || upper.includes('CONTA') || upper.includes('DATA') || upper.includes('HISTORICO') || upper.includes('DOCUMENTO') || upper.includes('PERIODO') || upper.includes('EMITIDO')) continue;
-      if (upper.startsWith('NR') || upper.startsWith('NO') || upper.startsWith('N0') || /^\d{3,}\s+\d/.test(limpa)) continue;
-      if (upper.includes('SALDO') || upper.includes('SDO') || upper.includes('BALANCE') || upper.includes('TOTAL')) continue;
-      // Ignora linhas que sao apenas numero de documento e saldo (colunas)
-      if (/^\d{5,}\s+[\d.,]+$/.test(limpa) || /^[\d.,]+\s*$/.test(limpa)) continue;
+        // Ignora cabecalho, numero de documento e saldo
+        const upper = limpa.toUpperCase();
+        if (upper.includes('EXTRATO') || upper.includes('AGENCIA') || upper.includes('CONTA') || upper.includes('DATA') || upper.includes('HISTORICO') || upper.includes('DOCUMENTO') || upper.includes('PERIODO') || upper.includes('EMITIDO')) continue;
+        if (upper.startsWith('NR') || upper.startsWith('NO') || upper.startsWith('N0') || /^\d{3,}\s+\d/.test(limpa)) continue;
+        if (upper.includes('SALDO') || upper.includes('SDO') || upper.includes('BALANCE') || upper.includes('TOTAL')) continue;
+        // Ignora linhas que sao apenas numero de documento e saldo (colunas)
+        if (/^\d{5,}\s+[\d.,]+$/.test(limpa) || /^[\d.,]+\s*$/.test(limpa)) continue;
 
-      // Tenta extrair data
-      const matchData = limpa.match(regexData);
-      if (!matchData) continue;
+        // Tenta extrair data
+        const matchData = limpa.match(regexData);
+        if (!matchData) continue;
 
-      const dataStr = matchData[1];
-      let [dia, mes] = dataStr.split(/[\/\.\-]/);
-      dia = dia.padStart(2, '0'); mes = mes.padStart(2, '0');
+        const dataStr = matchData[1];
+        let [dia, mes] = dataStr.split(/[\/\.\-]/);
+        dia = dia.padStart(2, '0'); mes = mes.padStart(2, '0');
 
-      // Busca valor monetario na linha (R$ xxx,xx ou -xxx,xx ou xxx.xx)
-      const regexValor = /(-?\s*R?\$\s*[\d]{1,3}(?:\.?\d{3})*(?:,\d{2})?)|(-?\s*[\d]{1,3}(?:\.\d{3})*(?:,\d{2}))/gi;
-      const valores = [...limpa.matchAll(regexValor)];
-      if (valores.length === 0) continue;
+        // Busca valor monetario na linha (R$ xxx,xx ou -xxx,xx ou xxx.xx)
+        const regexValor = /(-?\s*R?\$\s*[\d]{1,3}(?:\.?\d{3})*(?:,\d{2})?)|(-?\s*[\d]{1,3}(?:\.\d{3})*(?:,\d{2}))/gi;
+        const valores = [...limpa.matchAll(regexValor)];
+        if (valores.length === 0) continue;
 
-      // Pega o PRIMEIRO valor (transacao), ignora saldo (ultimo)
-      const valorTransacao = valores[0][0];
-      let valorStr = valorTransacao.replace(/[R\$\s]/g, '').replace(/\./g, '').replace(',', '.').replace(/-/g, '');
-      const isNegativo = valorTransacao.includes('-') || limpa.toLowerCase().includes('débito') || limpa.toLowerCase().includes('debito') || limpa.toLowerCase().includes('saque') || limpa.toLowerCase().includes('compra') || limpa.toLowerCase().includes('pagamento');
-      let valor = parseFloat(valorStr);
-      if (isNaN(valor)) continue;
-      if (isNegativo) valor = -Math.abs(valor);
+        // Pega o PRIMEIRO valor (transacao), ignora saldo (ultimo)
+        const valorTransacao = valores[0][0];
+        let valorStr = valorTransacao.replace(/[R\$\s]/g, '').replace(/\./g, '').replace(',', '.').replace(/-/g, '');
+        const isNegativo = valorTransacao.includes('-') || limpa.toLowerCase().includes('débito') || limpa.toLowerCase().includes('debito') || limpa.toLowerCase().includes('saque') || limpa.toLowerCase().includes('compra') || limpa.toLowerCase().includes('pagamento');
+        let valor = parseFloat(valorStr);
+        if (isNaN(valor)) continue;
+        if (isNegativo) valor = -Math.abs(valor);
 
-      // Descricao: remove data, valores e numeros de documento da linha
-      let descricao = limpa
-        .replace(matchData[0], '')
-        .replace(valorTransacao, '')
-        .replace(/[\/\.\-]\d{1,2}[\/\.\-]\d{2,4}/g, '')
-        .replace(/\b\d{3,10}[\-\/]?\d{0,5}\b/g, '') // remove numeros de documento
-        .replace(/\s+/g, ' ')
-        .trim();
+        // Descricao: remove data, valores e numeros de documento da linha
+        let descricao = limpa
+          .replace(matchData[0], '')
+          .replace(valorTransacao, '')
+          .replace(/[\/\.\-]\d{1,2}[\/\.\-]\d{2,4}/g, '')
+          .replace(/\b\d{3,10}[\-\/]?\d{0,5}\b/g, '') // remove numeros de documento
+          .replace(/\s+/g, ' ')
+          .trim();
 
-      if (descricao.length > 2) {
-        transacoesExtrato.push({
-          data: `${anoAtual}-${mes}-${dia}`,
-          descricao: descricao.substring(0, 60),
-          valor: Math.abs(valor),
-          tipo: valor < 0 ? 'DEBITO' : 'CREDITO',
-        });
-      }
+        if (descricao.length > 2) {
+          transacoesExtrato.push({
+            data: `${anoAtual}-${mes}-${dia}`,
+            descricao: descricao.substring(0, 60),
+            valor: Math.abs(valor),
+            tipo: valor < 0 ? 'DEBITO' : 'CREDITO',
+          });
+        }
       }
     }
 
@@ -1037,7 +1105,7 @@ app.post('/api/baixar-conciliados', autenticar, verificarPermissao('financeiro')
 app.post('/api/extrair-boleto', autenticar, verificarPermissao('financeiro'), limiterUpload, upload.single('documento'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ erro: 'Nenhum documento enviado.' });
-    
+
     const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
     const location = process.env.GOOGLE_CLOUD_LOCATION;
     const processorId = process.env.DOCUMENT_AI_PROCESSOR_ID;
@@ -1085,7 +1153,7 @@ app.post('/api/extrair-boleto', autenticar, verificarPermissao('financeiro'), li
                 dadosExtraidos.dataVencimento = `${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`;
               } else {
                 const partes = valorTexto.split(/[\/\-.]/);
-                if(partes.length === 3) dadosExtraidos.dataVencimento = `${partes[2]}-${partes[1]}-${partes[0]}`;
+                if (partes.length === 3) dadosExtraidos.dataVencimento = `${partes[2]}-${partes[1]}-${partes[0]}`;
               }
             }
           });
@@ -1140,13 +1208,13 @@ app.post('/api/extrair-boleto', autenticar, verificarPermissao('financeiro'), li
         ], { timeout: 60000 });
 
         textoCompleto = fs.readFileSync(tmpOut + '.txt', 'utf-8');
-        try { fs.unlinkSync(tmpImg); fs.unlinkSync(tmpOut + '.txt'); } catch {}
+        try { fs.unlinkSync(tmpImg); fs.unlinkSync(tmpOut + '.txt'); } catch { }
         console.log(`[OCR TESSERACT] Texto extraido via OCR: ${textoCompleto.length} caracteres`);
         if (textoCompleto) ocrWarning = null;
-        } catch (tessErr) {
-          console.error('[OCR TESSERACT ERROR] Falha no OCR local:', tessErr.message);
-        }
+      } catch (tessErr) {
+        console.error('[OCR TESSERACT ERROR] Falha no OCR local:', tessErr.message);
       }
+    }
 
     // FALLBACKS VIA REGEX (rodam com texto de qualquer fonte)
     if (textoCompleto) {
@@ -1213,52 +1281,60 @@ app.post('/api/extrair-boleto', autenticar, verificarPermissao('financeiro'), li
       if (pixEncontrado) {
         dadosExtraidos.pixCopiaCola = pixEncontrado[0];
         console.log('[OCR] PIX Copia e Cola encontrado via Texto/Regex!');
+      } else {
+        const regexChavePix = /Chave\s*PIX\s*[:\-\s]*([a-zA-Z0-9$@!%*?&.=-]+)/i;
+        const chavePixEncontrada = textoCompleto.match(regexChavePix);
+        if (chavePixEncontrada) {
+          dadosExtraidos.pixCopiaCola = chavePixEncontrada[1].trim();
+          console.log('[OCR] Chave PIX simples encontrada:', dadosExtraidos.pixCopiaCola);
+        }
       }
     }
-    
     // TENTA LER QR CODE PARA EXTRAIR O PIX
     try {
       console.log('[QRCODE] Iniciando busca por QR Code / PIX...');
       let imgBuffer = null;
       if (req.file.mimetype === 'application/pdf') {
-        const docQ = await pdfToImg(new Uint8Array(req.file.buffer.buffer, req.file.buffer.byteOffset, req.file.buffer.byteLength), { scale: 2 });
+        const docQ = await pdfToImg(new Uint8Array(req.file.buffer.buffer, req.file.buffer.byteOffset, req.file.buffer.byteLength), { scale: 3 });
         imgBuffer = await docQ.getPage(1);
       } else if (req.file.mimetype.startsWith('image/')) {
         imgBuffer = req.file.buffer;
       }
-      
+
       if (imgBuffer) {
         const image = await Jimp.read(imgBuffer);
         const { data, width, height } = image.bitmap;
-        const code = jsQR(data, width, height, { inversionAttempts: 'dontInvert' });
+        let code = jsQR(data, width, height, { inversionAttempts: 'dontInvert' });
+        if (!code) code = jsQR(data, width, height, { inversionAttempts: 'attemptBoth' });
+
         if (code && code.data) {
           console.log('[QRCODE] Encontrado QR Code:', code.data.substring(0, 50) + '...');
-          if (code.data.startsWith('000201')) {
-            dadosExtraidos.pixCopiaCola = code.data;
-          }
+          dadosExtraidos.pixCopiaCola = code.data;
+        } else {
+          console.log('[QRCODE] jsQR nao encontrou nenhum QRCode legivel.');
         }
       }
     } catch (qrErr) {
       console.error('[QRCODE ERROR] Falha ao ler QR Code:', qrErr.message);
     }
 
-        console.log(`[OCR DEBUG] Dados extraidos:`, JSON.stringify(dadosExtraidos));
+    console.log(`[OCR DEBUG] Dados extraidos:`, JSON.stringify(dadosExtraidos));
 
-        // Limpa artefatos de OCR da descricao
-        if (dadosExtraidos.descricao) {
-          dadosExtraidos.descricao = dadosExtraidos.descricao.replace(/^[a-z\s]+/, '').trim();
-        }
+    // Limpa artefatos de OCR da descricao
+    if (dadosExtraidos.descricao) {
+      dadosExtraidos.descricao = dadosExtraidos.descricao.replace(/^[a-z\s]+/, '').trim();
+    }
 
-        // Verifica se extraiu dados uteis
-        const temDadosUteis = dadosExtraidos.descricao || dadosExtraidos.valor || dadosExtraidos.dataVencimento;
-        if (!temDadosUteis && ocrWarning) {
-          dadosExtraidos.aviso = ocrWarning;
-        } else if (!temDadosUteis && textoCompleto) {
-          dadosExtraidos.aviso = 'Texto extraido do documento, mas nao foi possivel identificar descricao, valor ou data. Verifique os dados manualmente.';
-          dadosExtraidos.textoBruto = textoCompleto.substring(0, 1000);
-        } else if (!temDadosUteis) {
-          dadosExtraidos.aviso = 'Nao foi possivel extrair texto do documento. Verifique se e uma imagem legivel ou PDF com texto.';
-        }
+    // Verifica se extraiu dados uteis
+    const temDadosUteis = dadosExtraidos.descricao || dadosExtraidos.valor || dadosExtraidos.dataVencimento;
+    if (!temDadosUteis && ocrWarning) {
+      dadosExtraidos.aviso = ocrWarning;
+    } else if (!temDadosUteis && textoCompleto) {
+      dadosExtraidos.aviso = 'Texto extraido do documento, mas nao foi possivel identificar descricao, valor ou data. Verifique os dados manualmente.';
+      dadosExtraidos.textoBruto = textoCompleto.substring(0, 1000);
+    } else if (!temDadosUteis) {
+      dadosExtraidos.aviso = 'Nao foi possivel extrair texto do documento. Verifique se e uma imagem legivel ou PDF com texto.';
+    }
 
     // INTEGRAÇÃO DRIVE
     console.log(`[DRIVE] Armazenando arquivo na nuvem...`);
@@ -1356,7 +1432,7 @@ app.post('/api/upload-saude', autenticar, verificarPermissao('saude'), limiterUp
 
 const SUPERADMIN_EMAIL = 'tobiasrocha@gmail.com';
 
-const MODULOS = ['financeiro', 'tarefas', 'saude', 'estudos', 'patrimonio', 'viagens', 'espiritual'];
+const MODULOS = ['financeiro', 'tarefas', 'saude', 'estudos', 'patrimonio', 'viagens', 'espiritual', 'pessoas'];
 
 const permissoesPadrao = () => {
   const p = {};
@@ -1364,7 +1440,7 @@ const permissoesPadrao = () => {
   return p;
 };
 
-const isSuperadmin = (email) => email === SUPERADMIN_EMAIL;
+const isSuperadmin = (email) => email && email.toLowerCase() === SUPERADMIN_EMAIL;
 
 const formatarMembro = (doc) => {
   const data = doc.data();
@@ -1381,6 +1457,8 @@ const formatarMembro = (doc) => {
     telefone: data.telefone || '',
     role: data.role || 'usuario',
     criadoEm: data.criadoEm || '',
+    receberEmail: !!data.receberEmail,
+    receberWhatsapp: !!data.receberWhatsapp,
     isSuperadmin: isSuperadmin(email),
     permissoes: isSuperadmin(email) ? permissoesPadrao() : (data.permissoes || {}),
     temAuth: !!(data.uid || data.email),
@@ -1434,7 +1512,7 @@ app.post('/api/admin/usuarios', autenticar, verificarAdmin, async (req, res) => 
     if (!parsed.success) {
       return res.status(400).json({ erro: parsed.error.issues.map(i => i.message).join('; ') });
     }
-    const { nome, email, senha, tipo, dataNascimento, tipoSanguineo, alergias, telefone } = parsed.data;
+    const { nome, email, senha, tipo, dataNascimento, tipoSanguineo, alergias, telefone, receberEmail, receberWhatsapp } = parsed.data;
 
     const dadosFirestore = {
       nome,
@@ -1443,6 +1521,8 @@ app.post('/api/admin/usuarios', autenticar, verificarAdmin, async (req, res) => 
       tipoSanguineo: tipoSanguineo || '',
       alergias: alergias || '',
       telefone: telefone || '',
+      receberEmail: !!receberEmail,
+      receberWhatsapp: !!receberWhatsapp,
       criadoEm: new Date().toISOString(),
     };
 
@@ -1514,7 +1594,7 @@ app.put('/api/admin/usuarios/:id', autenticar, verificarAdmin, async (req, res) 
     if (!parsed.success) {
       return res.status(400).json({ erro: parsed.error.issues.map(i => i.message).join('; ') });
     }
-    const { nome, email, tipo, dataNascimento, tipoSanguineo, alergias, telefone } = parsed.data;
+    const { nome, email, tipo, dataNascimento, tipoSanguineo, alergias, telefone, receberEmail, receberWhatsapp } = parsed.data;
 
     const docRef = firestoreDb.collection('usuarios').doc(id);
     const doc = await docRef.get();
@@ -1530,6 +1610,8 @@ app.put('/api/admin/usuarios/:id', autenticar, verificarAdmin, async (req, res) 
     if (tipoSanguineo !== undefined) firestoreUpdates.tipoSanguineo = tipoSanguineo;
     if (alergias !== undefined) firestoreUpdates.alergias = alergias;
     if (telefone !== undefined) firestoreUpdates.telefone = telefone;
+    if (receberEmail !== undefined) firestoreUpdates.receberEmail = !!receberEmail;
+    if (receberWhatsapp !== undefined) firestoreUpdates.receberWhatsapp = !!receberWhatsapp;
 
     if (temAuth) {
       const authUpdates = {};
@@ -1717,5 +1799,294 @@ app.post('/api/disparar-alerta-prestador', autenticar, async (req, res) => {
 // Health check para Cloud Run
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
+// ── Rota do Mentor IA (Gemini + RAG) ──
+app.post('/api/ia/chat', autenticar, async (req, res) => {
+  try {
+    const { message, history } = req.body;
+    if (!message) return res.status(400).json({ erro: 'Mensagem não fornecida.' });
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(500).json({ erro: 'API Key do Gemini não configurada no servidor.' });
+    }
 
-app.listen(porta, () => console.log(`🚀 API rodando na porta `));
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const uid = req.usuario.uid;
+
+    // 1. RAG: Buscar contexto do usuário
+    const userDoc = await firestoreDb.collection('usuarios').doc(uid).get();
+    const nomeCompleto = userDoc.exists ? (userDoc.data().nome || 'Usuário') : 'Usuário';
+    const nomeUsuario = nomeCompleto.split(' ')[0];
+
+    // RAG: Resumo financeiro do mês atual
+    const hoje = new Date();
+    const ano = hoje.getFullYear();
+    const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+    const inicioMes = `${ano}-${mes}-01`;
+    const fimMes = `${ano}-${mes}-31`; // simplificado, para cobrir o mes todo textualmente
+
+    const financasSnap = await firestoreDb.collection('financas')
+      .where('dataVencimento', '>=', inicioMes)
+      .where('dataVencimento', '<=', fimMes)
+      .get();
+
+    let totalDespesas = 0;
+    let totalReceitas = 0;
+
+    financasSnap.forEach(doc => {
+      const d = doc.data();
+      const val = parseFloat(d.valor) || 0;
+      if (d.tipo === 'Despesa') totalDespesas += val;
+      if (d.tipo === 'Receita') totalReceitas += val;
+    });
+
+    const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+
+    const systemPrompt = `Você é a Geri, uma educadora financeira super amigável e direta que trabalha no sistema Família Rocha. 
+O usuário que está falando com você se chama ${nomeUsuario}. 
+Aqui estão os dados financeiros reais da família dele para o mês atual (${mes}/${ano}):
+- Total de Receitas: ${formatCurrency(totalReceitas)}
+- Total de Despesas (pendentes e pagas): ${formatCurrency(totalDespesas)}
+
+Responda à pergunta do usuário de forma útil, baseada em boas práticas de educação financeira. Não use formatações muito complexas, mantenha o texto limpo, use emojis amigáveis e responda em no máximo 2 a 3 parágrafos.
+`;
+
+    // 2. Chamar o modelo
+    const promptFinal = `${systemPrompt}\n\nHistórico da conversa:\n${(history || []).map(h => `${h.role === 'user' ? nomeUsuario : 'Geri'}: ${h.text}`).join('\n')}\n\n${nomeUsuario}: ${message}`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: promptFinal,
+    });
+
+    res.json({ reply: response.text });
+  } catch (error) {
+    console.error('[IA] Erro no chat:', error);
+    res.status(500).json({ erro: 'Falha ao processar a resposta da IA.', detalhes: error.message });
+  }
+});
+
+// ---------------------------------------------------------
+// ROTA: PIN E WEBAUTHN (BIOMETRIA)
+// ---------------------------------------------------------
+
+// --- PIN SETUP ---
+app.post('/api/auth/pin-setup', autenticar, async (req, res) => {
+  try {
+    const { pin } = req.body;
+    if (!pin || pin.length < 4) return res.status(400).json({ erro: 'PIN invalido. Use no minimo 4 digitos.' });
+
+    const salt = await bcrypt.genSalt(10);
+    const pinHash = await bcrypt.hash(pin, salt);
+
+    await firestoreDb.collection('usuarios').doc(req.usuario.uid).set({ pinHash }, { merge: true });
+    res.json({ msg: 'PIN cadastrado com sucesso.' });
+  } catch (error) {
+    console.error('[PIN SETUP]', error);
+    res.status(500).json({ erro: 'Falha ao cadastrar PIN.' });
+  }
+});
+
+// --- PIN LOGIN ---
+app.post('/api/auth/pin-login', async (req, res) => {
+  try {
+    const { email, pin } = req.body;
+    if (!email || !pin) return res.status(400).json({ erro: 'Email e PIN sao obrigatorios.' });
+
+    let userRecord;
+    try {
+      userRecord = await authAdmin.getUserByEmail(email);
+    } catch {
+      return res.status(401).json({ erro: 'Credenciais invalidas.' });
+    }
+
+    const doc = await firestoreDb.collection('usuarios').doc(userRecord.uid).get();
+    if (!doc.exists || !doc.data().pinHash) {
+      return res.status(401).json({ erro: 'PIN nao cadastrado para este usuario.' });
+    }
+
+    const isMatch = await bcrypt.compare(pin, doc.data().pinHash);
+    if (!isMatch) {
+      return res.status(401).json({ erro: 'PIN incorreto.' });
+    }
+
+    const customToken = await authAdmin.createCustomToken(userRecord.uid);
+    res.json({ customToken });
+  } catch (error) {
+    console.error('[PIN LOGIN]', error);
+    res.status(500).json({ erro: 'Falha no login por PIN.' });
+  }
+});
+
+// --- WEBAUTHN CONFIG ---
+const rpName = 'Família Rocha ERP';
+function getRpId(origin) {
+  try {
+    const url = new URL(origin);
+    return url.hostname;
+  } catch {
+    return 'localhost';
+  }
+}
+
+// --- WEBAUTHN: REGISTRATION OPTIONS ---
+app.post('/api/auth/webauthn-registration-options', autenticar, async (req, res) => {
+  try {
+    const doc = await firestoreDb.collection('usuarios').doc(req.usuario.uid).get();
+    const user = doc.data() || {};
+    const rpID = getRpId(req.headers.origin || req.headers.referer);
+    const passkeys = user.passkeys || [];
+
+    const options = await generateRegistrationOptions({
+      rpName,
+      rpID,
+      userID: new TextEncoder().encode(req.usuario.uid),
+      userName: req.usuario.email,
+      attestationType: 'none',
+      excludeCredentials: passkeys.map(key => ({
+        id: key.credentialID,
+        type: 'public-key',
+        transports: key.transports,
+      })),
+      authenticatorSelection: {
+        residentKey: 'preferred',
+        userVerification: 'preferred',
+        authenticatorAttachment: 'platform',
+      }
+    });
+
+    await firestoreDb.collection('usuarios').doc(req.usuario.uid).set({ currentChallenge: options.challenge }, { merge: true });
+    res.json(options);
+  } catch (error) {
+    console.error('[WEBAUTHN REG OPTS]', error);
+    res.status(500).json({ erro: 'Falha ao gerar opcoes de registro WebAuthn.' });
+  }
+});
+
+// --- WEBAUTHN: REGISTRATION VERIFY ---
+app.post('/api/auth/webauthn-registration-verify', autenticar, async (req, res) => {
+  try {
+    const { body } = req;
+    const rpID = getRpId(req.headers.origin || req.headers.referer);
+    const expectedOrigin = req.headers.origin || `https://${rpID}`;
+
+    const doc = await firestoreDb.collection('usuarios').doc(req.usuario.uid).get();
+    const user = doc.data();
+    if (!user || !user.currentChallenge) return res.status(400).json({ erro: 'Challenge nao encontrado.' });
+
+    const verification = await verifyRegistrationResponse({
+      response: body,
+      expectedChallenge: user.currentChallenge,
+      expectedOrigin,
+      expectedRPID: rpID,
+    });
+
+    if (verification.verified && verification.registrationInfo) {
+      const { credential } = verification.registrationInfo;
+      const newPasskey = {
+        credentialID: credential.id,
+        credentialPublicKey: Buffer.from(credential.publicKey).toString('base64url'),
+        counter: credential.counter,
+        transports: body.response.transports || [],
+      };
+      const passkeys = user.passkeys || [];
+      passkeys.push(newPasskey);
+
+      await firestoreDb.collection('usuarios').doc(req.usuario.uid).set({
+        passkeys,
+        currentChallenge: null
+      }, { merge: true });
+
+      return res.json({ verified: true });
+    }
+    res.status(400).json({ erro: 'Verificacao falhou.' });
+  } catch (error) {
+    console.error('[WEBAUTHN REG VERIFY]', error);
+    require('fs').appendFileSync('crash.log', 'VERIFY ERROR: ' + error.stack + '\n');
+    res.status(500).json({ erro: 'Falha ao verificar registro WebAuthn.', detalhes: error.message });
+  }
+});
+
+// --- WEBAUTHN: AUTHENTICATION OPTIONS ---
+app.post('/api/auth/webauthn-authentication-options', async (req, res) => {
+  try {
+    const rpID = getRpId(req.headers.origin || req.headers.referer);
+
+    const options = await generateAuthenticationOptions({
+      rpID,
+      userVerification: 'preferred',
+    });
+
+    const challengeDoc = firestoreDb.collection('authChallenges').doc();
+    await challengeDoc.set({
+      challenge: options.challenge,
+      createdAt: new Date().toISOString()
+    });
+
+    res.json({ options, challengeId: challengeDoc.id });
+  } catch (error) {
+    console.error('[WEBAUTHN AUTH OPTS]', error);
+    res.status(500).json({ erro: 'Falha ao gerar opcoes de autenticacao.' });
+  }
+});
+
+// --- WEBAUTHN: AUTHENTICATION VERIFY ---
+app.post('/api/auth/webauthn-authentication-verify', async (req, res) => {
+  try {
+    const { body, challengeId } = req.body;
+    if (!body || !challengeId) return res.status(400).json({ erro: 'Dados invalidos.' });
+
+    const challengeDoc = await firestoreDb.collection('authChallenges').doc(challengeId).get();
+    if (!challengeDoc.exists) return res.status(400).json({ erro: 'Challenge expirado ou invalido.' });
+    const { challenge } = challengeDoc.data();
+    await challengeDoc.ref.delete();
+
+    const userHandleBase64url = body.response.userHandle;
+    if (!userHandleBase64url) return res.status(400).json({ erro: 'Dispositivo nao retornou o identificador do usuario.' });
+
+    const uid = Buffer.from(userHandleBase64url, 'base64url').toString('utf8');
+
+    const doc = await firestoreDb.collection('usuarios').doc(uid).get();
+    const user = doc.data();
+    if (!user || !user.passkeys || user.passkeys.length === 0) {
+      return res.status(400).json({ erro: 'Usuario nao encontrado ou sem chaves.' });
+    }
+
+    const rpID = getRpId(req.headers.origin || req.headers.referer);
+    const expectedOrigin = req.headers.origin || `https://${rpID}`;
+
+    const passkey = user.passkeys.find(key => key.credentialID === body.id);
+    if (!passkey) return res.status(404).json({ erro: 'Chave nao encontrada no servidor.' });
+
+    const verification = await verifyAuthenticationResponse({
+      response: body,
+      expectedChallenge: challenge,
+      expectedOrigin,
+      expectedRPID: rpID,
+      credential: {
+        id: passkey.credentialID,
+        publicKey: new Uint8Array(Buffer.from(passkey.credentialPublicKey, 'base64url')),
+        counter: passkey.counter,
+        transports: passkey.transports,
+      },
+    });
+
+    if (verification.verified) {
+      const passkeys = user.passkeys.map(key => {
+        if (key.credentialID === body.id) {
+          return { ...key, counter: verification.authenticationInfo.newCounter };
+        }
+        return key;
+      });
+      await firestoreDb.collection('usuarios').doc(uid).set({ passkeys }, { merge: true });
+
+      const customToken = await authAdmin.createCustomToken(uid);
+      return res.json({ verified: true, customToken });
+    }
+
+    res.status(400).json({ erro: 'Verificacao de biometria falhou.' });
+  } catch (error) {
+    console.error('[WEBAUTHN AUTH VERIFY]', error);
+    res.status(500).json({ erro: 'Falha ao verificar biometria.', detalhes: error.message });
+  }
+});
+
+app.listen(porta, () => console.log(`🚀 API rodando na porta ${porta}`));

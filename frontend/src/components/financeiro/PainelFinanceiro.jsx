@@ -20,7 +20,10 @@ import GerenciadorSalarios from './GerenciadorSalarios';
 import GerenciadorCarteira from './GerenciadorCarteira';
 import GerenciadorCofre from './GerenciadorCofre';
 import GerenciadorHeranca from './GerenciadorHeranca';
-import { Vault, Gem } from 'lucide-react';
+import ModalCategorias from './ModalCategorias';
+import ModalOrcamentos from './ModalOrcamentos';
+import GerenciadorOrcamentos from './GerenciadorOrcamentos';
+import { Vault, Gem, Tags } from 'lucide-react';
 
 export default function PainelFinanceiro({ cores }) {
   const { dados: lancamentosGlobais, recarregar } = useFirestore('financas');
@@ -91,38 +94,46 @@ export default function PainelFinanceiro({ cores }) {
   const [salvando, setSalvando] = useState(false);
 
   const [executandoAlertas, setExecutandoAlertas] = useState(false);
-  const [exibirModalConfigAlertas, setExibirModalConfigAlertas] = useState(false);
-  const [configAlertas, setConfigAlertas] = useState({ semanalPendentes: true, diarioVencimento: true, diarioNovasContas: true, quinzenalVencidas: true });
+  const [categoriasFinanceiras, setCategoriasFinanceiras] = useState({
+    despesa: ['Alimentação', 'Cartão de Crédito', 'Educação', 'Igreja/Célula', 'Impostos', 'Lazer', 'Moradia', 'Prestadores de Serviço', 'Saúde', 'Transporte', 'Outros'],
+    receita: ['Salário', 'Serviços', 'Investimentos', 'Presente', 'Outros'],
+    tags: []
+  });
+  const [orcamentos, setOrcamentos] = useState({});
+  const [exibirModalCategorias, setExibirModalCategorias] = useState(false);
+  const [exibirModalOrcamentos, setExibirModalOrcamentos] = useState(false);
 
   useEffect(() => {
     const loadConfig = async () => {
       try {
-        const docSnap = await getDoc(doc(db, 'configuracoes', 'alertas'));
-        if (docSnap.exists()) setConfigAlertas(docSnap.data());
-      } catch (e) { console.error(e); }
+        const finSnap = await getDoc(doc(db, 'configuracoes', 'financeiro'));
+        if (finSnap.exists()) {
+          const d = finSnap.data();
+          if (d.categorias) setCategoriasFinanceiras(d.categorias);
+          if (d.orcamentos) setOrcamentos(d.orcamentos);
+        }
+      } catch (err) {
+        console.error('Erro ao carregar configurações:', err);
+      }
     };
     loadConfig();
   }, []);
 
-  const handleSalvarConfigAlertas = async () => {
-    try {
-      await setDoc(doc(db, 'configuracoes', 'alertas'), configAlertas);
-      setExibirModalConfigAlertas(false);
-      alert('Configurações salvas!');
-    } catch (e) { alert('Erro ao salvar'); }
-  };
+
 
   const [idEditando, setIdEditando] = useState(null);
   const [descricao, setDescricao] = useState(''); const [valor, setValor] = useState('');
   const [tipo, setTipo] = useState('Despesa'); const [categoria, setCategoria] = useState('Moradia');
   const [dataVencimento, setDataVencimento] = useState(''); const [status, setStatus] = useState('Pago');
   const [codigoBarras, setCodigoBarras] = useState(''); const [multa, setMulta] = useState(''); const [juros, setJuros] = useState('');
+  const [chavePixCopiaCola, setChavePixCopiaCola] = useState('');
   const [linkArquivo, setLinkArquivo] = useState(''); const [contaIdSelecionada, setContaIdSelecionada] = useState('');
   const [perfilTransacaoId, setPerfilTransacaoId] = useState('');
   const [formaPagamento, setFormaPagamento] = useState('');
 
   const [isParcelado, setIsParcelado] = useState(false); const [qtdParcelas, setQtdParcelas] = useState('2');
   const [listaParcelas, setListaParcelas] = useState([]);
+  const [tagsSelecionadas, setTagsSelecionadas] = useState([]);
 
   const anoAtual = new Date().getFullYear();
   const mesNumAtual = new Date().getMonth() + 1;
@@ -135,8 +146,8 @@ export default function PainelFinanceiro({ cores }) {
   const [perfilContabil, setPerfilContabil] = useState('Todos');
 
   const hoje = new Date().toISOString().slice(0, 10);
-  const categoriesDespesa = ['Alimentação', 'Cartão de Crédito', 'Educação', 'Igreja/Célula', 'Impostos', 'Lazer', 'Moradia', 'Prestadores de Serviço', 'Saúde', 'Transporte', 'Outros'];
-  const categoriasReceita = ['Salário', 'Serviços', 'Investimentos', 'Presente', 'Outros'];
+  const categoriesDespesa = categoriasFinanceiras.despesa || [];
+  const categoriasReceita = categoriasFinanceiras.receita || [];
 
   // Merge carteira nos lançamentos para exibição (apenas os que não foram para o fluxo financeiro)
   const carteiraComoLancamento = (carteira || []).filter(c => !c.vinculoId).map(c => ({
@@ -188,6 +199,7 @@ export default function PainelFinanceiro({ cores }) {
       if (dados.valor) setValor(dados.valor);
       if (dados.dataVencimento) setDataVencimento(dados.dataVencimento);
       if (dados.codigoBarras) setCodigoBarras(dados.codigoBarras);
+      if (dados.pixCopiaCola) setChavePixCopiaCola(dados.pixCopiaCola);
       if (dados.linkArquivo) setLinkArquivo(dados.linkArquivo);
     }
   };
@@ -231,20 +243,33 @@ export default function PainelFinanceiro({ cores }) {
 
   const resetarFormulario = () => {
     setDescricao(''); setValor(''); setTipo('Despesa'); setCategoria('Moradia'); setDataVencimento(''); setStatus('Pago');
-    setCodigoBarras(''); setMulta(''); setJuros(''); setLinkArquivo(''); setIsParcelado(false); setListaParcelas([]);
-    setContaIdSelecionada(''); setFormaPagamento('');
+    setCodigoBarras(''); setChavePixCopiaCola(''); setMulta(''); setJuros(''); setLinkArquivo(''); setIsParcelado(false); setListaParcelas([]);
+    setContaIdSelecionada(''); setFormaPagamento(''); setTagsSelecionadas([]);
     setIdEditando(null); setExibirForm(false);
   };
 
   const handleSalvarRegistro = async (e) => {
     e.preventDefault(); setSalvando(true);
     try {
-      if (isParcelado && listaParcelas.length > 0) {
+      if (tipo === 'Transferencia') {
+        const payloadOrigem = { descricao: `Transferência (Saída) - ${descricao}`, valor: parseFloat(valor), tipo: 'Despesa', categoria: 'Transferência', dataVencimento, status, contaId: contaIdSelecionada || null, perfilId: perfilTransacaoId, isTransferencia: true, tags: tagsSelecionadas };
+        const payloadDestino = { descricao: `Transferência (Entrada) - ${descricao}`, valor: parseFloat(valor), tipo: 'Receita', categoria: 'Transferência', dataVencimento, status, contaId: formaPagamento || null, perfilId: perfilTransacaoId, isTransferencia: true, tags: tagsSelecionadas }; // formaPagamento will temporarily hold contaDestinoId
+
+        if (idEditando) {
+          alert("Edição de transferências deve ser feita apagando o registro e criando um novo.");
+          return;
+        } else {
+          await Promise.all([
+            addDoc(collection(db, 'financas'), { ...payloadOrigem, criadoEm: new Date().toISOString() }),
+            addDoc(collection(db, 'financas'), { ...payloadDestino, criadoEm: new Date().toISOString() })
+          ]);
+        }
+      } else if (isParcelado && listaParcelas.length > 0) {
         for (let p of listaParcelas) {
-          await addDoc(collection(db, 'financas'), { descricao: `${descricao} (${p.numero}/${listaParcelas.length})`, valor: parseFloat(p.valor), tipo, categoria, dataVencimento: p.dataVencimento, status, codigoBarras, multa: parseFloat(multa) || 0, juros: parseFloat(juros) || 0, linkArquivo, contaId: contaIdSelecionada || null, perfilId: perfilTransacaoId, formaPagamento, criadoEm: new Date().toISOString() });
+          await addDoc(collection(db, 'financas'), { descricao: `${descricao} (${p.numero}/${listaParcelas.length})`, valor: parseFloat(p.valor), tipo, categoria, dataVencimento: p.dataVencimento, status, codigoBarras, pixCopiaCola: chavePixCopiaCola, multa: parseFloat(multa) || 0, juros: parseFloat(juros) || 0, linkArquivo, contaId: contaIdSelecionada || null, perfilId: perfilTransacaoId, formaPagamento, tags: tagsSelecionadas, criadoEm: new Date().toISOString() });
         }
       } else {
-        const payload = { descricao, valor: parseFloat(valor), tipo, categoria, dataVencimento, status, codigoBarras, multa: parseFloat(multa) || 0, juros: parseFloat(juros) || 0, linkArquivo, contaId: contaIdSelecionada || null, perfilId: perfilTransacaoId, formaPagamento };
+        const payload = { descricao, valor: parseFloat(valor), tipo, categoria, dataVencimento, status, codigoBarras, pixCopiaCola: chavePixCopiaCola, multa: parseFloat(multa) || 0, juros: parseFloat(juros) || 0, linkArquivo, contaId: contaIdSelecionada || null, perfilId: perfilTransacaoId, formaPagamento, tags: tagsSelecionadas };
         if (idEditando) await updateDoc(doc(db, 'financas', idEditando), { ...payload, atualizadoEm: new Date().toISOString() });
         else await addDoc(collection(db, 'financas'), { ...payload, criadoEm: new Date().toISOString() });
       }
@@ -255,9 +280,10 @@ export default function PainelFinanceiro({ cores }) {
   const handleEditar = (item) => {
     setDescricao(item.descricao); setValor(item.valor); setTipo(item.tipo); setCategoria(item.categoria);
     setDataVencimento(item.dataVencimento); setStatus(item.status); setCodigoBarras(item.codigoBarras || '');
+    setChavePixCopiaCola(item.pixCopiaCola || '');
     setMulta(item.multa?.toString() || ''); setJuros(item.juros?.toString() || '');
     setContaIdSelecionada(item.contaId || ''); setPerfilTransacaoId(item.perfilId || ''); setLinkArquivo(item.linkArquivo || '');
-    setFormaPagamento(item.formaPagamento || '');
+    setFormaPagamento(item.formaPagamento || ''); setTagsSelecionadas(item.tags || []);
     setIdEditando(item.id); setIsParcelado(false); setListaParcelas([]); setExibirForm(true); setAbaAtiva('lancamentos');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -270,35 +296,7 @@ export default function PainelFinanceiro({ cores }) {
   return (
     <div style={{ padding: '30px', maxWidth: '1200px', margin: '0 auto' }}>
       
-      {exibirModalConfigAlertas && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 3000 }}>
-          <div style={{ backgroundColor: '#fff', padding: '30px', borderRadius: '16px', maxWidth: '500px', width: '100%', boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }}>
-            <h3 style={{ margin: '0 0 20px 0', color: '#333' }}>⚙️ Configurações de Alertas</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
-                <input type="checkbox" checked={configAlertas.semanalPendentes} onChange={e => setConfigAlertas(c => ({...c, semanalPendentes: e.target.checked}))} style={{ marginTop: '4px' }} />
-                <div><strong style={{ display: 'block', color: '#2c3e50' }}>Semanal - Pendentes (Segundas)</strong><span style={{ fontSize: '12px', color: '#666' }}>Dispara toda segunda-feira listando as contas que vencem nos próximos 7 dias.</span></div>
-              </label>
-              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
-                <input type="checkbox" checked={configAlertas.diarioVencimento} onChange={e => setConfigAlertas(c => ({...c, diarioVencimento: e.target.checked}))} style={{ marginTop: '4px' }} />
-                <div><strong style={{ display: 'block', color: '#2c3e50' }}>Diário - Vencem Hoje</strong><span style={{ fontSize: '12px', color: '#666' }}>Dispara todos os dias listando apenas as contas que vencem no exato dia atual.</span></div>
-              </label>
-              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
-                <input type="checkbox" checked={configAlertas.diarioNovasContas} onChange={e => setConfigAlertas(c => ({...c, diarioNovasContas: e.target.checked}))} style={{ marginTop: '4px' }} />
-                <div><strong style={{ display: 'block', color: '#2c3e50' }}>Diário - Contas Lançadas Recentemente</strong><span style={{ fontSize: '12px', color: '#666' }}>Dispara se uma nova conta foi lançada nas últimas 24h e vai vencer nos próximos 7 dias.</span></div>
-              </label>
-              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
-                <input type="checkbox" checked={configAlertas.quinzenalVencidas} onChange={e => setConfigAlertas(c => ({...c, quinzenalVencidas: e.target.checked}))} style={{ marginTop: '4px' }} />
-                <div><strong style={{ display: 'block', color: '#2c3e50' }}>Quinzenal - Atrasadas (Segundas-feiras)</strong><span style={{ fontSize: '12px', color: '#666' }}>Dispara de 15 em 15 dias listando todas as contas atrasadas nos últimos 15 dias (com juros se aplicável).</span></div>
-              </label>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '30px' }}>
-              <button onClick={() => setExibirModalConfigAlertas(false)} style={{ padding: '10px 20px', borderRadius: '8px', border: '1px solid #ccc', background: 'none', cursor: 'pointer', fontWeight: 'bold' }}>Cancelar</button>
-              <button onClick={handleSalvarConfigAlertas} style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', background: '#28a745', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }}>Salvar Configurações</button>
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {/* Linha 1: Título + Seletor Mês/Ano alinhados */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
@@ -334,9 +332,13 @@ export default function PainelFinanceiro({ cores }) {
           </button>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button type="button" onClick={() => setExibirModalConfigAlertas(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 15px', backgroundColor: '#6c757d', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', fontSize: '15px' }}>
-            <Settings size={20} />
+          <button type="button" onClick={() => setExibirModalCategorias(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 15px', backgroundColor: '#17a2b8', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', fontSize: '15px' }} title="Categorias & Tags">
+            <Tags size={20} />
           </button>
+          <button type="button" onClick={() => setExibirModalOrcamentos(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 15px', backgroundColor: '#fd7e14', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', fontSize: '15px' }} title="Orçamentos">
+            <TrendingDown size={20} />
+          </button>
+
           <button type="button" onClick={handleDispararAlertas} disabled={executandoAlertas} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', backgroundColor: '#dc3545', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', fontSize: '15px' }}>
             <Bell size={20} /> {executandoAlertas ? 'Enviando...' : 'Testar Alertas'}
           </button>
@@ -357,20 +359,26 @@ export default function PainelFinanceiro({ cores }) {
       </div>
 
       {abaAtiva === 'dashboard' && (
-        <DashboardFinanceiro
-          cores={cores}
-          formatarMoeda={formatarMoeda}
-          saldoGlobalConsolidado={saldoGlobalConsolidado}
-          saldoBancario={saldoBancario}
-          saldoInvestimentos={saldoInvestimentos}
-          saldoCofre={saldoCofre}
-          debitoCartoes={debitoCartoes}
-          totalReceitas={totalReceitas}
-          totalDespesasPagas={totalDespesasPagas}
-          totalDespesasPendentes={totalDespesasPendentes}
-          mesFiltro={mesFiltro}
-          despesasPorCategoria={despesasPorCategoria}
-        />
+        <>
+          <DashboardFinanceiro
+            cores={cores}
+            formatarMoeda={formatarMoeda}
+            saldoGlobalConsolidado={saldoGlobalConsolidado}
+            saldoBancario={saldoBancario}
+            saldoInvestimentos={saldoInvestimentos}
+            saldoCofre={saldoCofre}
+            debitoCartoes={debitoCartoes}
+            totalReceitas={totalReceitas}
+            totalDespesasPagas={totalDespesasPagas}
+            totalDespesasPendentes={totalDespesasPendentes}
+            mesFiltro={mesFiltro}
+            despesasPorCategoria={despesasPorCategoria}
+          />
+          <GerenciadorOrcamentos 
+            orcamentos={orcamentos} 
+            despesasPorCategoria={despesasPorCategoria} 
+          />
+        </>
       )}
 
       {abaAtiva === 'contas' && (
@@ -409,10 +417,9 @@ export default function PainelFinanceiro({ cores }) {
               contaIdSelecionada={contaIdSelecionada} setContaIdSelecionada={setContaIdSelecionada}
               perfilTransacaoId={perfilTransacaoId} setPerfilTransacaoId={setPerfilTransacaoId}
               formaPagamento={formaPagamento} setFormaPagamento={setFormaPagamento}
-              multa={multa} setMulta={setMulta}
-              juros={juros} setJuros={setJuros}
-              isParcelado={isParcelado} setIsParcelado={setIsParcelado}
-              qtdParcelas={qtdParcelas} setQtdParcelas={setQtdParcelas}
+              multa={multa} setMulta={setMulta} juros={juros} setJuros={setJuros}
+              chavePixCopiaCola={chavePixCopiaCola} setChavePixCopiaCola={setChavePixCopiaCola}
+              isParcelado={isParcelado} setIsParcelado={setIsParcelado} qtdParcelas={qtdParcelas} setQtdParcelas={setQtdParcelas}
               listaParcelas={listaParcelas} setListaParcelas={setListaParcelas}
               linkArquivo={linkArquivo}
               extraindoDados={extraindoDados}
@@ -424,6 +431,9 @@ export default function PainelFinanceiro({ cores }) {
               onUploadDocumento={handleUploadDocumento}
               categoriesDespesa={categoriesDespesa}
               categoriasReceita={categoriasReceita}
+              tagsDisponiveis={categoriasFinanceiras.tags}
+              tagsSelecionadas={tagsSelecionadas}
+              setTagsSelecionadas={setTagsSelecionadas}
               handleGerarCronogramaParcelas={handleGerarCronogramaParcelas}
               handleAtualizarParcela={handleAtualizarParcela}
             />
@@ -578,6 +588,23 @@ export default function PainelFinanceiro({ cores }) {
           </div>
         </div>
       )}
+      {exibirModalCategorias && (
+        <ModalCategorias 
+          categoriasFinanceiras={categoriasFinanceiras} 
+          setCategoriasFinanceiras={setCategoriasFinanceiras} 
+          onClose={() => setExibirModalCategorias(false)} 
+        />
+      )}
+
+      {exibirModalOrcamentos && (
+        <ModalOrcamentos 
+          categoriasFinanceiras={categoriasFinanceiras} 
+          orcamentos={orcamentos} 
+          setOrcamentos={setOrcamentos} 
+          onClose={() => setExibirModalOrcamentos(false)} 
+        />
+      )}
+
     </div>
   );
 }

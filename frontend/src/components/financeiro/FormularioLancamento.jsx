@@ -7,14 +7,14 @@ export default function FormularioLancamento({
   tipo, setTipo, categoria, setCategoria,
   dataVencimento, setDataVencimento, status, setStatus,
   contaIdSelecionada, setContaIdSelecionada,
-  perfilTransacaoId, setPerfilTransacaoId,
-  formaPagamento, setFormaPagamento,
-  multa, setMulta, juros, setJuros,
+  perfilTransacaoId, setPerfilTransacaoId, formaPagamento, setFormaPagamento,
+  multa, setMulta, juros, setJuros, chavePixCopiaCola, setChavePixCopiaCola,
   isParcelado, setIsParcelado, qtdParcelas, setQtdParcelas,
   listaParcelas,
   linkArquivo, extraindoDados, progressoUpload, avisoUpload, tipoAviso,
   salvando, onSalvar, onUploadDocumento,
   categoriesDespesa, categoriasReceita,
+  tagsDisponiveis, tagsSelecionadas, setTagsSelecionadas,
   handleGerarCronogramaParcelas, handleAtualizarParcela,
 }) {
   return (
@@ -48,23 +48,48 @@ export default function FormularioLancamento({
         <div style={{ flex: '1 1 250px' }}><h4 style={{ margin: '0 0 10px 0', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}><User size={18}/> Responsável</h4><select value={perfilTransacaoId} onChange={e => setPerfilTransacaoId(e.target.value)} required style={{ padding: '12px', borderRadius: '6px', border: '2px solid #C5A059', width: '100%', fontWeight: 'bold' }}><option value="" disabled>--- Quem pagou/recebeu? ---</option>{perfis.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}</select></div>
         <div style={{ flex: '1 1 250px' }}><h4 style={{ margin: '0 0 10px 0', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}><ArrowRightLeft size={18}/> {formaPagamento === 'Crédito' ? 'Cartão' : 'Conta Banco'}</h4><select value={contaIdSelecionada} onChange={e => setContaIdSelecionada(e.target.value)} style={{ padding: '12px', borderRadius: '6px', border: '2px solid #2c3e50', width: '100%', fontWeight: 'bold' }}><option value="">--- Vincular depois ---</option>{formaPagamento === 'Crédito' ? (cartoes || []).map(c => <option key={c.id} value={c.id}>{c.nome} (Limite: {Number(c.limite).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})})</option>) : contasBancarias.map(c => <option key={c.id} value={c.id}>{c.nome} ({obterNomePerfil(c.perfilId)})</option>)}</select></div>
       </div>
-      <div style={{ flex: '1 1 150px' }}><label>Vencimento</label><input type="date" value={dataVencimento} onChange={e=>setDataVencimento(e.target.value)} required style={{ width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }} /></div>
-      <div style={{ flex: '1 1 150px' }}><label>Tipo</label><select value={tipo} onChange={e=>{setTipo(e.target.value); setCategoria(e.target.value==='Despesa'?'Moradia':'Salario');}} style={{ width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }}><option value="Despesa">Despesa</option><option value="Receita">Receita</option></select></div>
-      <div style={{ flex: '1 1 150px' }}><label>Categoria</label>
-        <SelectDigitavel value={categoria} onChange={setCategoria} opcoes={(tipo==='Despesa'?categoriesDespesa:categoriasReceita)} style={{ width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }} />
+      <div style={{ flex: '1 1 150px', display: 'flex', flexDirection: 'column', gap: '5px' }}><label>Vencimento</label><input type="date" value={dataVencimento} onChange={e=>setDataVencimento(e.target.value)} required style={{ width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }} /></div>
+      <div style={{ flex: '1 1 150px', display: 'flex', flexDirection: 'column', gap: '5px' }}><label>Tipo</label><select value={tipo} onChange={e=>{setTipo(e.target.value); setCategoria(e.target.value==='Despesa'?'Moradia':e.target.value==='Receita'?'Salário':'Transferência');}} style={{ width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }}><option value="Despesa">Despesa</option><option value="Receita">Receita</option><option value="Transferencia">Transferência</option></select></div>
+      {tipo !== 'Transferencia' && (
+        <div style={{ flex: '1 1 150px', display: 'flex', flexDirection: 'column', gap: '5px' }}><label>Categoria</label>
+          <SelectDigitavel value={categoria} onChange={setCategoria} opcoes={(tipo==='Despesa'?categoriesDespesa:categoriasReceita)} style={{ width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }} />
+        </div>
+      )}
+      <div style={{ flex: '2 1 200px', display: 'flex', flexDirection: 'column', gap: '5px' }}><label>Descrição</label><input type="text" value={descricao} onChange={e=>setDescricao(e.target.value)} required style={{ width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }} /></div>
+      
+      <div style={{ flex: '1 1 150px', display: 'flex', flexDirection: 'column', gap: '5px' }}><label>Tags (Opcional)</label>
+        <select multiple value={tagsSelecionadas || []} onChange={e => {
+          const options = [...e.target.selectedOptions];
+          const values = options.map(opt => opt.value);
+          setTagsSelecionadas(values);
+        }} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', height: '42px', overflow: 'hidden' }} title="Segure CTRL (ou CMD) para selecionar múltiplas tags">
+          {tagsDisponiveis?.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
       </div>
-      <div style={{ flex: '2 1 200px' }}><label>Descrição</label><input type="text" value={descricao} onChange={e=>setDescricao(e.target.value)} required style={{ width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }} /></div>
-      <div style={{ flex: '1 1 150px' }}><label>Valor Total (R$)</label><input type="number" step="0.01" value={valor} onChange={e=>setValor(e.target.value)} required style={{ width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }} /></div>
+
+      <div style={{ flex: '1 1 150px', display: 'flex', flexDirection: 'column', gap: '5px' }}><label>Valor Total (R$)</label><input type="number" step="0.01" value={valor} onChange={e=>setValor(e.target.value)} required style={{ width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }} /></div>
 
       {tipo === 'Despesa' && (
         <>
-          <div style={{ flex: '0 0 100px' }}><label>Multa (R$)</label><input type="number" step="0.01" min="0" value={multa} onChange={e=>setMulta(e.target.value)} placeholder="0,00" style={{ width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }} /></div>
-          <div style={{ flex: '0 0 100px' }}><label>Juros (R$)</label><input type="number" step="0.01" min="0" value={juros} onChange={e=>setJuros(e.target.value)} placeholder="0,00" style={{ width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }} /></div>
+          <div style={{ flex: '0 0 100px', display: 'flex', flexDirection: 'column', gap: '5px' }}><label>Multa (R$)</label><input type="number" step="0.01" min="0" value={multa} onChange={e=>setMulta(e.target.value)} placeholder="0,00" style={{ width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }} /></div>
+          <div style={{ flex: '0 0 100px', display: 'flex', flexDirection: 'column', gap: '5px' }}><label>Juros (R$)</label><input type="number" step="0.01" min="0" value={juros} onChange={e=>setJuros(e.target.value)} placeholder="0,00" style={{ width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }} /></div>
         </>
       )}
 
       {tipo === 'Despesa' && (
-        <div style={{ flex: '1 1 150px' }}><label>Pagamento</label><select value={formaPagamento} onChange={e=>setFormaPagamento(e.target.value)} style={{ width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }}><option value="">Selecione...</option><option value="PIX">PIX</option><option value="Débito">Débito</option><option value="Crédito">Crédito</option><option value="Dinheiro">Dinheiro</option></select></div>
+        <div style={{ flex: '1 1 150px', display: 'flex', flexDirection: 'column', gap: '5px' }}><label>Pagamento</label><select value={formaPagamento} onChange={e=>setFormaPagamento(e.target.value)} style={{ width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }}><option value="">Selecione...</option><option value="PIX">PIX</option><option value="Débito">Débito</option><option value="Crédito">Crédito</option><option value="Dinheiro">Dinheiro</option></select></div>
+      )}
+      {tipo === 'Transferencia' && (
+        <div style={{ flex: '1 1 250px', display: 'flex', flexDirection: 'column', gap: '5px' }}><label style={{ fontWeight: 'bold', color: '#17a2b8' }}>Conta Destino (Entrada)</label>
+          <select value={formaPagamento} onChange={e => setFormaPagamento(e.target.value)} required style={{ padding: '10px', borderRadius: '6px', border: '2px solid #17a2b8', width: '100%', fontWeight: 'bold' }}>
+            <option value="" disabled>--- Selecione o Destino ---</option>
+            {contasBancarias.map(c => <option key={c.id} value={c.id}>{c.nome} ({obterNomePerfil(c.perfilId)})</option>)}
+          </select>
+        </div>
+      )}
+
+      {tipo === 'Despesa' && (
+        <div style={{ flex: '1 1 100%', display: 'flex', flexDirection: 'column', gap: '5px' }}><label>Chave PIX (Copia e Cola)</label><input type="text" value={chavePixCopiaCola || ''} onChange={e=>setChavePixCopiaCola(e.target.value)} style={{ width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #ccc' }} /></div>
       )}
 
       {tipo === 'Despesa' && !idEditando && (

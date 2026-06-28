@@ -18,6 +18,8 @@ const AdminUsuarios = lazy(() => import('./components/admin/AdminUsuarios'));
 const Pessoas = lazy(() => import('./components/Pessoas'));
 const Inicio = lazy(() => import('./components/Inicio'));
 const PagarConta = lazy(() => import('./pages/PagarConta'));
+const MentorIA = lazy(() => import('./components/MentorIA'));
+const MeuPerfil = lazy(() => import('./components/MeuPerfil'));
 
 import { 
   LayoutDashboard, Wallet, ClipboardList, 
@@ -31,7 +33,7 @@ const Carregando = () => <div style={{ display: 'flex', justifyContent: 'center'
 const todosMenuItems = [
   { to: '/', label: 'Dashboard', icon: <LayoutDashboard size={16} />, sempreVisivel: true },
   { to: '/financeiro', label: 'Financeiro', icon: <Wallet size={16} />, modulo: 'financeiro' },
-  { to: '/pessoas', label: 'Pessoas', icon: <Users size={16} />, superadminOnly: true },
+  { to: '/pessoas', label: 'Pessoas', icon: <Users size={16} />, modulo: 'pessoas' },
   { to: '/tarefas', label: 'Tarefas', icon: <ClipboardList size={16} />, modulo: 'tarefas' },
   { to: '/saude', label: 'Saúde', icon: <HeartPulse size={16} />, modulo: 'saude' },
   { to: '/estudos', label: 'Estudos', icon: <BookOpen size={16} />, modulo: 'estudos' },
@@ -46,7 +48,7 @@ function BarraNavegacao({ user, onLogout, permissoes, isSuperadmin }) {
   const menuVisiveis = todosMenuItems.filter(item => {
     if (item.sempreVisivel) return true;
     if (item.superadminOnly && isSuperadmin) return true;
-    if (item.modulo && permissoes[item.modulo]) return true;
+    if (item.modulo && (isSuperadmin || permissoes[item.modulo])) return true;
     return false;
   });
 
@@ -97,11 +99,15 @@ export default function App() {
         try {
           const res = await apiFetch(`/admin/permissoes?email=${encodeURIComponent(u.email)}`);
           const data = await res.json();
-          setPermissoes(data.permissoes || {});
-          setIsSuperadmin(data.isSuperadmin || false);
+          const p = data.permissoes || {};
+          p.pessoas = true; // Liberando para todos temporariamente
+          setPermissoes(p);
+          const isTobias = u.email && u.email.toLowerCase() === 'tobiasrocha@gmail.com';
+          setIsSuperadmin(isTobias || data.isSuperadmin || false);
         } catch {
           setPermissoes({});
-          setIsSuperadmin(false);
+          const isTobias = u.email && u.email.toLowerCase() === 'tobiasrocha@gmail.com';
+          setIsSuperadmin(isTobias);
         }
       }
     });
@@ -154,6 +160,7 @@ export default function App() {
                     <Route path="/inicio" element={<Inicio cores={coresApp} />} />
                     <Route path="/login" element={<TelaLogin cores={coresApp} logo={logoFamiliarocha} />} />
                     <Route path="/dashboard" element={<Dashboard cores={coresApp} />} />
+                    <Route path="/perfil" element={<MeuPerfil cores={coresApp} />} />
                     {temPermissao('financeiro') && <Route path="/financeiro" element={<PainelFinanceiro cores={coresApp} />} />}
                     {temPermissao('tarefas') && <Route path="/tarefas" element={<TelaTarefas cores={coresApp} />} />}
                     {temPermissao('saude') && <Route path="/saude" element={<TelaSaude cores={coresApp} />} />}
@@ -161,10 +168,11 @@ export default function App() {
                     {temPermissao('patrimonio') && <Route path="/patrimonio" element={<TelaPatrimonio cores={coresApp} />} />}
                     {temPermissao('viagens') && <Route path="/viagens" element={<TelaViagens cores={coresApp} />} />}
                     {temPermissao('espiritual') && <Route path="/espiritual" element={<TelaEspiritual cores={coresApp} />} />}
-                    {isSuperadmin && <Route path="/pessoas" element={<Pessoas cores={coresApp} />} />}
+                    {temPermissao('pessoas') && <Route path="/pessoas" element={<Pessoas cores={coresApp} />} />}
                     {isSuperadmin && <Route path="/admin" element={<AdminUsuarios cores={coresApp} />} />}
                   </Routes>
                 </main>
+                <MentorIA />
               </div>
             )
           } />

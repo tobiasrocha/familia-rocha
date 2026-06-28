@@ -1,0 +1,6 @@
+[2026-06-28T17:37:37.390Z] GET /api/admin/permissoes?email=tobias.rocha%40ufrn.br -> 200 | Body: {"permissoes":{"financeiro":true,"tarefas":true,"saude":true,"estudos":true,"patrimonio":true,"viage
+[2026-06-28T17:37:39.166Z] GET /api/admin/usuarios -> 200 | Body: {"usuarios":[{"id":"OcmAvtUl8Jh6jYnvIsnCbOpbTIk1","uid":"OcmAvtUl8Jh6jYnvIsnCbOpbTIk1","nome":"Tobia
+[2026-06-28T17:37:39.190Z] GET /api/admin/usuarios -> 200 | Body: {"usuarios":[{"id":"OcmAvtUl8Jh6jYnvIsnCbOpbTIk1","uid":"OcmAvtUl8Jh6jYnvIsnCbOpbTIk1","nome":"Tobia
+[2026-06-28T17:38:14.110Z] GET /api/admin/usuarios -> 200 | Body: {"usuarios":[{"id":"OcmAvtUl8Jh6jYnvIsnCbOpbTIk1","uid":"OcmAvtUl8Jh6jYnvIsnCbOpbTIk1","nome":"Tobia
+[2026-06-28T17:38:14.339Z] GET /api/admin/usuarios -> 200 | Body: {"usuarios":[{"id":"OcmAvtUl8Jh6jYnvIsnCbOpbTIk1","uid":"OcmAvtUl8Jh6jYnvIsnCbOpbTIk1","nome":"Tobia
+[2026-06-28T17:40:21.116Z] GET /api/admin/permissoes?email=tobias.rocha%40ufrn.br -> 200 | Body: {"permissoes":{"financeiro":true,"tarefas":true,"saude":true,"estudos":true,"patrimonio":true,"viage

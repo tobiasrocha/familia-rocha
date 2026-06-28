@@ -1,0 +1,6 @@
+VERIFY ERROR: TypeError [ERR_INVALID_ARG_TYPE]: The first argument must be of type string or an instance of Buffer, ArrayBuffer, or Array or an Array-like Object. Received undefined
+    at Buffer.from (node:buffer:362:9)
+    at C:\Users\tobia\Documents\familiarocha\backend\server.js:1984:30
+VERIFY ERROR: TypeError [ERR_INVALID_ARG_TYPE]: The first argument must be of type string or an instance of Buffer, ArrayBuffer, or Array or an Array-like Object. Received undefined
+    at Buffer.from (node:buffer:362:9)
+    at C:\Users\tobia\Documents\familiarocha\backend\server.js:1984:30

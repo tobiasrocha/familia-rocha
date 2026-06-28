@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Shield, Plus, Trash2, Key, Mail, User, Settings, CheckSquare, Square, Pencil, PawPrint, Baby, Calendar, Droplet, AlertTriangle, Phone } from 'lucide-react'
+import { Shield, Plus, Trash2, Key, Mail, User, Settings, CheckSquare, Square, Pencil, PawPrint, Baby, Calendar, Droplet, AlertTriangle, Phone, Bell } from 'lucide-react'
 import { apiFetch } from '../../config'
+import { db } from '../../firebaseConfig'
+import { doc, getDoc, setDoc } from 'firebase/firestore'
 
 const MODULOS = [
   { key: 'financeiro', label: 'Financeiro' },
@@ -29,6 +31,11 @@ export default function AdminUsuarios({ cores }) {
   const [tipoSanguineo, setTipoSanguineo] = useState('')
   const [alergias, setAlergias] = useState('')
   const [telefone, setTelefone] = useState('')
+  const [receberEmail, setReceberEmail] = useState(false)
+  const [receberWhatsapp, setReceberWhatsapp] = useState(false)
+
+  const [exibirModalConfigAlertas, setExibirModalConfigAlertas] = useState(false)
+  const [configAlertas, setConfigAlertas] = useState({ semanalPendentes: true, diarioVencimento: true, diarioNovasContas: true, quinzenalVencidas: true })
 
   const [resetId, setResetId] = useState(null)
   const [novaSenha, setNovaSenha] = useState('')
@@ -41,7 +48,10 @@ export default function AdminUsuarios({ cores }) {
     setErro('')
     try {
       const res = await apiFetch('/admin/usuarios')
-      if (!res.ok) throw new Error('Erro ao buscar')
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Erro ${res.status}: ${errorText}`);
+      }
       const data = await res.json()
       setMembros(data.usuarios || [])
     } catch (err) {
@@ -58,7 +68,10 @@ export default function AdminUsuarios({ cores }) {
       setErro('');
       try {
         const res = await apiFetch('/admin/usuarios');
-        if (!res.ok) throw new Error('Erro ao buscar');
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(`Erro ${res.status}: ${txt}`);
+        }
         const data = await res.json();
         if (!ignore) setMembros(data.usuarios || []);
       } catch (err) {
@@ -74,6 +87,7 @@ export default function AdminUsuarios({ cores }) {
   const resetarForm = () => {
     setNome(''); setTipo('Adulto'); setEmail(''); setSenha('')
     setDataNascimento(''); setTipoSanguineo(''); setAlergias(''); setTelefone('')
+    setReceberEmail(false); setReceberWhatsapp(false)
     setEditandoId(null); setExibirForm(false)
   }
 
@@ -90,6 +104,8 @@ export default function AdminUsuarios({ cores }) {
     setTipoSanguineo(m.tipoSanguineo || '')
     setAlergias(m.alergias || '')
     setTelefone(m.telefone || '')
+    setReceberEmail(!!m.receberEmail)
+    setReceberWhatsapp(!!m.receberWhatsapp)
     setSenha('')
     setEditandoId(m.id)
     setExibirForm(true)
@@ -109,7 +125,7 @@ export default function AdminUsuarios({ cores }) {
 
     setSalvando(true)
     try {
-      const body = { nome, tipo, dataNascimento, tipoSanguineo, alergias, telefone }
+      const body = { nome, tipo, dataNascimento, tipoSanguineo, alergias, telefone, receberEmail, receberWhatsapp }
       if (tipo !== 'Pet') body.email = email
       if (!editandoId && senha) body.senha = senha
 
@@ -133,6 +149,25 @@ export default function AdminUsuarios({ cores }) {
       setSalvando(false)
     }
   }
+
+  const abrirModalConfigAlertas = async () => {
+    try {
+      const docSnap = await getDoc(doc(db, 'configuracoes', 'alertas'));
+      if (docSnap.exists()) setConfigAlertas(docSnap.data());
+      setExibirModalConfigAlertas(true);
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao carregar configurações de alerta');
+    }
+  };
+
+  const handleSalvarConfigAlertas = async () => {
+    try {
+      await setDoc(doc(db, 'configuracoes', 'alertas'), configAlertas);
+      setExibirModalConfigAlertas(false);
+      alert('Configurações salvas!');
+    } catch (e) { alert('Erro ao salvar'); }
+  };
 
   const handleExcluir = async (m) => {
     if (m.isSuperadmin) return
@@ -217,9 +252,14 @@ export default function AdminUsuarios({ cores }) {
         <h2 style={{ color: cores?.texto, margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
           <Shield size={28} color={cores?.dourado} /> Membros da Família
         </h2>
-        <button onClick={() => exibirForm ? resetarForm() : abrirFormCriar()} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', cursor: 'pointer', backgroundColor: exibirForm ? '#6c757d' : cores?.dourado, color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>
-          <Plus size={18} /> {exibirForm ? 'Cancelar' : 'Novo Membro'}
-        </button>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <button onClick={abrirModalConfigAlertas} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', cursor: 'pointer', backgroundColor: '#6c757d', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>
+            <Bell size={18} /> Configurar Alertas
+          </button>
+          <button onClick={() => exibirForm ? resetarForm() : abrirFormCriar()} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', cursor: 'pointer', backgroundColor: exibirForm ? '#dc3545' : cores?.dourado, color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>
+            <Plus size={18} /> {exibirForm ? 'Cancelar' : 'Novo Membro'}
+          </button>
+        </div>
       </div>
 
       {exibirForm && (
@@ -242,6 +282,9 @@ export default function AdminUsuarios({ cores }) {
               <div style={{ flex: '2 1 200px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
                 <label style={{ fontSize: '14px', fontWeight: 'bold' }}>Email</label>
                 <input type="email" value={email} onChange={e => setEmail(e.target.value)} required={!editandoId} placeholder="email@exemplo.com" style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#555', marginTop: '4px', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={receberEmail} onChange={e => setReceberEmail(e.target.checked)} /> Receber E-mails de Alerta
+                </label>
               </div>
               {!editandoId && (
                 <div style={{ flex: '1 1 150px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
@@ -269,6 +312,11 @@ export default function AdminUsuarios({ cores }) {
           <div style={{ flex: '1 1 180px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
             <label style={{ fontSize: '14px', fontWeight: 'bold' }}>Telefone</label>
             <input type="tel" value={telefone} onChange={e => setTelefone(e.target.value)} placeholder="(84) 99999-9999" style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} />
+            {tipo !== 'Pet' && (
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#555', marginTop: '4px', cursor: 'pointer' }}>
+                <input type="checkbox" checked={receberWhatsapp} onChange={e => setReceberWhatsapp(e.target.checked)} /> Receber WhatsApp de Alerta
+              </label>
+            )}
           </div>
           <div style={{ flex: '2 1 250px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
             <label style={{ fontSize: '14px', fontWeight: 'bold' }}>Alergias / Restrições</label>
@@ -317,6 +365,38 @@ export default function AdminUsuarios({ cores }) {
         </div>
       )}
 
+      {exibirModalConfigAlertas && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 3000 }}>
+          <div style={{ backgroundColor: '#fff', padding: '30px', borderRadius: '16px', maxWidth: '500px', width: '90%', boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }}>
+            <h3 style={{ margin: '0 0 20px 0', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Bell size={24} color={cores?.dourado} /> Configurações de Alertas
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
+                <input type="checkbox" checked={configAlertas.semanalPendentes} onChange={e => setConfigAlertas(c => ({...c, semanalPendentes: e.target.checked}))} style={{ marginTop: '4px' }} />
+                <div><strong style={{ display: 'block', color: '#2c3e50' }}>Semanal - Pendentes (Segundas)</strong><span style={{ fontSize: '12px', color: '#666' }}>Dispara toda segunda-feira listando as contas que vencem nos próximos 7 dias.</span></div>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
+                <input type="checkbox" checked={configAlertas.diarioVencimento} onChange={e => setConfigAlertas(c => ({...c, diarioVencimento: e.target.checked}))} style={{ marginTop: '4px' }} />
+                <div><strong style={{ display: 'block', color: '#2c3e50' }}>Diário - Vencem Hoje</strong><span style={{ fontSize: '12px', color: '#666' }}>Dispara todos os dias listando apenas as contas que vencem no exato dia atual.</span></div>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
+                <input type="checkbox" checked={configAlertas.diarioNovasContas} onChange={e => setConfigAlertas(c => ({...c, diarioNovasContas: e.target.checked}))} style={{ marginTop: '4px' }} />
+                <div><strong style={{ display: 'block', color: '#2c3e50' }}>Diário - Contas Lançadas Recentemente</strong><span style={{ fontSize: '12px', color: '#666' }}>Dispara se uma nova conta foi lançada nas últimas 24h e vai vencer nos próximos 7 dias.</span></div>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
+                <input type="checkbox" checked={configAlertas.quinzenalVencidas} onChange={e => setConfigAlertas(c => ({...c, quinzenalVencidas: e.target.checked}))} style={{ marginTop: '4px' }} />
+                <div><strong style={{ display: 'block', color: '#2c3e50' }}>Quinzenal - Atrasadas (Segundas-feiras)</strong><span style={{ fontSize: '12px', color: '#666' }}>Dispara de 15 em 15 dias listando todas as contas atrasadas nos últimos 15 dias (com juros se aplicável).</span></div>
+              </label>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '30px' }}>
+              <button onClick={() => setExibirModalConfigAlertas(false)} style={{ padding: '10px 20px', borderRadius: '8px', border: '1px solid #ccc', background: 'none', cursor: 'pointer', fontWeight: 'bold' }}>Cancelar</button>
+              <button onClick={handleSalvarConfigAlertas} style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', background: cores?.dourado, color: '#fff', cursor: 'pointer', fontWeight: 'bold' }}>Salvar Configurações</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {carregando ? (
         <div style={{ textAlign: 'center', padding: '40px', color: '#6c757d' }}>Carregando...</div>
       ) : erro ? (
@@ -348,8 +428,8 @@ export default function AdminUsuarios({ cores }) {
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', color: '#495057' }}>
-                      {m.email && <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Mail size={14} color="#6c757d" />{m.email}</div>}
-                      {m.telefone && <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Phone size={14} color="#6c757d" />{m.telefone}</div>}
+                      {m.email && <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Mail size={14} color="#6c757d" />{m.email} {m.receberEmail && <Bell size={12} color="#28a745" title="Recebe Alertas por E-mail" />}</div>}
+                      {m.telefone && <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Phone size={14} color="#6c757d" />{m.telefone} {m.receberWhatsapp && <Bell size={12} color="#28a745" title="Recebe Alertas no WhatsApp" />}</div>}
                       {m.dataNascimento && <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Calendar size={14} color="#6c757d" />{m.dataNascimento.split('-').reverse().join('/')} ({calcularIdade(m.dataNascimento)} anos)</div>}
                       {m.tipoSanguineo && <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Droplet size={14} color="#dc3545" />Sangue: {m.tipoSanguineo}</div>}
                       {m.alergias && <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', backgroundColor: '#fff3cd', padding: '6px 8px', borderRadius: '6px', color: '#856404' }}><AlertTriangle size={14} style={{ flexShrink: 0, marginTop: '1px' }} />{m.alergias}</div>}

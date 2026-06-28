@@ -151,21 +151,19 @@ export default function TabelaLancamentos({ dadosMesFiltro, contasBancarias, car
                       const classified = classificarCodigo(item.codigoBarras);
                       if (!classified) return null;
                       return (
-                        <div style={{ marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <span style={{ fontSize: '9px', fontWeight: 'bold', color: classified.cor, backgroundColor: `${classified.cor}15`, padding: '1px 5px', borderRadius: '4px' }}>{classified.label}</span>
-                          <span style={{ fontSize: '10px', color: '#999' }}>{classified.valor.length > 32 ? classified.valor.substring(0, 32) + '...' : classified.valor}</span>
-                          <button onClick={() => { navigator.clipboard.writeText(classified.valor); }} title="Copiar" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C5A059', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '2px' }}>
-                            <Copy size={11} /> Copiar
+                        <div style={{ marginTop: '5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '10px', fontWeight: 'bold', color: classified.cor, backgroundColor: `${classified.cor}15`, padding: '2px 6px', borderRadius: '4px' }}>{classified.label}</span>
+                          <button onClick={() => { navigator.clipboard.writeText(classified.valor); alert('Copiado!'); }} title="Copiar Código" style={{ background: '#f8f9fa', border: '1px solid #ddd', borderRadius: '4px', cursor: 'pointer', color: '#555', padding: '4px 8px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px', transition: 'background 0.2s' }} onMouseOver={e => e.currentTarget.style.background = '#e9ecef'} onMouseOut={e => e.currentTarget.style.background = '#f8f9fa'}>
+                            <Copy size={12} /> Copiar
                           </button>
                         </div>
                       );
                     })()}
                     {item.pixCopiaCola && (
-                      <div style={{ marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <span style={{ fontSize: '9px', fontWeight: 'bold', color: '#059669', backgroundColor: '#05966915', padding: '1px 5px', borderRadius: '4px' }}>PIX</span>
-                        <span style={{ fontSize: '10px', color: '#999' }}>{item.pixCopiaCola.substring(0, 32)}...</span>
-                        <button onClick={() => { navigator.clipboard.writeText(item.pixCopiaCola); }} title="Copiar PIX" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#059669', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '2px' }}>
-                          <Copy size={11} /> Copiar
+                      <div style={{ marginTop: '5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#059669', backgroundColor: '#05966915', padding: '2px 6px', borderRadius: '4px' }}>PIX</span>
+                        <button onClick={() => { navigator.clipboard.writeText(item.pixCopiaCola); alert('PIX Copiado!'); }} title="Copiar PIX" style={{ background: '#f8f9fa', border: '1px solid #ddd', borderRadius: '4px', cursor: 'pointer', color: '#555', padding: '4px 8px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px', transition: 'background 0.2s' }} onMouseOver={e => e.currentTarget.style.background = '#e9ecef'} onMouseOut={e => e.currentTarget.style.background = '#f8f9fa'}>
+                          <Copy size={12} /> Copiar
                         </button>
                       </div>
                     )}

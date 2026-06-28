@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Copy, CheckCircle, AlertCircle } from 'lucide-react';
+import { db } from '../firebaseConfig';
+import { doc, getDoc } from 'firebase/firestore';
 
 export default function PagarConta({ cores, logo }) {
   const { id } = useParams();
@@ -10,22 +12,21 @@ export default function PagarConta({ cores, logo }) {
   const [copiadoBarras, setCopiadoBarras] = useState(false);
 
   useEffect(() => {
-    try {
-      const b64 = id.replace(/-/g, '+').replace(/_/g, '/');
-      const binStr = atob(b64);
-      const bytes = Uint8Array.from(binStr, c => c.charCodeAt(0));
-      const jsonString = new TextDecoder('utf-8').decode(bytes);
-      const parsed = JSON.parse(jsonString);
-
-      setConta({
-        descricao: parsed.d,
-        valor: parsed.v,
-        pixCopiaCola: parsed.p,
-        codigoBarras: parsed.b
-      });
-    } catch (err) {
-      setErro('O link de pagamento é inválido ou está corrompido.');
-    }
+    const carregarLink = async () => {
+      try {
+        if (!id) throw new Error('Link vazio');
+        const docRef = doc(db, 'links_pagamento', id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setConta(docSnap.data());
+        } else {
+          setErro('O link de pagamento é inválido, expirou ou a conta foi excluída.');
+        }
+      } catch (err) {
+        setErro('O link de pagamento é inválido ou está corrompido.');
+      }
+    };
+    carregarLink();
   }, [id]);
 
   const handleCopiar = (texto, tipo) => {
