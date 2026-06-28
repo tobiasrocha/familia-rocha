@@ -18,6 +18,8 @@ steps:
       - --set-secrets=GOOGLE_OAUTH_CLIENT_ID=oauth-client-id:latest
       - --set-secrets=GOOGLE_OAUTH_CLIENT_SECRET=oauth-client-secret:latest
       - --set-secrets=GOOGLE_OAUTH_REFRESH_TOKEN=oauth-refresh-token:latest
+      - --set-secrets=SMTP_PASS=smtp-pass:latest
+      - --set-secrets=WHATSAPP_API_TOKEN=whatsapp-token:latest
       - --update-env-vars=GOOGLE_CLOUD_PROJECT_ID=familia-rocha-7ea1a,GOOGLE_CLOUD_LOCATION=us,DOCUMENT_AI_PROCESSOR_ID=4cad7feb06d834dd,TESSERACT_ENABLED=false,CRON_ENABLED=false,SMTP_HOST=smtp.gmail.com,SMTP_PORT=587,SMTP_USER=tobiasrocha@gmail.com,WHATSAPP_API_URL=https://api.uman-app.uk/message/sendText/app-familia-rocha,GOOGLE_DRIVE_FOLDER_ID=1MoXgZV8Xvnp1x7vMjzuJZkWBZ9S1Gz5_
 options:
   logging: CLOUD_LOGGING_ONLY
